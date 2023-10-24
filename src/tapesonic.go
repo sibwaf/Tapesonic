@@ -7,8 +7,12 @@ import (
 	"os"
 
 	"tapesonic/api"
+	"tapesonic/appcontext"
 	"tapesonic/build"
 	"tapesonic/config"
+	"tapesonic/ffmpeg"
+	"tapesonic/storage"
+	"tapesonic/ytdlp"
 )
 
 var logo = []string{
@@ -20,6 +24,11 @@ var logo = []string{
 }
 
 func main() {
+	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	})
+	slog.SetDefault(slog.New(logHandler))
+
 	for _, line := range logo {
 		println(line)
 	}
@@ -32,12 +41,30 @@ func main() {
 	}
 
 	config := &config.TapesonicConfig{
-		Username: os.Getenv("TAPESONIC_USERNAME"),
-		Password: os.Getenv("TAPESONIC_PASSWORD"),
+		Username:   os.Getenv("TAPESONIC_USERNAME"),
+		Password:   os.Getenv("TAPESONIC_PASSWORD"),
+		YtdlpPath:  os.Getenv("TAPESONIC_YTDLP_PATH"),
+		StorageDir: os.Getenv("TAPESONIC_STORAGE_DIR"),
+	}
+	if config.YtdlpPath == "" {
+		config.YtdlpPath = "yt-dlp"
+	}
+	if config.FfmpegPath == "" {
+		config.FfmpegPath = "ffmpeg"
+	}
+	if config.StorageDir == "" {
+		config.StorageDir = "data"
+	}
+
+	appCtx := &appcontext.Context{
+		Config:  config,
+		Storage: storage.NewStorage(config.StorageDir),
+		Ytdlp:   ytdlp.NewYtdlp(config.YtdlpPath),
+		Ffmpeg:  ffmpeg.NewFfmpeg(config.FfmpegPath),
 	}
 
 	mux := http.NewServeMux()
-	for route, handler := range api.GetHandlers(config) {
+	for route, handler := range api.GetHandlers(appCtx) {
 		mux.HandleFunc(route, handler)
 	}
 

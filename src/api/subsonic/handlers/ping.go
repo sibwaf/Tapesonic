@@ -7,5 +7,5 @@ import (
 )
 
 func Ping(r *http.Request) (*responses.SubsonicResponse, error) {
-	return responses.NewOkSubsonicResponse(), nil
+	return responses.NewOkResponse(), nil
 }

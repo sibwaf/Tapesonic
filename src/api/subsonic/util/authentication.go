@@ -17,9 +17,9 @@ func Authenticated(handler http.HandlerFunc, config *config.TapesonicConfig) htt
 
 		username := query.Get(SUBSONIC_QUERY_USERNAME)
 		if username == "" {
-			msg := fmt.Sprintf("Query parameter `%s` is missing", SUBSONIC_QUERY_USERNAME)
-			LogInfo(r, msg)
-			writeResponse(w, r, responses.NewFailureSubsonicResponse(responses.ERROR_CODE_PARAMETER_MISSING, msg))
+			response := responses.NewParameterMissingResponse(SUBSONIC_QUERY_USERNAME)
+			LogDebug(r, response.Error.Message)
+			writeResponse(w, r, response)
 			return
 		}
 
@@ -31,9 +31,9 @@ func Authenticated(handler http.HandlerFunc, config *config.TapesonicConfig) htt
 		var isAuthenticated bool
 		if token != "" {
 			if salt == "" {
-				msg := fmt.Sprintf("Query parameter `%s` is missing", SUBSONIC_QUERY_SALT)
-				LogInfo(r, msg)
-				writeResponse(w, r, responses.NewFailureSubsonicResponse(responses.ERROR_CODE_PARAMETER_MISSING, msg))
+				response := responses.NewParameterMissingResponse(SUBSONIC_QUERY_SALT)
+				LogDebug(r, response.Error.Message)
+				writeResponse(w, r, response)
 				return
 			}
 
@@ -52,15 +52,15 @@ func Authenticated(handler http.HandlerFunc, config *config.TapesonicConfig) htt
 				config.Password,
 			)
 		} else {
-			msg := fmt.Sprintf("Query parameters `%s` or `%s`+`%s` are missing", SUBSONIC_QUERY_PASSWORD, SUBSONIC_QUERY_TOKEN, SUBSONIC_QUERY_SALT)
-			LogInfo(r, msg)
-			writeResponse(w, r, responses.NewFailureSubsonicResponse(responses.ERROR_CODE_PARAMETER_MISSING, msg))
+			response := responses.NewParameterMissingResponse(SUBSONIC_QUERY_PASSWORD)
+			LogDebug(r, response.Error.Message)
+			writeResponse(w, r, response)
 			return
 		}
 
 		if !isAuthenticated {
 			LogWarning(r, "Request failed authentication")
-			writeResponse(w, r, responses.NewFailureSubsonicResponse(responses.ERROR_CODE_UNAUTHENTICATED, "Wrong username/password or username/token"))
+			writeResponse(w, r, responses.NewNotAuthenticatedResponse())
 			return
 		}
 

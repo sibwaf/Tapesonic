@@ -23,18 +23,17 @@ const (
 )
 
 func writeResponse(w http.ResponseWriter, r *http.Request, response *responses.SubsonicResponse) {
-	format := getFormat(r)
-	switch format {
-	case SUBSONIC_FORMAT_JSON:
-		wrappedResponse := responses.SubsonicResponseWrapper{
-			Response: *response,
-		}
+	wrappedResponse := responses.SubsonicResponseWrapper{
+		Response: *response,
+	}
 
+	switch format := getFormat(r); format {
+	case SUBSONIC_FORMAT_JSON:
 		w.Header().Add("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(wrappedResponse)
 	case SUBSONIC_FORMAT_XML, "":
 		w.Header().Add("Content-Type", "application/xml")
-		xml.NewEncoder(w).Encode(response)
+		xml.NewEncoder(w).Encode(wrappedResponse)
 	default:
 		LogError(r, "Unsupported format", "format", format)
 		w.WriteHeader(http.StatusBadRequest)

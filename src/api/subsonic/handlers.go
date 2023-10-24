@@ -5,20 +5,26 @@ import (
 
 	"tapesonic/api/subsonic/handlers"
 	"tapesonic/api/subsonic/util"
-	"tapesonic/config"
+	"tapesonic/appcontext"
 )
 
-func GetHandlers(config *config.TapesonicConfig) map[string]http.HandlerFunc {
+func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 	rawHandlers := map[string]http.HandlerFunc{
-		"/rest/ping": util.AsHandlerFunc(handlers.Ping),
+		"/ping": util.AsHandlerFunc(handlers.Ping),
+
+		"/getPlaylists": util.AsHandlerFunc(handlers.NewGetPlaylistsHandler(appCtx.Storage).Handle),
+		"/getPlaylist":  util.AsHandlerFunc(handlers.NewGetPlaylistHandler(appCtx.Storage).Handle),
+
+		"/stream":      util.AsRawHandlerFunc(handlers.NewStreamHandler(appCtx.Storage, appCtx.Ffmpeg).Handle),
+		"/getCoverArt": util.AsRawHandlerFunc(handlers.NewGetCoverArtHandler(appCtx.Storage).Handle),
 	}
 
-	handlers := map[string]http.HandlerFunc{}
+	resultHandlers := map[string]http.HandlerFunc{}
 	for path, handler := range rawHandlers {
-		wrappedHandler := util.Logged(util.Authenticated(handler, config))
-		handlers[path] = wrappedHandler
-		handlers[path+".view"] = wrappedHandler
+		wrappedHandler := util.Logged(util.Authenticated(handler, appCtx.Config))
+		resultHandlers["/rest"+path] = wrappedHandler
+		resultHandlers["/rest"+path+".view"] = wrappedHandler
 	}
 
-	return handlers
+	return resultHandlers
 }
