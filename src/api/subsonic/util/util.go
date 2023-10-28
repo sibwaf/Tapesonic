@@ -24,7 +24,7 @@ const (
 
 func writeResponse(w http.ResponseWriter, r *http.Request, response *responses.SubsonicResponse) {
 	wrappedResponse := responses.SubsonicResponseWrapper{
-		Response: *response,
+		SubsonicResponse: *response,
 	}
 
 	switch format := getFormat(r); format {

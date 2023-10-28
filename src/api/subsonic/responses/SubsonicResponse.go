@@ -1,6 +1,7 @@
 package responses
 
 import (
+	"encoding/xml"
 	"fmt"
 	"tapesonic/build"
 )
@@ -17,7 +18,8 @@ const (
 )
 
 type SubsonicResponseWrapper struct {
-	Response SubsonicResponse `json:"subsonic-response" xml:"subsonic-response"`
+	XMLName xml.Name `json:"-" xml:"subsonic-response"`
+	SubsonicResponse `json:"subsonic-response"`
 }
 
 type SubsonicResponse struct {
