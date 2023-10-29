@@ -27,9 +27,9 @@ func (f *Ffmpeg) Stream(ctx context.Context, offsetMs int, durationMs int, reade
 
 		"-v", "0",
 
-		"-ss", fmt.Sprint(offsetMs/1000.0),
+		"-ss", fmt.Sprintf("%.3f", float32(offsetMs)/1000.0),
 		"-i", "-",
-		"-t", fmt.Sprint(durationMs/1000.0),
+		"-t", fmt.Sprintf("%.3f", float32(durationMs)/1000.0),
 		"-vn",
 		"-f", "opus", // todo
 		// todo: -c copy
