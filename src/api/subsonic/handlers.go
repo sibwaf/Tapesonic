@@ -39,5 +39,12 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 		resultHandlers["/rest"+path+".view"] = wrappedHandler
 	}
 
+	resultHandlers["/rest/"] = util.Logged(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			util.LogWarning(r, "Handler is not implemented")
+		},
+	)
+
 	return resultHandlers
 }
