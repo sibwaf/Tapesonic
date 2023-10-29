@@ -4,7 +4,7 @@ type TapesonicConfig struct {
 	Username string
 	Password string
 
-	StorageDir string
+	MediaStorageDir string
 
 	YtdlpPath  string
 	FfmpegPath string

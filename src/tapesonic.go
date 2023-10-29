@@ -41,10 +41,11 @@ func main() {
 	}
 
 	config := &config.TapesonicConfig{
-		Username:   os.Getenv("TAPESONIC_USERNAME"),
-		Password:   os.Getenv("TAPESONIC_PASSWORD"),
-		YtdlpPath:  os.Getenv("TAPESONIC_YTDLP_PATH"),
-		StorageDir: os.Getenv("TAPESONIC_STORAGE_DIR"),
+		Username:        os.Getenv("TAPESONIC_USERNAME"),
+		Password:        os.Getenv("TAPESONIC_PASSWORD"),
+		YtdlpPath:       os.Getenv("TAPESONIC_YTDLP_PATH"),
+		FfmpegPath:      os.Getenv("TAPESONIC_FFMPEG_PATH"),
+		MediaStorageDir: os.Getenv("TAPESONIC_MEDIA_STORAGE_DIR"),
 	}
 	if config.YtdlpPath == "" {
 		config.YtdlpPath = "yt-dlp"
@@ -52,13 +53,13 @@ func main() {
 	if config.FfmpegPath == "" {
 		config.FfmpegPath = "ffmpeg"
 	}
-	if config.StorageDir == "" {
-		config.StorageDir = "data"
+	if config.MediaStorageDir == "" {
+		config.MediaStorageDir = "media"
 	}
 
 	appCtx := &appcontext.Context{
 		Config:  config,
-		Storage: storage.NewStorage(config.StorageDir),
+		Storage: storage.NewStorage(config.MediaStorageDir),
 		Ytdlp:   ytdlp.NewYtdlp(config.YtdlpPath),
 		Ffmpeg:  ffmpeg.NewFfmpeg(config.FfmpegPath),
 	}
