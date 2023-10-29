@@ -10,11 +10,15 @@ import (
 
 func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 	// todo: logging
-	// todo: auth
-	handlers := map[string]http.HandlerFunc{
-		"/api/formats": util.AsHandlerFunc(handlers.NewGetFormatsHandler(appCtx.Ytdlp)),
-		"/api/import":  util.AsHandlerFunc(handlers.NewImportHandler(appCtx.Ytdlp)),
+	rawHandlers := map[string]util.WebappHandler{
+		"/api/formats": handlers.NewGetFormatsHandler(appCtx.Ytdlp),
+		"/api/import":  handlers.NewImportHandler(appCtx.Ytdlp),
 	}
 
-	return handlers
+	resultHandlers := map[string]http.HandlerFunc{}
+	for path, handler := range rawHandlers {
+		resultHandlers[path] = util.Authenticated(util.AsHandlerFunc(handler), appCtx.Config)
+	}
+
+	return resultHandlers
 }
