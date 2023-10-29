@@ -10,9 +10,6 @@ import (
 	"tapesonic/appcontext"
 	"tapesonic/build"
 	"tapesonic/config"
-	"tapesonic/ffmpeg"
-	"tapesonic/storage"
-	"tapesonic/ytdlp"
 )
 
 var logo = []string{
@@ -57,12 +54,7 @@ func main() {
 		config.MediaStorageDir = "media"
 	}
 
-	appCtx := &appcontext.Context{
-		Config:  config,
-		Storage: storage.NewStorage(config.MediaStorageDir),
-		Ytdlp:   ytdlp.NewYtdlp(config.YtdlpPath),
-		Ffmpeg:  ffmpeg.NewFfmpeg(config.FfmpegPath),
-	}
+	appCtx := appcontext.NewContext(config)
 
 	mux := http.NewServeMux()
 	for route, handler := range api.GetHandlers(appCtx) {

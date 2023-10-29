@@ -4,18 +4,18 @@ import (
 	"net/http"
 
 	"tapesonic/api/admin/responses"
-	"tapesonic/ytdlp"
+	"tapesonic/storage"
 )
 
 type importHandler struct {
-	ytdlp *ytdlp.Ytdlp
+	importer *storage.Importer
 }
 
 func NewImportHandler(
-	ytdlp *ytdlp.Ytdlp,
+	importer *storage.Importer,
 ) *importHandler {
 	return &importHandler{
-		ytdlp: ytdlp,
+		importer: importer,
 	}
 }
 
@@ -36,12 +36,11 @@ func (h *importHandler) Handle(r *http.Request) (*responses.Response, error) {
 		return &resp, nil
 	}
 
-	metadata, err := h.ytdlp.Download(url, format, "data") // todo
+	err := h.importer.ImportMixtape(url, format)
 	if err != nil {
-		resp := responses.NewResponse(err) // todo
-		return &resp, nil
+		return nil, err
 	}
 
-	resp := responses.NewResponse(metadata) // todo
-	return &resp, nil
+	resp := responses.NewResponse("ok")
+	return &resp, nil // todo
 }
