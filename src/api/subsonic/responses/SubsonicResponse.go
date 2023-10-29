@@ -18,7 +18,7 @@ const (
 )
 
 type SubsonicResponseWrapper struct {
-	XMLName xml.Name `json:"-" xml:"subsonic-response"`
+	XMLName          xml.Name `json:"-" xml:"subsonic-response"`
 	SubsonicResponse `json:"subsonic-response"`
 }
 
@@ -31,8 +31,19 @@ type SubsonicResponse struct {
 
 	Error *subsonicError `json:"error,omitempty" xml:"error"`
 
-	Playlists *SubsonicPlaylists `json:"playlists,omitempty" xml:"playlists"`
-	Playlist  *SubsonicPlaylist  `json:"playlist,omitempty" xml:"playlist"`
+	AlbumList2            *AlbumList2            `json:"albumList2,omitempty" xml:"albumList2"`
+	Artists               *Artists               `json:"artists,omitempty" xml:"artists"`
+	Genres                *Genres                `json:"genres,omitempty" xml:"genres"`
+	InternetRadioStations *InternetRadioStations `json:"internetRadioStations,omitempty" xml:"internetRadioStations"`
+	MusicFolders          *MusicFolders          `json:"musicFolders,omitempty" xml:"musicFolders"`
+	NewestPodcasts        *NewestPodcasts        `json:"newestPodcasts,omitempty" xml:"newestPodcasts"`
+	Playlists             *SubsonicPlaylists     `json:"playlists,omitempty" xml:"playlists"`
+	Playlist              *SubsonicPlaylist      `json:"playlist,omitempty" xml:"playlist"`
+	Podcasts              *Podcasts              `json:"podcasts,omitempty" xml:"podcasts"`
+	RandomSongs           *RandomSongs           `json:"randomSongs,omitempty" xml:"randomSongs"`
+	ScanStatus            *ScanStatus            `json:"scanStatus,omitempty" xml:"scanStatus"`
+	SearchResult3         *SearchResult3         `json:"searchResult3,omitempty" xml:"searchResult3"`
+	Starred2              *Starred2              `json:"starred2,omitempty" xml:"starred2"`
 }
 
 type subsonicError struct {
