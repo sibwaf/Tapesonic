@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"os"
 
-	"tapesonic/api"
 	"tapesonic/appcontext"
 	"tapesonic/build"
 	"tapesonic/config"
+	tshttp "tapesonic/http"
 )
 
 var logo = []string{
@@ -57,7 +57,7 @@ func main() {
 	appCtx := appcontext.NewContext(config)
 
 	mux := http.NewServeMux()
-	for route, handler := range api.GetHandlers(appCtx) {
+	for route, handler := range tshttp.GetHandlers(appCtx) {
 		mux.HandleFunc(route, handler)
 	}
 
