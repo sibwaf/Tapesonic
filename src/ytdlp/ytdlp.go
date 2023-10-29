@@ -2,6 +2,7 @@ package ytdlp
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os/exec"
 )
@@ -17,17 +18,21 @@ func NewYtdlp(path string) *Ytdlp {
 }
 
 func (y *Ytdlp) ExtractMetadata(url string) (YtdlpMetadata, error) {
-	slog.Debug("Extracting metadata", "yt-dlp", y.path, "url", url)
-
 	cmd := exec.Command(y.path, "--dump-json", url)
+
+	slog.Debug(fmt.Sprintf("Extracting metadata from `%s` via `%s`", url, cmd.String()))
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		slog.Debug("Failed to extract metadata", "yt-dlp", y.path, "url", url, "error", err)
+		slog.Debug(fmt.Sprintf("Failed to extract metadata from `%s`: %s", url, err.Error()))
+		outText := string(out)
+		if outText != "" {
+			slog.Error(outText)
+		}
 		return YtdlpMetadata{}, err
 	}
 
-	slog.Debug("Successfully extracted metadata", "yt-dlp", y.path, "url", url)
+	slog.Debug(fmt.Sprintf("Successfully extracted metadata from `%s`", url))
 
 	var metadata YtdlpMetadata
 	err = json.Unmarshal(out, &metadata)
@@ -35,13 +40,13 @@ func (y *Ytdlp) ExtractMetadata(url string) (YtdlpMetadata, error) {
 }
 
 func (y *Ytdlp) Download(url string, formatId string, downloadDir string) (YtdlpMetadata, error) {
-	slog.Debug("Downloading files", "yt-dlp", y.path, "url", url, "path", downloadDir)
+	cmd := exec.Command(
+		y.path,
 
-	args := []string{
 		"--format", formatId,
 		"--convert-thumbnails", "png",
 		"--output", "%(id)s.%(ext)s",
-		"--paths", "home:" + downloadDir,
+		"--paths", "home:"+downloadDir,
 
 		"--no-continue",
 		"--no-part",
@@ -51,17 +56,21 @@ func (y *Ytdlp) Download(url string, formatId string, downloadDir string) (Ytdlp
 		"--dump-json",
 
 		url,
-	}
+	)
 
-	cmd := exec.Command(y.path, args...)
+	slog.Debug(fmt.Sprintf("Downloading `%s` via `%s`", url, cmd.String()))
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		slog.Debug("Failed to download files", "yt-dlp", y.path, "url", url, "path", downloadDir, "error", err)
+		slog.Debug(fmt.Sprintf("Failed to download `%s`: %s", url, err.Error()))
+		outText := string(out)
+		if outText != "" {
+			slog.Error(outText)
+		}
 		return YtdlpMetadata{}, err
 	}
 
-	slog.Debug("Successfully downloaded files", "yt-dlp", y.path, "url", url, "path", downloadDir)
+	slog.Debug(fmt.Sprintf("Successfully downloaded `%s`", url))
 
 	var metadata YtdlpMetadata
 	err = json.Unmarshal(out, &metadata)

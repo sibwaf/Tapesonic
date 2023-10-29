@@ -19,8 +19,7 @@ func NewFfmpeg(path string) *Ffmpeg {
 	}
 }
 
-// todo: traceable reader
-func (f *Ffmpeg) Stream(ctx context.Context, offsetMs int, durationMs int, reader io.Reader, writer io.Writer) error {
+func (f *Ffmpeg) Stream(ctx context.Context, offsetMs int, durationMs int, reader *ReaderWithMeta, writer io.Writer) error {
 	cmd := exec.CommandContext(
 		ctx,
 		f.path,
@@ -36,13 +35,14 @@ func (f *Ffmpeg) Stream(ctx context.Context, offsetMs int, durationMs int, reade
 
 		"-",
 	)
-	cmd.Stdin = reader
+	cmd.Stdin = reader.Reader
 	cmd.Stdout = writer
 
-	slog.Debug("Starting streaming", "ffmpeg", f.path)
+	slog.Debug(fmt.Sprintf("Starting streaming `%s` via `%s`", reader.SourceInfo, cmd.String()))
+
 	err := cmd.Start()
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to start streaming: %s", err.Error()), "ffmpeg", f.path)
+		slog.Error(fmt.Sprintf("Failed to start streaming `%s`: %s", reader.SourceInfo, err.Error()))
 		return err
 	}
 
@@ -50,16 +50,16 @@ func (f *Ffmpeg) Stream(ctx context.Context, offsetMs int, durationMs int, reade
 
 	var exitError *exec.ExitError
 	if errors.As(err, &exitError) && ctx.Err() == context.Canceled {
-		slog.Debug("ffmpeg was killed because context was cancelled", "ffmpeg", f.path)
+		slog.Debug(fmt.Sprintf("Stopped streaming `%s` because context was cancelled", reader.SourceInfo))
 		return nil
 	} else if err != nil {
-		slog.Error(fmt.Sprintf("Error while streaming: %s", err.Error()), "ffmpeg", f.path)
+		slog.Error(fmt.Sprintf("Error while streaming `%s`: %s", reader.SourceInfo, err.Error()))
 		if exitError != nil && len(exitError.Stderr) > 0 {
 			slog.Error(string(exitError.Stderr))
 		}
 		return err
 	} else {
-		slog.Debug("Successfully finished streaming", "ffmpeg", f.path)
+		slog.Debug(fmt.Sprintf("Successfully finished streaming `%s`", reader.SourceInfo))
 		return nil
 	}
 }

@@ -46,7 +46,10 @@ func (h *streamHandler) Handle(w http.ResponseWriter, r *http.Request) (*respons
 		r.Context(),
 		track.Track.OffsetMs,
 		track.Track.LengthMs,
-		reader,
+		ffmpeg.NewReaderWithMeta(
+			"file:"+track.Path,
+			reader,
+		),
 		w,
 	)
 }
