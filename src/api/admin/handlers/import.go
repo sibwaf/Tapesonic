@@ -19,6 +19,10 @@ func NewImportHandler(
 	}
 }
 
+func (h *importHandler) Methods() []string {
+	return []string{http.MethodPost}
+}
+
 func (h *importHandler) Handle(r *http.Request) (*responses.Response, error) {
 	url := r.URL.Query().Get("url")
 	if url == "" {

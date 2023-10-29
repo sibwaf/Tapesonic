@@ -19,6 +19,10 @@ func NewGetFormatsHandler(
 	}
 }
 
+func (h *getFormatsHandler) Methods() []string {
+	return []string{http.MethodGet}
+}
+
 func (h *getFormatsHandler) Handle(r *http.Request) (*responses.Response, error) {
 	url := r.URL.Query().Get("url")
 	if url == "" {
