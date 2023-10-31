@@ -18,10 +18,12 @@ RUN apk add \
 
 WORKDIR /app
 COPY --from=builder /build/tapesonic /app/tapesonic
+COPY webapp/dist /app/webapp
 
 ENV TAPESONIC_PORT=8080
 ENV TAPESONIC_YTDLP_PATH=/usr/bin/yt-dlp
 ENV TAPESONIC_FFMPEG_PATH=/usr/bin/ffmpeg
+ENV TAPESONIC_WEBAPP_DIR=/app/webapp
 ENV TAPESONIC_MEDIA_STORAGE_DIR=/media
 
 EXPOSE $TAPESONIC_PORT/tcp

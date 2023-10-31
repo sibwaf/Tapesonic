@@ -42,6 +42,7 @@ func main() {
 		Password:        os.Getenv("TAPESONIC_PASSWORD"),
 		YtdlpPath:       os.Getenv("TAPESONIC_YTDLP_PATH"),
 		FfmpegPath:      os.Getenv("TAPESONIC_FFMPEG_PATH"),
+		WebappDir:       os.Getenv("TAPESONIC_WEBAPP_DIR"),
 		MediaStorageDir: os.Getenv("TAPESONIC_MEDIA_STORAGE_DIR"),
 	}
 	if config.YtdlpPath == "" {
@@ -49,6 +50,9 @@ func main() {
 	}
 	if config.FfmpegPath == "" {
 		config.FfmpegPath = "ffmpeg"
+	}
+	if config.WebappDir == "" {
+		config.WebappDir = "webapp"
 	}
 	if config.MediaStorageDir == "" {
 		config.MediaStorageDir = "media"

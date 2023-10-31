@@ -21,8 +21,11 @@ func AsHandlerFunc(handler WebappHandler) http.HandlerFunc {
 			return
 		}
 
-		response, _ := handler.Handle(r)
-		// todo: err
+		response, err := handler.Handle(r)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 		w.Header().Add("content-type", "application/json")
 		json.NewEncoder(w).Encode(response)

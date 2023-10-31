@@ -1,5 +1,7 @@
 .vscode/
 data/
 media/
+webapp/node_modules/
+webapp/dist/
 
 __debug*

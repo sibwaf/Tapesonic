@@ -13,11 +13,47 @@ env:
   REGISTRY: "ghcr.io"
 
 jobs:
-  publish:
+  build-webapp:
     runs-on: "ubuntu-latest"
     steps:
       - name: "Checkout"
         uses: "actions/checkout@v4"
+
+      - name: "Set up NodeJS"
+        uses: "actions/setup-node@v3"
+        with:
+          node-version: 18
+          cache: "npm"
+          cache-dependency-path: "webapp/package-lock.json"
+
+      - name: "Install dependencies"
+        run: "npm install"
+        working-directory: "webapp"
+
+      - name: "Build"
+        run: "npm run build"
+        working-directory: "webapp"
+
+      - name: "Upload webapp distribution"
+        uses: "actions/upload-artifact@v3"
+        with:
+          name: "webapp-dist"
+          path: "webapp/dist"
+          if-no-files-found: "error"
+
+  publish:
+    runs-on: "ubuntu-latest"
+    needs:
+      - "build-webapp"
+    steps:
+      - name: "Checkout"
+        uses: "actions/checkout@v4"
+
+      - name: "Download webapp distribution"
+        uses: "actions/download-artifact@v3"
+        with:
+          name: "webapp-dist"
+          path: "webapp/dist"
 
       - name: "Set up variables"
         run: |
