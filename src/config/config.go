@@ -5,6 +5,7 @@ type TapesonicConfig struct {
 	Password string
 
 	WebappDir       string
+	DataStorageDir  string
 	MediaStorageDir string
 
 	YtdlpPath  string

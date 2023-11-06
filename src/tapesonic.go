@@ -43,6 +43,7 @@ func main() {
 		YtdlpPath:       os.Getenv("TAPESONIC_YTDLP_PATH"),
 		FfmpegPath:      os.Getenv("TAPESONIC_FFMPEG_PATH"),
 		WebappDir:       os.Getenv("TAPESONIC_WEBAPP_DIR"),
+		DataStorageDir:  os.Getenv("TAPESONIC_DATA_STORAGE_DIR"),
 		MediaStorageDir: os.Getenv("TAPESONIC_MEDIA_STORAGE_DIR"),
 	}
 	if config.YtdlpPath == "" {
@@ -54,11 +55,18 @@ func main() {
 	if config.WebappDir == "" {
 		config.WebappDir = "webapp"
 	}
+	if config.DataStorageDir == "" {
+		config.DataStorageDir = "data"
+	}
 	if config.MediaStorageDir == "" {
 		config.MediaStorageDir = "media"
 	}
 
-	appCtx := appcontext.NewContext(config)
+	appCtx, err := appcontext.NewContext(config)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Failed to start the application context: %s", err.Error()))
+		os.Exit(2)
+	}
 
 	mux := http.NewServeMux()
 	for route, handler := range tshttp.GetHandlers(appCtx) {
@@ -66,7 +74,7 @@ func main() {
 	}
 
 	slog.Info("Serving HTTP requests", "port", port)
-	err := http.ListenAndServe(fmt.Sprintf(":%s", port), mux)
+	err = http.ListenAndServe(fmt.Sprintf(":%s", port), mux)
 	if err != nil && err != http.ErrServerClosed {
 		slog.Error("Failed to serve requests", "error", err)
 		os.Exit(1)
