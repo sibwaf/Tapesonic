@@ -37,6 +37,7 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 	context.Importer = storage.NewImporter(
 		context.Config.MediaStorageDir,
 		context.Ytdlp,
+		context.DataStorage,
 	)
 
 	return &context, nil

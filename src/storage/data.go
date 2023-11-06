@@ -24,8 +24,33 @@ func NewDataStorage(
 		return nil, err
 	}
 
+	if err = db.AutoMigrate(
+		&Tape{},
+		&TapeTrack{},
+	); err != nil {
+		return nil, err
+	}
+
 	return &DataStorage{
 		db: db,
 	}, nil
+}
+
+func (s *DataStorage) CreateTape(tape *Tape) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Save(tape).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Where(
+			"tape_id = ? AND tape_track_index > ?",
+			tape.Id,
+			len(tape.Tracks)-1,
+		).Delete(&TapeTrack{}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 

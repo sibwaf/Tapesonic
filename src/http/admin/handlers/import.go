@@ -36,11 +36,11 @@ func (h *importHandler) Handle(r *http.Request) (*responses.Response, error) {
 		return &resp, nil
 	}
 
-	err := h.importer.ImportMixtape(url, format)
+	id, err := h.importer.ImportTape(url, format)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := responses.NewResponse("ok")
+	resp := responses.NewResponse(id)
 	return &resp, nil // todo
 }

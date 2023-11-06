@@ -1,7 +1,6 @@
 package ytdlp
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os/exec"
@@ -34,12 +33,10 @@ func (y *Ytdlp) ExtractMetadata(url string) (YtdlpMetadata, error) {
 
 	slog.Debug(fmt.Sprintf("Successfully extracted metadata from `%s`", url))
 
-	var metadata YtdlpMetadata
-	err = json.Unmarshal(out, &metadata)
-	return metadata, err
+	return DownloadInfo{RawMetadata: out}.ParseMetadata()
 }
 
-func (y *Ytdlp) Download(url string, formatId string, downloadDir string) (YtdlpMetadata, error) {
+func (y *Ytdlp) Download(url string, formatId string, downloadDir string) (DownloadInfo, error) {
 	cmd := exec.Command(
 		y.path,
 
@@ -67,12 +64,19 @@ func (y *Ytdlp) Download(url string, formatId string, downloadDir string) (Ytdlp
 		if outText != "" {
 			slog.Error(outText)
 		}
-		return YtdlpMetadata{}, err
+		return DownloadInfo{}, err
 	}
 
 	slog.Debug(fmt.Sprintf("Successfully downloaded `%s`", url))
 
-	var metadata YtdlpMetadata
-	err = json.Unmarshal(out, &metadata)
-	return metadata, err
+	info := DownloadInfo{RawMetadata: out}
+	metadata, err := info.ParseMetadata()
+	if err != nil {
+		return DownloadInfo{}, err
+	}
+
+	info.MediaPath = metadata.Id + "." + metadata.Ext
+	info.ThumbnailPath = metadata.Id + ".png"
+
+	return info, nil
 }
