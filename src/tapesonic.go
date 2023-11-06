@@ -32,34 +32,10 @@ func main() {
 
 	slog.Info(fmt.Sprintf("Starting Tapesonic %s", build.TAPESONIC_VERSION))
 
-	port := os.Getenv("TAPESONIC_PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	config := &config.TapesonicConfig{
-		Username:        os.Getenv("TAPESONIC_USERNAME"),
-		Password:        os.Getenv("TAPESONIC_PASSWORD"),
-		YtdlpPath:       os.Getenv("TAPESONIC_YTDLP_PATH"),
-		FfmpegPath:      os.Getenv("TAPESONIC_FFMPEG_PATH"),
-		WebappDir:       os.Getenv("TAPESONIC_WEBAPP_DIR"),
-		DataStorageDir:  os.Getenv("TAPESONIC_DATA_STORAGE_DIR"),
-		MediaStorageDir: os.Getenv("TAPESONIC_MEDIA_STORAGE_DIR"),
-	}
-	if config.YtdlpPath == "" {
-		config.YtdlpPath = "yt-dlp"
-	}
-	if config.FfmpegPath == "" {
-		config.FfmpegPath = "ffmpeg"
-	}
-	if config.WebappDir == "" {
-		config.WebappDir = "webapp"
-	}
-	if config.DataStorageDir == "" {
-		config.DataStorageDir = "data"
-	}
-	if config.MediaStorageDir == "" {
-		config.MediaStorageDir = "media"
+	config, err := config.NewConfig()
+	if err != nil {
+		slog.Error(fmt.Sprintf("Failed to parse config: %s", err.Error()))
+		os.Exit(3)
 	}
 
 	appCtx, err := appcontext.NewContext(config)
@@ -73,8 +49,8 @@ func main() {
 		mux.HandleFunc(route, handler)
 	}
 
-	slog.Info(fmt.Sprintf("Serving HTTP requests @ port %s", port))
-	err = http.ListenAndServe(fmt.Sprintf(":%s", port), mux)
+	slog.Info(fmt.Sprintf("Serving HTTP requests @ port %d", config.ServerPort))
+	err = http.ListenAndServe(fmt.Sprintf(":%d", config.ServerPort), mux)
 	if err != nil && err != http.ErrServerClosed {
 		slog.Error(fmt.Sprintf("Failed to serve requests: %s", err.Error()))
 		os.Exit(1)
