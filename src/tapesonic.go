@@ -14,7 +14,7 @@ import (
 
 var logo = []string{
 	" ______                            _      ",
-	"/_  __/__ ____  ___ ___ ___  ___  (_)___  ",
+	"/_  __/__  ___  ___ ___ ___  ___  (_)___  ",
 	" / / / _ `/ _ \\/ -_|_-</ _ \\/ _ \\/ / __/  ",
 	"/_/  \\_,_/ .__/\\__/___/\\___/_//_/_/\\__/   ",
 	"        /_/                               ",
@@ -30,7 +30,7 @@ func main() {
 		println(line)
 	}
 
-	slog.Info("Starting Tapesonic", "version", build.TAPESONIC_VERSION)
+	slog.Info(fmt.Sprintf("Starting Tapesonic %s", build.TAPESONIC_VERSION))
 
 	port := os.Getenv("TAPESONIC_PORT")
 	if port == "" {
@@ -73,10 +73,10 @@ func main() {
 		mux.HandleFunc(route, handler)
 	}
 
-	slog.Info("Serving HTTP requests", "port", port)
+	slog.Info(fmt.Sprintf("Serving HTTP requests @ port %s", port))
 	err = http.ListenAndServe(fmt.Sprintf(":%s", port), mux)
 	if err != nil && err != http.ErrServerClosed {
-		slog.Error("Failed to serve requests", "error", err)
+		slog.Error(fmt.Sprintf("Failed to serve requests: %s", err.Error()))
 		os.Exit(1)
 	}
 }
