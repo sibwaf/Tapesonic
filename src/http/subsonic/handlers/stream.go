@@ -6,21 +6,22 @@ import (
 
 	"tapesonic/ffmpeg"
 	"tapesonic/http/subsonic/responses"
+	"tapesonic/http/util"
 	"tapesonic/storage"
 )
 
 type streamHandler struct {
-	storage *storage.Storage
-	ffmpeg  *ffmpeg.Ffmpeg
+	mediaStorage *storage.MediaStorage
+	ffmpeg       *ffmpeg.Ffmpeg
 }
 
 func NewStreamHandler(
-	storage *storage.Storage,
+	mediaStorage *storage.MediaStorage,
 	ffmpeg *ffmpeg.Ffmpeg,
 ) *streamHandler {
 	return &streamHandler{
-		storage: storage,
-		ffmpeg:  ffmpeg,
+		mediaStorage: mediaStorage,
+		ffmpeg:       ffmpeg,
 	}
 }
 
@@ -30,7 +31,7 @@ func (h *streamHandler) Handle(w http.ResponseWriter, r *http.Request) (*respons
 		return responses.NewParameterMissingResponse("id"), nil
 	}
 
-	track, err := h.storage.GetStreamableTrack(id)
+	track, err := h.mediaStorage.GetTrack(id)
 	if err != nil {
 		return nil, err
 	}
@@ -41,13 +42,13 @@ func (h *streamHandler) Handle(w http.ResponseWriter, r *http.Request) (*respons
 	}
 	defer reader.Close()
 
-	w.Header().Add("Content-Type", "audio/opus")
+	w.Header().Add("Content-Type", util.FormatToMediaType(track.Format))
 	return nil, h.ffmpeg.Stream(
 		r.Context(),
-		track.Track.OffsetMs,
-		track.Track.LengthMs,
+		track.StartOffsetMs,
+		track.EndOffsetMs-track.StartOffsetMs,
 		ffmpeg.NewReaderWithMeta(
-			"file:"+track.Path,
+			"file://"+track.Path,
 			reader,
 		),
 		w,

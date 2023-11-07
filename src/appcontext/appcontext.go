@@ -10,9 +10,9 @@ import (
 type Context struct {
 	Config *config.TapesonicConfig
 
-	DataStorage *storage.DataStorage
-	Storage     *storage.Storage
-	Importer    *storage.Importer
+	DataStorage  *storage.DataStorage
+	MediaStorage *storage.MediaStorage
+	Importer     *storage.Importer
 
 	Ytdlp  *ytdlp.Ytdlp
 	Ffmpeg *ffmpeg.Ffmpeg
@@ -24,8 +24,6 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 
 		Ytdlp:  ytdlp.NewYtdlp(config.YtdlpPath),
 		Ffmpeg: ffmpeg.NewFfmpeg(config.FfmpegPath),
-
-		Storage: storage.NewStorage(config.MediaStorageDir),
 	}
 
 	var err error
@@ -33,6 +31,11 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	context.MediaStorage = storage.NewMediaStorage(
+		config.MediaStorageDir,
+		context.DataStorage,
+	)
 
 	context.Importer = storage.NewImporter(
 		context.Config.MediaStorageDir,

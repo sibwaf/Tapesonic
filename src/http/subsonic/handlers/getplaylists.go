@@ -9,19 +9,19 @@ import (
 )
 
 type getPlaylistsHandler struct {
-	storage *storage.Storage
+	dataStorage *storage.DataStorage
 }
 
 func NewGetPlaylistsHandler(
-	storage *storage.Storage,
+	dataStorage *storage.DataStorage,
 ) *getPlaylistsHandler {
 	return &getPlaylistsHandler{
-		storage: storage,
+		dataStorage: dataStorage,
 	}
 }
 
 func (h *getPlaylistsHandler) Handle(r *http.Request) (*responses.SubsonicResponse, error) {
-	tapes, err := h.storage.GetTapes()
+	tapes, err := h.dataStorage.GetAllTapes()
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func (h *getPlaylistsHandler) Handle(r *http.Request) (*responses.SubsonicRespon
 	for _, tape := range tapes {
 		totalLengthMs := 0
 		for _, track := range tape.Tracks {
-			totalLengthMs += track.LengthMs
+			totalLengthMs += track.EndOffsetMs - track.StartOffsetMs
 		}
 
 		playlist := responses.NewSubsonicPlaylist(

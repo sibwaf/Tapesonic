@@ -6,18 +6,19 @@ import (
 	"os"
 
 	"tapesonic/http/subsonic/responses"
+	"tapesonic/http/util"
 	"tapesonic/storage"
 )
 
 type getCoverArtHandler struct {
-	storage *storage.Storage
+	mediaStorage *storage.MediaStorage
 }
 
 func NewGetCoverArtHandler(
-	storage *storage.Storage,
+	mediaStorage *storage.MediaStorage,
 ) *getCoverArtHandler {
 	return &getCoverArtHandler{
-		storage: storage,
+		mediaStorage: mediaStorage,
 	}
 }
 
@@ -27,7 +28,7 @@ func (h *getCoverArtHandler) Handle(w http.ResponseWriter, r *http.Request) (*re
 		return responses.NewParameterMissingResponse("id"), nil
 	}
 
-	cover, err := h.storage.GetCover(id)
+	cover, err := h.mediaStorage.GetCover(id)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +39,7 @@ func (h *getCoverArtHandler) Handle(w http.ResponseWriter, r *http.Request) (*re
 	}
 	defer reader.Close()
 
-	w.Header().Add("Content-Type", "image/png")
+	w.Header().Add("Content-Type", util.FormatToMediaType(cover.Format))
 	_, err = io.Copy(w, reader)
 	return nil, err
 }

@@ -49,7 +49,6 @@ func (y *Ytdlp) Download(url string, formatId string, downloadDir string) (Downl
 		"--no-part",
 		"--no-simulate",
 		"--write-thumbnail",
-		"--write-info-json",
 		"--dump-json",
 
 		url,

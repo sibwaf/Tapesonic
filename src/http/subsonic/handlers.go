@@ -18,8 +18,8 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 		"/getInternetRadioStations": util.AsHandlerFunc(handlers.NewGetInternetRadioStationsHandler().Handle),
 		"/getMusicFolders":          util.AsHandlerFunc(handlers.NewGetMusicFoldersHandler().Handle),
 		"/getNewestPodcasts":        util.AsHandlerFunc(handlers.NewGetNewestPodcastsHandler().Handle),
-		"/getPlaylists":             util.AsHandlerFunc(handlers.NewGetPlaylistsHandler(appCtx.Storage).Handle),
-		"/getPlaylist":              util.AsHandlerFunc(handlers.NewGetPlaylistHandler(appCtx.Storage).Handle),
+		"/getPlaylists":             util.AsHandlerFunc(handlers.NewGetPlaylistsHandler(appCtx.DataStorage).Handle),
+		"/getPlaylist":              util.AsHandlerFunc(handlers.NewGetPlaylistHandler(appCtx.DataStorage).Handle),
 		"/getPodcasts":              util.AsHandlerFunc(handlers.NewGetPodcastsHandler().Handle),
 		"/getRandomSongs":           util.AsHandlerFunc(handlers.NewGetRandomSongsHandler().Handle),
 		"/getScanStatus":            util.AsHandlerFunc(handlers.NewGetScanStatusHandler().Handle),
@@ -28,8 +28,8 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 
 		"/scrobble": util.AsHandlerFunc(handlers.NewScrobbleHandler().Handle),
 
-		"/stream":      util.AsRawHandlerFunc(handlers.NewStreamHandler(appCtx.Storage, appCtx.Ffmpeg).Handle),
-		"/getCoverArt": util.AsRawHandlerFunc(handlers.NewGetCoverArtHandler(appCtx.Storage).Handle),
+		"/stream":      util.AsRawHandlerFunc(handlers.NewStreamHandler(appCtx.MediaStorage, appCtx.Ffmpeg).Handle),
+		"/getCoverArt": util.AsRawHandlerFunc(handlers.NewGetCoverArtHandler(appCtx.MediaStorage).Handle),
 	}
 
 	resultHandlers := map[string]http.HandlerFunc{}

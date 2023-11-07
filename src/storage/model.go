@@ -44,11 +44,14 @@ type TrackInfo struct {
 	LengthMs int
 }
 
-type StreamableTrack struct {
-	Path  string
-	Track TrackInfo
+type TrackDescriptor struct {
+	Path          string
+	StartOffsetMs int
+	EndOffsetMs   int
+	Format        string
 }
 
-type Cover struct {
-	Path string
+type CoverDescriptor struct {
+	Path   string
+	Format string
 }

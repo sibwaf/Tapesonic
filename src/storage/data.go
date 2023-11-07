@@ -36,8 +36,8 @@ func NewDataStorage(
 	}, nil
 }
 
-func (s *DataStorage) CreateTape(tape *Tape) error {
-	return s.db.Transaction(func(tx *gorm.DB) error {
+func (ds *DataStorage) CreateTape(tape *Tape) error {
+	return ds.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Save(tape).Error; err != nil {
 			return err
 		}
@@ -54,3 +54,28 @@ func (s *DataStorage) CreateTape(tape *Tape) error {
 	})
 }
 
+func (ds *DataStorage) GetAllTapes() ([]Tape, error) {
+	result := []Tape{}
+	// todo: get rid of preload
+	return result, ds.db.Preload("Tracks").Find(&result).Error
+}
+
+func (ds *DataStorage) GetTapeWithoutTracks(id string) (*Tape, error) {
+	result := Tape{}
+	return &result, ds.db.Where(&Tape{Id: id}).Take(&result).Error
+}
+
+func (ds *DataStorage) GetTapeWithTracks(id string) (*Tape, error) {
+	result := Tape{}
+	return &result, ds.db.Where(&Tape{Id: id}).Preload("Tracks").Take(&result).Error
+}
+
+func (ds *DataStorage) GetTapeTrack(tapeId string, index int) (*TapeTrack, error) {
+	filter := map[string]any{
+		"tape_id":          tapeId,
+		"tape_track_index": index, // index can be 0 and gorm ignores default values for fields
+	}
+
+	result := TapeTrack{}
+	return &result, ds.db.Where(filter).Take(&result).Error
+}

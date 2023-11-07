@@ -10,14 +10,14 @@ import (
 )
 
 type getPlaylistHandler struct {
-	storage *storage.Storage
+	dataStorage *storage.DataStorage
 }
 
 func NewGetPlaylistHandler(
-	storage *storage.Storage,
+	dataStorage *storage.DataStorage,
 ) *getPlaylistHandler {
 	return &getPlaylistHandler{
-		storage: storage,
+		dataStorage: dataStorage,
 	}
 }
 
@@ -27,7 +27,7 @@ func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicRespons
 		return responses.NewFailedResponse(responses.ERROR_CODE_PARAMETER_MISSING, "no playlist id"), nil
 	}
 
-	tape, err := h.storage.GetTape(id)
+	tape, err := h.dataStorage.GetTapeWithTracks(id)
 	if err != nil {
 		return nil, err
 	}
@@ -35,15 +35,17 @@ func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicRespons
 	tracks := []responses.SubsonicChild{}
 	totalLengthMs := 0
 	for _, track := range tape.Tracks {
+		lengthMs := track.EndOffsetMs - track.StartOffsetMs
+
 		trackResponse := responses.NewSubsonicChild(
-			fmt.Sprintf("%s/%d", tape.Id, track.Index),
+			fmt.Sprintf("%s/%d", tape.Id, track.TapeTrackIndex),
 			false,
-			track.Name,
-			track.LengthMs/1000,
+			track.Title,
+			lengthMs/1000,
 		)
 
 		tracks = append(tracks, *trackResponse)
-		totalLengthMs += track.LengthMs
+		totalLengthMs += lengthMs
 	}
 
 	response := responses.NewOkResponse()
@@ -56,7 +58,7 @@ func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicRespons
 		time.Now(),
 	)
 	response.Playlist.CoverArt = tape.Id
-	response.Playlist.Owner = tape.Author
+	response.Playlist.Owner = tape.AuthorName
 	response.Playlist.Entry = tracks
 
 	return response, nil
