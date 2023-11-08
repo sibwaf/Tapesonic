@@ -23,7 +23,7 @@ func (h *importHandler) Methods() []string {
 	return []string{http.MethodPost}
 }
 
-func (h *importHandler) Handle(r *http.Request) (*responses.Response, error) {
+func (h *importHandler) Handle(r *http.Request) (any, error) {
 	url := r.URL.Query().Get("url")
 	if url == "" {
 		resp := responses.NewResponse("no url") // todo

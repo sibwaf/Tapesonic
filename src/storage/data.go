@@ -36,7 +36,7 @@ func NewDataStorage(
 	}, nil
 }
 
-func (ds *DataStorage) CreateTape(tape *Tape) error {
+func (ds *DataStorage) UpsertTape(tape *Tape) error {
 	return ds.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Save(tape).Error; err != nil {
 			return err

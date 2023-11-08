@@ -2,15 +2,14 @@ package util
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"slices"
-
-	"tapesonic/http/admin/responses"
 )
 
 type WebappHandler interface {
 	Methods() []string
-	Handle(r *http.Request) (response *responses.Response, err error)
+	Handle(r *http.Request) (response any, err error)
 }
 
 func AsHandlerFunc(handler WebappHandler) http.HandlerFunc {
@@ -23,7 +22,9 @@ func AsHandlerFunc(handler WebappHandler) http.HandlerFunc {
 
 		response, err := handler.Handle(r)
 		if err != nil {
+			// todo
 			w.WriteHeader(http.StatusInternalServerError)
+			slog.Error(err.Error())
 			return
 		}
 

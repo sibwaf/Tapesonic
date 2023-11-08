@@ -60,7 +60,7 @@ func (i *Importer) ImportTape(url string, format string) (string, error) {
 		Tracks:        tracks,
 	}
 
-	err = i.dataStorage.CreateTape(&tape)
+	err = i.dataStorage.UpsertTape(&tape)
 
 	return tape.Id, err
 }

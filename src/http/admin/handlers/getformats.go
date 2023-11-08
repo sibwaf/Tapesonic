@@ -23,7 +23,7 @@ func (h *getFormatsHandler) Methods() []string {
 	return []string{http.MethodGet}
 }
 
-func (h *getFormatsHandler) Handle(r *http.Request) (*responses.Response, error) {
+func (h *getFormatsHandler) Handle(r *http.Request) (any, error) {
 	url := r.URL.Query().Get("url")
 	if url == "" {
 		resp := responses.NewResponse("no url") // todo

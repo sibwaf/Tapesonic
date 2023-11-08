@@ -6,19 +6,23 @@ import (
 	"tapesonic/appcontext"
 	"tapesonic/http/admin/handlers"
 	"tapesonic/http/admin/util"
+
+	"github.com/gorilla/mux"
 )
 
-func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
+func GetHandler(appCtx *appcontext.Context) (string, http.Handler) {
 	// todo: logging
 	rawHandlers := map[string]util.WebappHandler{
-		"/api/formats": handlers.NewGetFormatsHandler(appCtx.Ytdlp),
-		"/api/import":  handlers.NewImportHandler(appCtx.Importer),
+		"/api/formats":        handlers.NewGetFormatsHandler(appCtx.Ytdlp),
+		"/api/import":         handlers.NewImportHandler(appCtx.Importer),
+		"/api/tapes":          handlers.NewTapesHandler(appCtx.DataStorage),
+		"/api/tapes/{tapeId}": handlers.NewTapeHandler(appCtx.DataStorage),
 	}
 
-	resultHandlers := map[string]http.HandlerFunc{}
+	router := mux.NewRouter()
 	for path, handler := range rawHandlers {
-		resultHandlers[path] = util.Authenticated(util.AsHandlerFunc(handler), appCtx.Config)
+		router.HandleFunc(path, util.Authenticated(util.AsHandlerFunc(handler), appCtx.Config))
 	}
 
-	return resultHandlers
+	return "/api/", router
 }

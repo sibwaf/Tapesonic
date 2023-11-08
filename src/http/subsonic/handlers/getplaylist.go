@@ -40,6 +40,7 @@ func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicRespons
 		trackResponse := responses.NewSubsonicChild(
 			fmt.Sprintf("%s/%d", tape.Id, track.TapeTrackIndex),
 			false,
+			track.Artist,
 			track.Title,
 			lengthMs/1000,
 		)
