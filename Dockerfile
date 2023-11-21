@@ -5,8 +5,10 @@ ARG APP_VERSION
 WORKDIR /build
 COPY src .
 
+RUN apk add --no-cache --no-interactive build-base
+
 RUN sed -i "s/\"dev\"/\"$APP_VERSION\"/" build/version.go && \
-    go build
+    CGO_ENABLED=1 go build
 
 FROM alpine:3.18
 
