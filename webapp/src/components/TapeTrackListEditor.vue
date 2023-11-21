@@ -10,6 +10,8 @@ defineProps<{ modelValue: TapeTrack[] }>();
         <thead>
             <th>Artist</th>
             <th>Title</th>
+            <th>Start offset</th>
+            <th>End offset</th>
         </thead>
         <tbody>
             <TapeTrackEditor v-for="track in modelValue" :key="track.TapeId + '/' + track.TapeTrackIndex"
