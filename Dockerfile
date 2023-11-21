@@ -13,8 +13,8 @@ FROM alpine:3.18
 RUN apk add \
     --no-cache \
     --no-interactive \
-    yt-dlp=2023.07.06-r1 \
-    ffmpeg=6.0-r15
+    yt-dlp \
+    ffmpeg
 
 WORKDIR /app
 COPY --from=builder /build/tapesonic /app/tapesonic
