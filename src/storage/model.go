@@ -30,20 +30,6 @@ type TapeTrack struct {
 	Tape *Tape `gorm:"foreignKey:TapeId"`
 }
 
-type TapeInfo struct {
-	Id     string
-	Name   string
-	Author string
-	Tracks []TrackInfo
-}
-
-type TrackInfo struct {
-	Name     string
-	Index    int
-	OffsetMs int
-	LengthMs int
-}
-
 type TrackDescriptor struct {
 	Path          string
 	StartOffsetMs int
