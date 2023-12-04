@@ -68,7 +68,10 @@ func (ds *DataStorage) GetTapeWithoutTracks(id uuid.UUID) (*Tape, error) {
 
 func (ds *DataStorage) GetTapeWithTracks(id uuid.UUID) (*Tape, error) {
 	result := Tape{}
-	return &result, ds.db.Where(&Tape{Id: id}).Preload("Tracks").Take(&result).Error
+
+	return &result, ds.db.Where(&Tape{Id: id}).Preload("Tracks", func(db *gorm.DB) *gorm.DB {
+		return db.Order("track_index ASC")
+	}).Take(&result).Error
 }
 
 func (ds *DataStorage) GetTapeTrack(id uuid.UUID) (*TapeTrack, error) {
