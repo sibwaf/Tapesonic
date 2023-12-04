@@ -1,10 +1,9 @@
 package storage
 
 import (
-	"fmt"
 	"path"
-	"strconv"
-	"strings"
+
+	"github.com/google/uuid"
 )
 
 type MediaStorage struct {
@@ -22,19 +21,8 @@ func NewMediaStorage(
 	}
 }
 
-func (ms *MediaStorage) GetTrack(id string) (TrackDescriptor, error) {
-	idParts := strings.Split(id, "/")
-	if len(idParts) != 2 {
-		return TrackDescriptor{}, fmt.Errorf("invalid id `%s`, expected format `tape/index`", id)
-	}
-
-	tapeId := idParts[0]
-	index, err := strconv.Atoi(idParts[1])
-	if err != nil {
-		return TrackDescriptor{}, fmt.Errorf("invalid id `%s`, `%s` is not an index", id, idParts[1])
-	}
-
-	track, err := ms.dataStorage.GetTapeTrack(tapeId, index)
+func (ms *MediaStorage) GetTrack(id uuid.UUID) (TrackDescriptor, error) {
+	track, err := ms.dataStorage.GetTapeTrack(id)
 	if err != nil {
 		return TrackDescriptor{}, err
 	}
@@ -47,7 +35,7 @@ func (ms *MediaStorage) GetTrack(id string) (TrackDescriptor, error) {
 	}, nil
 }
 
-func (ms *MediaStorage) GetCover(id string) (CoverDescriptor, error) {
+func (ms *MediaStorage) GetCover(id uuid.UUID) (CoverDescriptor, error) {
 	tape, err := ms.dataStorage.GetTapeWithoutTracks(id)
 	if err != nil {
 		return CoverDescriptor{}, err

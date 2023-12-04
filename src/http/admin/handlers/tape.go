@@ -6,6 +6,7 @@ import (
 
 	"tapesonic/storage"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -26,10 +27,14 @@ func (h *tapeHandler) Methods() []string {
 }
 
 func (h *tapeHandler) Handle(r *http.Request) (any, error) {
-	id := mux.Vars(r)["tapeId"]
+	rawId := mux.Vars(r)["tapeId"]
+	id, idErr := uuid.Parse(rawId)
 
 	switch r.Method {
 	case http.MethodGet:
+		if idErr != nil {
+			return nil, idErr
+		}
 		return h.dataStorage.GetTapeWithTracks(id)
 	case http.MethodPut:
 		var tape storage.Tape

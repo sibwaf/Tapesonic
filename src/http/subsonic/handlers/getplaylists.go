@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -34,14 +35,14 @@ func (h *getPlaylistsHandler) Handle(r *http.Request) (*responses.SubsonicRespon
 		}
 
 		playlist := responses.NewSubsonicPlaylist(
-			tape.Id,
+			fmt.Sprint(tape.Id),
 			tape.Name,
 			len(tape.Tracks),
 			totalLengthMs/1000,
 			time.Now(),
 			time.Now(),
 		)
-		playlist.CoverArt = tape.Id
+		playlist.CoverArt = fmt.Sprint(playlist.Id)
 
 		playlists = append(playlists, *playlist)
 	}

@@ -1,7 +1,10 @@
 package storage
 
+import "github.com/google/uuid"
+
 type Tape struct {
-	Id       string `gorm:"primaryKey;not null"`
+	Id uuid.UUID
+
 	Metadata string
 	Url      string
 
@@ -14,10 +17,12 @@ type Tape struct {
 }
 
 type TapeTrack struct {
-	TapeId         string `gorm:"primaryKey;not null"`
-	TapeTrackIndex int    `gorm:"primaryKey;not null"`
+	Id uuid.UUID
 
-	FilePath string `gorm:"not null"`
+	TapeId uuid.UUID
+	Tape   *Tape
+
+	FilePath string
 
 	RawStartOffsetMs int
 	StartOffsetMs    int
@@ -27,7 +32,7 @@ type TapeTrack struct {
 	Artist string
 	Title  string
 
-	Tape *Tape `gorm:"foreignKey:TapeId"`
+	TrackIndex int
 }
 
 type TrackDescriptor struct {

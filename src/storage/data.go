@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -37,16 +38,16 @@ func NewDataStorage(
 }
 
 func (ds *DataStorage) UpsertTape(tape *Tape) error {
+	for index, track := range tape.Tracks {
+		track.TrackIndex = index
+	}
+
 	return ds.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Save(tape).Error; err != nil {
+		if err := tx.Omit("Tracks").Save(tape).Error; err != nil {
 			return err
 		}
 
-		if err := tx.Where(
-			"tape_id = ? AND tape_track_index > ?",
-			tape.Id,
-			len(tape.Tracks)-1,
-		).Delete(&TapeTrack{}).Error; err != nil {
+		if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(tape).Association("Tracks").Unscoped().Replace(tape.Tracks); err != nil {
 			return err
 		}
 
@@ -60,22 +61,17 @@ func (ds *DataStorage) GetAllTapes() ([]Tape, error) {
 	return result, ds.db.Preload("Tracks").Find(&result).Error
 }
 
-func (ds *DataStorage) GetTapeWithoutTracks(id string) (*Tape, error) {
+func (ds *DataStorage) GetTapeWithoutTracks(id uuid.UUID) (*Tape, error) {
 	result := Tape{}
 	return &result, ds.db.Where(&Tape{Id: id}).Take(&result).Error
 }
 
-func (ds *DataStorage) GetTapeWithTracks(id string) (*Tape, error) {
+func (ds *DataStorage) GetTapeWithTracks(id uuid.UUID) (*Tape, error) {
 	result := Tape{}
 	return &result, ds.db.Where(&Tape{Id: id}).Preload("Tracks").Take(&result).Error
 }
 
-func (ds *DataStorage) GetTapeTrack(tapeId string, index int) (*TapeTrack, error) {
-	filter := map[string]any{
-		"tape_id":          tapeId,
-		"tape_track_index": index, // index can be 0 and gorm ignores default values for fields
-	}
-
+func (ds *DataStorage) GetTapeTrack(id uuid.UUID) (*TapeTrack, error) {
 	result := TapeTrack{}
-	return &result, ds.db.Where(filter).Take(&result).Error
+	return &result, ds.db.Where(&TapeTrack{Id: id}).Take(&result).Error
 }

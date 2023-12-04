@@ -11,8 +11,7 @@ export interface Tape {
 }
 
 export interface TapeTrack {
-    TapeId: string;
-    TapeTrackIndex: number;
+    Id: string;
 
     RawStartOffsetMs: number;
     StartOffsetMs: number;

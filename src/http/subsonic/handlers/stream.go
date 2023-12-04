@@ -8,6 +8,8 @@ import (
 	"tapesonic/http/subsonic/responses"
 	"tapesonic/http/util"
 	"tapesonic/storage"
+
+	"github.com/google/uuid"
 )
 
 type streamHandler struct {
@@ -26,9 +28,14 @@ func NewStreamHandler(
 }
 
 func (h *streamHandler) Handle(w http.ResponseWriter, r *http.Request) (*responses.SubsonicResponse, error) {
-	id := r.URL.Query().Get("id")
-	if id == "" {
+	rawId := r.URL.Query().Get("id")
+	if rawId == "" {
 		return responses.NewParameterMissingResponse("id"), nil
+	}
+
+	id, err := uuid.Parse(rawId)
+	if err != nil {
+		return nil, err
 	}
 
 	track, err := h.mediaStorage.GetTrack(id)

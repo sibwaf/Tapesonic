@@ -7,6 +7,8 @@ import (
 
 	"tapesonic/http/subsonic/responses"
 	"tapesonic/storage"
+
+	"github.com/google/uuid"
 )
 
 type getPlaylistHandler struct {
@@ -22,9 +24,14 @@ func NewGetPlaylistHandler(
 }
 
 func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicResponse, error) {
-	id := r.URL.Query().Get("id")
-	if id == "" {
-		return responses.NewFailedResponse(responses.ERROR_CODE_PARAMETER_MISSING, "no playlist id"), nil
+	rawId := r.URL.Query().Get("id")
+	if rawId == "" {
+		return responses.NewParameterMissingResponse("id"), nil
+	}
+
+	id, err := uuid.Parse(rawId)
+	if err != nil {
+		return nil, err
 	}
 
 	tape, err := h.dataStorage.GetTapeWithTracks(id)
@@ -38,7 +45,7 @@ func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicRespons
 		lengthMs := track.EndOffsetMs - track.StartOffsetMs
 
 		trackResponse := responses.NewSubsonicChild(
-			fmt.Sprintf("%s/%d", tape.Id, track.TapeTrackIndex),
+			fmt.Sprint(track.Id),
 			false,
 			track.Artist,
 			track.Title,
@@ -51,14 +58,14 @@ func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicRespons
 
 	response := responses.NewOkResponse()
 	response.Playlist = responses.NewSubsonicPlaylist(
-		tape.Id,
+		fmt.Sprint(tape.Id),
 		tape.Name,
 		len(tape.Tracks),
 		totalLengthMs/1000,
 		time.Now(),
 		time.Now(),
 	)
-	response.Playlist.CoverArt = tape.Id
+	response.Playlist.CoverArt = fmt.Sprint(tape.Id)
 	response.Playlist.Owner = tape.AuthorName
 	response.Playlist.Entry = tracks
 

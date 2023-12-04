@@ -2,6 +2,8 @@ package storage
 
 import (
 	"tapesonic/ytdlp"
+
+	"github.com/google/uuid"
 )
 
 type Importer struct {
@@ -22,21 +24,21 @@ func NewImporter(
 	}
 }
 
-func (i *Importer) ImportTape(url string, format string) (string, error) {
+func (i *Importer) ImportTape(url string, format string) (*Tape, error) {
 	downloadInfo, err := i.ytdlp.Download(url, format, i.mediaDir)
 	if err != nil {
-		return "", err
+		return &Tape{}, err
 	}
 
 	metadata, err := downloadInfo.ParseMetadata()
 	if err != nil {
-		return "", err
+		return &Tape{}, err
 	}
 
 	tracks := []*TapeTrack{}
-	for index, chapter := range metadata.Chapters {
+	for _, chapter := range metadata.Chapters {
 		track := TapeTrack{
-			TapeTrackIndex: index,
+			Id: uuid.New(),
 
 			FilePath: downloadInfo.MediaPath,
 
@@ -51,7 +53,7 @@ func (i *Importer) ImportTape(url string, format string) (string, error) {
 	}
 
 	tape := Tape{
-		Id:            metadata.Id,
+		Id:            uuid.New(),
 		Metadata:      string(downloadInfo.RawMetadata),
 		Url:           metadata.WebpageUrl,
 		Name:          metadata.Title,
@@ -62,5 +64,5 @@ func (i *Importer) ImportTape(url string, format string) (string, error) {
 
 	err = i.dataStorage.UpsertTape(&tape)
 
-	return tape.Id, err
+	return &tape, err
 }

@@ -14,7 +14,7 @@ defineProps<{ modelValue: TapeTrack[] }>();
             <th>End offset</th>
         </thead>
         <tbody>
-            <TapeTrackEditor v-for="track in modelValue" :key="track.TapeId + '/' + track.TapeTrackIndex"
+            <TapeTrackEditor v-for="track in modelValue" :key="track.Id"
                 :model-value="track" />
         </tbody>
     </table>
