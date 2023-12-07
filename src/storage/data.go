@@ -28,6 +28,8 @@ func NewDataStorage(
 	if err = db.AutoMigrate(
 		&Tape{},
 		&TapeTrack{},
+		&Playlist{},
+		&PlaylistTrack{},
 	); err != nil {
 		return nil, err
 	}
@@ -77,4 +79,31 @@ func (ds *DataStorage) GetTapeWithTracks(id uuid.UUID) (*Tape, error) {
 func (ds *DataStorage) GetTapeTrack(id uuid.UUID) (*TapeTrack, error) {
 	result := TapeTrack{}
 	return &result, ds.db.Where(&TapeTrack{Id: id}).Take(&result).Error
+}
+
+func (ds *DataStorage) CreatePlaylist(playlist *Playlist) error {
+	for index, track := range playlist.Tracks {
+		track.TrackIndex = index
+	}
+
+	return ds.db.Session(&gorm.Session{FullSaveAssociations: true}).Create(playlist).Error
+}
+
+func (ds *DataStorage) GetAllPlaylists() ([]Playlist, error) {
+	result := []Playlist{}
+	// todo: get rid of preload
+	return result, ds.db.Preload("Tracks").Find(&result).Error
+}
+
+func (ds *DataStorage) GetPlaylistWithoutTracks(id uuid.UUID) (*Playlist, error) {
+	result := Playlist{}
+	return &result, ds.db.Where(&Tape{Id: id}).Take(&result).Error
+}
+
+func (ds *DataStorage) GetPlaylistWithTracks(id uuid.UUID) (*Playlist, error) {
+	result := Playlist{}
+
+	return &result, ds.db.Where(&Tape{Id: id}).Preload("Tracks", func(db *gorm.DB) *gorm.DB {
+		return db.Order("track_index ASC")
+	}).Preload("Tracks.TapeTrack").Take(&result).Error
 }

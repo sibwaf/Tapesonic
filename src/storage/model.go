@@ -1,6 +1,10 @@
 package storage
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Tape struct {
 	Id uuid.UUID
@@ -31,6 +35,30 @@ type TapeTrack struct {
 
 	Artist string
 	Title  string
+
+	TrackIndex int
+}
+
+type Playlist struct {
+	Id uuid.UUID
+
+	Name          string
+	ThumbnailPath string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+
+	Tracks []*PlaylistTrack
+}
+
+type PlaylistTrack struct {
+	Id uuid.UUID
+
+	PlaylistId uuid.UUID
+	Playlist   *Playlist
+
+	TapeTrackId uuid.UUID
+	TapeTrack   *TapeTrack
 
 	TrackIndex int
 }

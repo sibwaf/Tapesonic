@@ -35,7 +35,7 @@ func (h *getCoverArtHandler) Handle(w http.ResponseWriter, r *http.Request) (*re
 		return nil, err
 	}
 
-	cover, err := h.mediaStorage.GetCover(id)
+	cover, err := h.mediaStorage.GetTapeCover(id)
 	if err != nil {
 		return nil, err
 	}

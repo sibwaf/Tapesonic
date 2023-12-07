@@ -35,7 +35,7 @@ func (ms *MediaStorage) GetTrack(id uuid.UUID) (TrackDescriptor, error) {
 	}, nil
 }
 
-func (ms *MediaStorage) GetCover(id uuid.UUID) (CoverDescriptor, error) {
+func (ms *MediaStorage) GetTapeCover(id uuid.UUID) (CoverDescriptor, error) {
 	tape, err := ms.dataStorage.GetTapeWithoutTracks(id)
 	if err != nil {
 		return CoverDescriptor{}, err
@@ -43,6 +43,18 @@ func (ms *MediaStorage) GetCover(id uuid.UUID) (CoverDescriptor, error) {
 
 	return CoverDescriptor{
 		Path:   path.Join(ms.dir, tape.ThumbnailPath),
+		Format: "png", // todo
+	}, nil
+}
+
+func (ms *MediaStorage) GetPlaylistCover(id uuid.UUID) (CoverDescriptor, error) {
+	playlist, err := ms.dataStorage.GetPlaylistWithoutTracks(id)
+	if err != nil {
+		return CoverDescriptor{}, err
+	}
+
+	return CoverDescriptor{
+		Path:   path.Join(ms.dir, playlist.ThumbnailPath),
 		Format: "png", // todo
 	}, nil
 }

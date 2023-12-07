@@ -7,6 +7,7 @@ export interface Tape {
     Id: string;
     Name: string;
     AuthorName: string;
+    ThumbnailPath: string;
     Tracks: TapeTrack[];
 }
 
@@ -22,6 +23,20 @@ export interface TapeTrack {
     Title: string;
 }
 
+export interface Playlist {
+    Id: string;
+    Name: string;
+    ThumbnailPath: string;
+    Tracks: PlaylistTrack[];
+}
+
+export interface PlaylistTrack {
+    Id: string;
+
+    TapeTrackId: string;
+    TapeTrack: TapeTrack;
+}
+
 export default {
     async import(url: string, format: string): Promise<ImportResult> {
         const response = await fetch(
@@ -34,6 +49,7 @@ export default {
             Error: response.ok ? null : `${response.status} ${response.statusText}`,
         };
     },
+
     async getAllTapes(): Promise<Tape[]> {
         const response = await fetch(`/api/tapes`, { method: "GET" });
         return await response.json();
@@ -47,5 +63,22 @@ export default {
         if (!response.ok) {
             throw await response.json();
         }
+    },
+
+    async createPlaylist(playlist: Playlist): Promise<Playlist> {
+        const response = await fetch(`/api/playlists`, { method: "POST", body: JSON.stringify(playlist) });
+        if (!response.ok) {
+            throw await response.json();
+        } else {
+            return await response.json();
+        }
+    },
+    async getAllPlaylists(): Promise<Playlist[]> {
+        const response = await fetch(`/api/playlists`, { method: "GET" });
+        return await response.json();
+    },
+    async getPlaylist(id: string): Promise<Playlist> {
+        const response = await fetch(`/api/playlists/${id}`, { method: "GET" });
+        return await response.json();
     },
 }

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import api, { type Tape } from "@/api";
+import api, { type Tape, type Playlist } from "@/api";
 import { useRoute } from "vue-router";
 import { computed, ref, toRaw } from "vue";
 import TapeTrackListEditor from "@/components/TapeTrackListEditor.vue";
+import router from "@/router";
+import { v4 as uuid4 } from "uuid";
 
 enum State {
     LOADING,
@@ -11,6 +13,9 @@ enum State {
     SAVING,
     SAVING_OK,
     SAVING_ERROR,
+    CREATING_PLAYLIST,
+    CREATING_PLAYLIST_ERROR,
+    CREATING_PLAYLIST_OK,
 }
 
 const route = useRoute();
@@ -22,6 +27,17 @@ const editedTape = ref<Tape | null>(null);
 
 const isEdited = computed(() => {
     return JSON.stringify(tape.value) != JSON.stringify(editedTape.value);
+});
+
+const isBusy = computed(() => {
+    switch (state.value) {
+        case State.LOADING:
+        case State.SAVING:
+        case State.CREATING_PLAYLIST:
+            return true;
+        default:
+            return false;
+    }
 });
 
 function reset() {
@@ -36,6 +52,32 @@ async function save() {
         state.value = State.SAVING_OK;
     } catch (e) {
         state.value = State.SAVING_ERROR;
+        console.error(e);
+    }
+}
+
+async function createPlaylist() {
+    try {
+        state.value = State.CREATING_PLAYLIST;
+
+        const tapeValue = tape.value!;
+        const playlist: Playlist = {
+            Id: uuid4(),
+            Name: tapeValue.Name,
+            ThumbnailPath: tapeValue.ThumbnailPath,
+            Tracks: tapeValue.Tracks.map(it => ({
+                Id: uuid4(),
+                TapeTrackId: it.Id,
+                TapeTrack: undefined!
+            }))
+        };
+
+        const response = await api.createPlaylist(playlist);
+        state.value = State.CREATING_PLAYLIST_OK;
+
+        router.push({ name: "playlist", params: { "playlistId": response.Id } });
+    } catch (e) {
+        state.value = State.CREATING_PLAYLIST_ERROR;
         console.error(e);
     }
 }
@@ -64,10 +106,17 @@ async function save() {
     <template v-else-if="editedTape">
         <h1>{{ editedTape.Name }}</h1>
         <h2>by {{ editedTape.AuthorName }}</h2>
+        <h2>
+            <div>
+                <button :disabled="isBusy" @click="createPlaylist">Create playlist from this tape</button>
+            </div>
+            <div v-if="state == State.CREATING_PLAYLIST_ERROR">Failed to created a playlist</div>
+        </h2>
+
         <TapeTrackListEditor v-if="editedTape" v-model="editedTape.Tracks" />
 
-        <button :disabled="!isEdited && state != State.SAVING" @click="reset">Reset</button>
-        <button :disabled="!isEdited && state != State.SAVING" @click="save">Save</button>
+        <button :disabled="!isEdited || isBusy" @click="reset">Reset</button>
+        <button :disabled="!isEdited || isBusy" @click="save">Save</button>
 
         <div v-if="state == State.SAVING">Saving...</div>
         <div v-else-if="state == State.SAVING_OK">Saved</div>

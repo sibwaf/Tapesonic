@@ -13,10 +13,14 @@ import (
 func GetHandler(appCtx *appcontext.Context) (string, http.Handler) {
 	// todo: logging
 	rawHandlers := map[string]util.WebappHandler{
-		"/api/formats":        handlers.NewGetFormatsHandler(appCtx.Ytdlp),
-		"/api/import":         handlers.NewImportHandler(appCtx.Importer),
+		"/api/formats": handlers.NewGetFormatsHandler(appCtx.Ytdlp),
+		"/api/import":  handlers.NewImportHandler(appCtx.Importer),
+
 		"/api/tapes":          handlers.NewTapesHandler(appCtx.DataStorage),
 		"/api/tapes/{tapeId}": handlers.NewTapeHandler(appCtx.DataStorage),
+
+		"/api/playlists":              handlers.NewPlaylistsHandler(appCtx.DataStorage),
+		"/api/playlists/{playlistId}": handlers.NewPlaylistHandler(appCtx.DataStorage),
 	}
 
 	router := mux.NewRouter()
