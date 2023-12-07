@@ -89,6 +89,10 @@ func (ds *DataStorage) CreatePlaylist(playlist *Playlist) error {
 	return ds.db.Session(&gorm.Session{FullSaveAssociations: true}).Create(playlist).Error
 }
 
+func (ds *DataStorage) DeletePlaylist(id uuid.UUID) error {
+	return ds.db.Delete(&Playlist{}, id).Error
+}
+
 func (ds *DataStorage) GetAllPlaylists() ([]Playlist, error) {
 	result := []Playlist{}
 	// todo: get rid of preload

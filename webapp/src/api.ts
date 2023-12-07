@@ -73,6 +73,12 @@ export default {
             return await response.json();
         }
     },
+    async deletePlaylist(id: string) {
+        const response = await fetch(`/api/playlists/${id}`, { method: "DELETE" });
+        if (!response.ok) {
+            throw await response.json();
+        }
+    },
     async getAllPlaylists(): Promise<Playlist[]> {
         const response = await fetch(`/api/playlists`, { method: "GET" });
         return await response.json();

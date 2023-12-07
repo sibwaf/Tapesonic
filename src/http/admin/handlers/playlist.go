@@ -22,7 +22,7 @@ func NewPlaylistHandler(
 }
 
 func (h *playlistHandler) Methods() []string {
-	return []string{http.MethodGet}
+	return []string{http.MethodGet, http.MethodDelete}
 }
 
 func (h *playlistHandler) Handle(r *http.Request) (any, error) {
@@ -35,6 +35,11 @@ func (h *playlistHandler) Handle(r *http.Request) (any, error) {
 			return nil, idErr
 		}
 		return h.dataStorage.GetPlaylistWithTracks(id)
+	case http.MethodDelete:
+		if idErr != nil {
+			return nil, idErr
+		}
+		return nil, h.dataStorage.DeletePlaylist(id)
 	default:
 		return nil, http.ErrNotSupported
 	}
