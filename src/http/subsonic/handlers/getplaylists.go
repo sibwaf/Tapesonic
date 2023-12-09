@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"tapesonic/http/subsonic/responses"
 	"tapesonic/storage"
@@ -22,33 +21,33 @@ func NewGetPlaylistsHandler(
 }
 
 func (h *getPlaylistsHandler) Handle(r *http.Request) (*responses.SubsonicResponse, error) {
-	tapes, err := h.dataStorage.GetAllTapes()
+	playlists, err := h.dataStorage.GetAllPlaylists()
 	if err != nil {
 		return nil, err
 	}
 
-	playlists := []responses.SubsonicPlaylist{}
-	for _, tape := range tapes {
+	responsePlaylists := []responses.SubsonicPlaylist{}
+	for _, playlist := range playlists {
 		totalLengthMs := 0
-		for _, track := range tape.Tracks {
-			totalLengthMs += track.EndOffsetMs - track.StartOffsetMs
+		for _, track := range playlist.Tracks {
+			totalLengthMs += track.TapeTrack.EndOffsetMs - track.TapeTrack.StartOffsetMs
 		}
 
-		playlist := responses.NewSubsonicPlaylist(
-			fmt.Sprint(tape.Id),
-			tape.Name,
-			len(tape.Tracks),
+		responsePlaylist := responses.NewSubsonicPlaylist(
+			fmt.Sprint(playlist.Id),
+			playlist.Name,
+			len(playlist.Tracks),
 			totalLengthMs/1000,
-			time.Now(),
-			time.Now(),
+			playlist.CreatedAt,
+			playlist.UpdatedAt,
 		)
-		playlist.CoverArt = fmt.Sprint(playlist.Id)
+		responsePlaylist.CoverArt = fmt.Sprint(responsePlaylist.Id)
 
-		playlists = append(playlists, *playlist)
+		responsePlaylists = append(responsePlaylists, *responsePlaylist)
 	}
 
 	response := responses.NewOkResponse()
-	response.Playlists = responses.NewSubsonicPlaylists(playlists)
+	response.Playlists = responses.NewSubsonicPlaylists(responsePlaylists)
 
 	return response, nil
 }

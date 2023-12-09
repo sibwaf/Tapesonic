@@ -96,7 +96,7 @@ func (ds *DataStorage) DeletePlaylist(id uuid.UUID) error {
 func (ds *DataStorage) GetAllPlaylists() ([]Playlist, error) {
 	result := []Playlist{}
 	// todo: get rid of preload
-	return result, ds.db.Preload("Tracks").Find(&result).Error
+	return result, ds.db.Preload("Tracks").Preload("Tracks.TapeTrack").Find(&result).Error
 }
 
 func (ds *DataStorage) GetPlaylistWithoutTracks(id uuid.UUID) (*Playlist, error) {

@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"tapesonic/http/subsonic/responses"
 	"tapesonic/storage"
@@ -34,21 +33,21 @@ func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicRespons
 		return nil, err
 	}
 
-	tape, err := h.dataStorage.GetTapeWithTracks(id)
+	playlist, err := h.dataStorage.GetPlaylistWithTracks(id)
 	if err != nil {
 		return nil, err
 	}
 
 	tracks := []responses.SubsonicChild{}
 	totalLengthMs := 0
-	for _, track := range tape.Tracks {
-		lengthMs := track.EndOffsetMs - track.StartOffsetMs
+	for _, track := range playlist.Tracks {
+		lengthMs := track.TapeTrack.EndOffsetMs - track.TapeTrack.StartOffsetMs
 
 		trackResponse := responses.NewSubsonicChild(
-			fmt.Sprint(track.Id),
+			fmt.Sprint(track.TapeTrack.Id),
 			false,
-			track.Artist,
-			track.Title,
+			track.TapeTrack.Artist,
+			track.TapeTrack.Title,
 			lengthMs/1000,
 		)
 
@@ -58,15 +57,14 @@ func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicRespons
 
 	response := responses.NewOkResponse()
 	response.Playlist = responses.NewSubsonicPlaylist(
-		fmt.Sprint(tape.Id),
-		tape.Name,
-		len(tape.Tracks),
+		fmt.Sprint(playlist.Id),
+		playlist.Name,
+		len(playlist.Tracks),
 		totalLengthMs/1000,
-		time.Now(),
-		time.Now(),
+		playlist.CreatedAt,
+		playlist.UpdatedAt,
 	)
-	response.Playlist.CoverArt = fmt.Sprint(tape.Id)
-	response.Playlist.Owner = tape.AuthorName
+	response.Playlist.CoverArt = fmt.Sprint(playlist.Id)
 	response.Playlist.Entry = tracks
 
 	return response, nil
