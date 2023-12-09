@@ -82,6 +82,31 @@ async function createPlaylist() {
     }
 }
 
+function guessArtistAndTitle() {
+    const tape = editedTape.value;
+    if (tape == null) {
+        return;
+    }
+
+    for (const track of tape.Tracks) {
+        if (track.Artist == "") {
+            const parts = track.Title.split(" - ")
+            if (parts.length <= 1) {
+                continue;
+            }
+
+            const cleanup = (text: string) => {
+                const timestampRegex = "(?:\\d{1,}:)?\\d{1,2}:\\d{1,2}";
+                const fullRegex = new RegExp(`^\\s*(?:${timestampRegex})?\\s*(.+?)\\s*$`);
+                return fullRegex.exec(text)?.[1] ?? text;
+            };
+
+            track.Artist = cleanup(parts[0]);
+            track.Title = cleanup(parts.slice(1).join(" - "));
+        }
+    }
+}
+
 (async () => {
     try {
         state.value = State.LOADING;
@@ -112,6 +137,8 @@ async function createPlaylist() {
             </div>
             <div v-if="state == State.CREATING_PLAYLIST_ERROR">Failed to created a playlist</div>
         </h2>
+
+        <button :disabled="isBusy" @click="guessArtistAndTitle">Guess artist/title</button>
 
         <TapeTrackListEditor v-if="editedTape" v-model="editedTape.Tracks" />
 
