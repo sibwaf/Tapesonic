@@ -107,6 +107,19 @@ function guessArtistAndTitle() {
     }
 }
 
+function swapArtistAndTitle() {
+    const tape = editedTape.value;
+    if (tape == null) {
+        return;
+    }
+
+    for (const track of tape.Tracks) {
+        const temp = track.Artist;
+        track.Artist = track.Title;
+        track.Title = temp;
+    }
+}
+
 (async () => {
     try {
         state.value = State.LOADING;
@@ -139,6 +152,7 @@ function guessArtistAndTitle() {
         </h2>
 
         <button :disabled="isBusy" @click="guessArtistAndTitle">Guess artist/title</button>
+        <button :disabled="isBusy" @click="swapArtistAndTitle">Swap artist/title</button>
 
         <TapeTrackListEditor v-if="editedTape" v-model="editedTape.Tracks" />
 
