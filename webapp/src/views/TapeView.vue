@@ -5,6 +5,7 @@ import { computed, ref, toRaw } from "vue";
 import TapeTrackListEditor from "@/components/TapeTrackListEditor.vue";
 import router from "@/router";
 import { v4 as uuid4 } from "uuid";
+import PlaylistGrid from "@/components/PlaylistGrid.vue";
 
 enum State {
     LOADING,
@@ -172,13 +173,11 @@ function swapArtistAndTitle() {
         <div v-else-if="state == State.SAVING_OK">Saved</div>
         <div v-else-if="state == State.SAVING_ERROR">Failed to save</div>
 
-        <template v-if="relatedItems">
+        <template v-if="relatedItems?.Playlists">
             <hr>
 
             <h2>Linked playlists</h2>
-            <RouterLink v-for="playlist in relatedItems.Playlists" :key="playlist.Id" :to="'/playlists/' + playlist.Id">
-                <div>{{ playlist.Name }}</div>
-            </RouterLink>
+            <PlaylistGrid v-model="relatedItems.Playlists" />
         </template>
     </template>
     <template v-else>

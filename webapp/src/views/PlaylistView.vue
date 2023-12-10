@@ -3,6 +3,7 @@ import api, { type Playlist, type RelatedItems } from "@/api";
 import { useRoute } from "vue-router";
 import { computed, ref } from "vue";
 import router from "@/router";
+import TapeGrid from "@/components/TapeGrid.vue";
 
 enum State {
     LOADING,
@@ -85,14 +86,11 @@ async function deletePlaylist() {
             <span v-if="track.TapeTrack.Artist">{{ track.TapeTrack.Artist }} - </span>{{ track.TapeTrack.Title }}
         </div>
 
-        <template v-if="relatedItems">
+        <template v-if="relatedItems?.Tapes">
             <hr>
 
             <h2>Linked tapes</h2>
-            <RouterLink v-for="tape in relatedItems.Tapes" :key="tape.Id" :to="'/tapes/' + tape.Id">
-                <div>{{ tape.Name }}</div>
-                <div>by {{ tape.AuthorName }}</div>
-            </RouterLink>
+            <TapeGrid v-model="relatedItems.Tapes" />
         </template>
     </template>
     <template v-else>
