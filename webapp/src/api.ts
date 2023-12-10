@@ -41,6 +41,7 @@ export interface PlaylistTrack {
 
 export interface RelatedItems {
     Tapes: Tape[];
+    Playlists: Playlist[];
 }
 
 export default {
@@ -62,6 +63,10 @@ export default {
     },
     async getTape(id: string): Promise<Tape> {
         const response = await fetch(`/api/tapes/${id}`, { method: "GET" });
+        return await response.json();
+    },
+    async getTapeRelationships(id: string): Promise<RelatedItems> {
+        const response = await fetch(`/api/tapes/${id}/related`, { method: "GET" });
         return await response.json();
     },
     async saveTape(id: string, tape: Tape) {

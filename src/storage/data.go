@@ -76,6 +76,22 @@ func (ds *DataStorage) GetTapeWithTracks(id uuid.UUID) (*Tape, error) {
 	}).Take(&result).Error
 }
 
+func (ds *DataStorage) GetTapeRelationships(id uuid.UUID) (*RelatedItems, error) {
+	result := RelatedItems{}
+
+	playlistIdFilter := ds.db.Raw(
+		"SELECT DISTINCT playlist_id "+
+			"FROM playlist_tracks "+
+			"JOIN tape_tracks ON tape_tracks.id = playlist_tracks.tape_track_id "+
+			"WHERE tape_tracks.tape_id = ?",
+		id,
+	)
+
+	err := ds.db.Model(&Playlist{}).Where("id IN (?)", playlistIdFilter).Find(&result.Playlists).Error
+
+	return &result, err
+}
+
 func (ds *DataStorage) GetTapeTrack(id uuid.UUID) (*TapeTrack, error) {
 	result := TapeTrack{}
 	return &result, ds.db.Where(&TapeTrack{Id: id}).Take(&result).Error

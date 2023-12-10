@@ -76,5 +76,6 @@ type CoverDescriptor struct {
 }
 
 type RelatedItems struct {
-	Tapes []*Tape
+	Tapes     []*Tape
+	Playlists []*Playlist
 }

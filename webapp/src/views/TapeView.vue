@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api, { type Tape, type Playlist } from "@/api";
+import api, { type Tape, type Playlist, type RelatedItems } from "@/api";
 import { useRoute } from "vue-router";
 import { computed, ref, toRaw } from "vue";
 import TapeTrackListEditor from "@/components/TapeTrackListEditor.vue";
@@ -22,8 +22,11 @@ const route = useRoute();
 const tapeId = route.params.tapeId as string;
 
 const state = ref(State.LOADING);
+
 const tape = ref<Tape | null>(null);
 const editedTape = ref<Tape | null>(null);
+
+const relatedItems = ref<RelatedItems | null>(null);
 
 const isEdited = computed(() => {
     return JSON.stringify(tape.value) != JSON.stringify(editedTape.value);
@@ -123,7 +126,13 @@ function swapArtistAndTitle() {
 (async () => {
     try {
         state.value = State.LOADING;
-        tape.value = await api.getTape(tapeId);
+
+        const tapeAsync = api.getTape(tapeId);
+        const relatedItemsAsync = api.getTapeRelationships(tapeId);
+
+        tape.value = await tapeAsync;
+        relatedItems.value = await relatedItemsAsync;
+
         state.value = State.LOADING_OK;
     } catch (e) {
         state.value = State.LOADING_ERROR;
@@ -162,6 +171,15 @@ function swapArtistAndTitle() {
         <div v-if="state == State.SAVING">Saving...</div>
         <div v-else-if="state == State.SAVING_OK">Saved</div>
         <div v-else-if="state == State.SAVING_ERROR">Failed to save</div>
+
+        <template v-if="relatedItems">
+            <hr>
+
+            <h2>Linked playlists</h2>
+            <RouterLink v-for="playlist in relatedItems.Playlists" :key="playlist.Id" :to="'/playlists/' + playlist.Id">
+                <div>{{ playlist.Name }}</div>
+            </RouterLink>
+        </template>
     </template>
     <template v-else>
         Unknown error
