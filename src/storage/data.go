@@ -111,3 +111,19 @@ func (ds *DataStorage) GetPlaylistWithTracks(id uuid.UUID) (*Playlist, error) {
 		return db.Order("track_index ASC")
 	}).Preload("Tracks.TapeTrack").Take(&result).Error
 }
+
+func (ds *DataStorage) GetPlaylistRelationships(id uuid.UUID) (*RelatedItems, error) {
+	result := RelatedItems{}
+
+	tapeIdFilter := ds.db.Raw(
+		"SELECT DISTINCT tape_id "+
+			"FROM tape_tracks "+
+			"JOIN playlist_tracks ON tape_tracks.id = playlist_tracks.tape_track_id "+
+			"WHERE playlist_tracks.playlist_id = ?",
+		id,
+	)
+
+	err := ds.db.Model(&Tape{}).Where("id IN (?)", tapeIdFilter).Find(&result.Tapes).Error
+
+	return &result, err
+}

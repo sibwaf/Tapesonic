@@ -74,3 +74,7 @@ type CoverDescriptor struct {
 	Path   string
 	Format string
 }
+
+type RelatedItems struct {
+	Tapes []*Tape
+}

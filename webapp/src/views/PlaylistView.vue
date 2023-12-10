@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api, { type Playlist } from "@/api";
+import api, { type Playlist, type RelatedItems } from "@/api";
 import { useRoute } from "vue-router";
 import { computed, ref } from "vue";
 import router from "@/router";
@@ -18,6 +18,8 @@ const playlistId = route.params.playlistId as string;
 
 const state = ref(State.LOADING);
 const playlist = ref<Playlist | null>(null);
+
+const relatedItems = ref<RelatedItems | null>(null);
 
 const isBusy = computed(() => {
     switch (state.value) {
@@ -45,7 +47,13 @@ async function deletePlaylist() {
 (async () => {
     try {
         state.value = State.LOADING;
-        playlist.value = await api.getPlaylist(playlistId);
+
+        const playlistAsync = api.getPlaylist(playlistId);
+        const relatedItemsAsync = api.getPlaylistRelationships(playlistId);
+
+        playlist.value = await playlistAsync;
+        relatedItems.value = await relatedItemsAsync;
+
         state.value = State.LOADING_OK;
     } catch (e) {
         state.value = State.LOADING_ERROR;
@@ -76,6 +84,16 @@ async function deletePlaylist() {
         <div v-for="track in playlist.Tracks">
             <span v-if="track.TapeTrack.Artist">{{ track.TapeTrack.Artist }} - </span>{{ track.TapeTrack.Title }}
         </div>
+
+        <template v-if="relatedItems">
+            <hr>
+
+            <h2>Linked tapes</h2>
+            <RouterLink v-for="tape in relatedItems.Tapes" :key="tape.Id" :to="'/tapes/' + tape.Id">
+                <div>{{ tape.Name }}</div>
+                <div>by {{ tape.AuthorName }}</div>
+            </RouterLink>
+        </template>
     </template>
     <template v-else>
         Unknown error

@@ -14,6 +14,8 @@ export interface Tape {
 export interface TapeTrack {
     Id: string;
 
+    TapeId: string;
+
     RawStartOffsetMs: number;
     StartOffsetMs: number;
     RawEndOffsetMs: number;
@@ -35,6 +37,10 @@ export interface PlaylistTrack {
 
     TapeTrackId: string;
     TapeTrack: TapeTrack;
+}
+
+export interface RelatedItems {
+    Tapes: Tape[];
 }
 
 export default {
@@ -85,6 +91,10 @@ export default {
     },
     async getPlaylist(id: string): Promise<Playlist> {
         const response = await fetch(`/api/playlists/${id}`, { method: "GET" });
+        return await response.json();
+    },
+    async getPlaylistRelationships(id: string): Promise<RelatedItems> {
+        const response = await fetch(`/api/playlists/${id}/related`, { method: "GET" });
         return await response.json();
     },
 }
