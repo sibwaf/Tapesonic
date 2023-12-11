@@ -10,14 +10,14 @@ import (
 )
 
 type tapeRelatedHandler struct {
-	dataStorage *storage.DataStorage
+	tapeStorage *storage.TapeStorage
 }
 
 func NewTapeRelatedHandler(
-	dataStorage *storage.DataStorage,
+	tapeStorage *storage.TapeStorage,
 ) *tapeRelatedHandler {
 	return &tapeRelatedHandler{
-		dataStorage: dataStorage,
+		tapeStorage: tapeStorage,
 	}
 }
 
@@ -32,5 +32,5 @@ func (h *tapeRelatedHandler) Handle(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	return h.dataStorage.GetTapeRelationships(id)
+	return h.tapeStorage.GetTapeRelationships(id)
 }

@@ -9,19 +9,19 @@ import (
 )
 
 type getPlaylistsHandler struct {
-	dataStorage *storage.DataStorage
+	playlistStorage *storage.PlaylistStorage
 }
 
 func NewGetPlaylistsHandler(
-	dataStorage *storage.DataStorage,
+	playlistStorage *storage.PlaylistStorage,
 ) *getPlaylistsHandler {
 	return &getPlaylistsHandler{
-		dataStorage: dataStorage,
+		playlistStorage: playlistStorage,
 	}
 }
 
 func (h *getPlaylistsHandler) Handle(r *http.Request) (*responses.SubsonicResponse, error) {
-	playlists, err := h.dataStorage.GetAllPlaylists()
+	playlists, err := h.playlistStorage.GetAllPlaylists()
 	if err != nil {
 		return nil, err
 	}

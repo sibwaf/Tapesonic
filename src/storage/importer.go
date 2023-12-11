@@ -9,18 +9,18 @@ import (
 type Importer struct {
 	mediaDir    string
 	ytdlp       *ytdlp.Ytdlp
-	dataStorage *DataStorage
+	tapeStorage *TapeStorage
 }
 
 func NewImporter(
 	mediaDir string,
 	ytdlp *ytdlp.Ytdlp,
-	dataStorage *DataStorage,
+	tapeStorage *TapeStorage,
 ) *Importer {
 	return &Importer{
 		mediaDir:    mediaDir,
 		ytdlp:       ytdlp,
-		dataStorage: dataStorage,
+		tapeStorage: tapeStorage,
 	}
 }
 
@@ -62,7 +62,7 @@ func (i *Importer) ImportTape(url string, format string) (*Tape, error) {
 		Tracks:        tracks,
 	}
 
-	err = i.dataStorage.UpsertTape(&tape)
+	err = i.tapeStorage.UpsertTape(&tape)
 
 	return &tape, err
 }

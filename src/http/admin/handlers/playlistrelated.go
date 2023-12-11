@@ -10,14 +10,14 @@ import (
 )
 
 type playlistRelatedHandler struct {
-	dataStorage *storage.DataStorage
+	playlistStorage *storage.PlaylistStorage
 }
 
 func NewPlaylistRelatedHandler(
-	dataStorage *storage.DataStorage,
+	playlistStorage *storage.PlaylistStorage,
 ) *playlistRelatedHandler {
 	return &playlistRelatedHandler{
-		dataStorage: dataStorage,
+		playlistStorage: playlistStorage,
 	}
 }
 
@@ -32,5 +32,5 @@ func (h *playlistRelatedHandler) Handle(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	return h.dataStorage.GetPlaylistRelationships(id)
+	return h.playlistStorage.GetPlaylistRelationships(id)
 }

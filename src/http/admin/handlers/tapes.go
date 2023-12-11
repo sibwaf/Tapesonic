@@ -7,14 +7,14 @@ import (
 )
 
 type tapesHandler struct {
-	dataStorage *storage.DataStorage
+	tapeStorage *storage.TapeStorage
 }
 
 func NewTapesHandler(
-	dataStorage *storage.DataStorage,
+	tapeStorage *storage.TapeStorage,
 ) *tapesHandler {
 	return &tapesHandler{
-		dataStorage: dataStorage,
+		tapeStorage: tapeStorage,
 	}
 }
 
@@ -23,5 +23,5 @@ func (h *tapesHandler) Methods() []string {
 }
 
 func (h *tapesHandler) Handle(r *http.Request) (any, error) {
-	return h.dataStorage.GetAllTapes()
+	return h.tapeStorage.GetAllTapes()
 }

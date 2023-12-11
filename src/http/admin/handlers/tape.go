@@ -11,14 +11,14 @@ import (
 )
 
 type tapeHandler struct {
-	dataStorage *storage.DataStorage
+	tapeStorage *storage.TapeStorage
 }
 
 func NewTapeHandler(
-	dataStorage *storage.DataStorage,
+	tapeStorage *storage.TapeStorage,
 ) *tapeHandler {
 	return &tapeHandler{
-		dataStorage: dataStorage,
+		tapeStorage: tapeStorage,
 	}
 }
 
@@ -35,7 +35,7 @@ func (h *tapeHandler) Handle(r *http.Request) (any, error) {
 		if idErr != nil {
 			return nil, idErr
 		}
-		return h.dataStorage.GetTapeWithTracks(id)
+		return h.tapeStorage.GetTapeWithTracks(id)
 	case http.MethodPut:
 		var tape storage.Tape
 		err := json.NewDecoder(r.Body).Decode(&tape)
@@ -43,7 +43,7 @@ func (h *tapeHandler) Handle(r *http.Request) (any, error) {
 			return nil, err
 		}
 
-		return nil, h.dataStorage.UpsertTape(&tape)
+		return nil, h.tapeStorage.UpsertTape(&tape)
 	default:
 		return nil, http.ErrNotSupported
 	}

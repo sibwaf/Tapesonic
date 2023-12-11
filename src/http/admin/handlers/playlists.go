@@ -8,14 +8,14 @@ import (
 )
 
 type playlistsHandler struct {
-	dataStorage *storage.DataStorage
+	playlistStorage *storage.PlaylistStorage
 }
 
 func NewPlaylistsHandler(
-	dataStorage *storage.DataStorage,
+	playlistStorage *storage.PlaylistStorage,
 ) *playlistsHandler {
 	return &playlistsHandler{
-		dataStorage: dataStorage,
+		playlistStorage: playlistStorage,
 	}
 }
 
@@ -26,7 +26,7 @@ func (h *playlistsHandler) Methods() []string {
 func (h *playlistsHandler) Handle(r *http.Request) (any, error) {
 	switch r.Method {
 	case http.MethodGet:
-		return h.dataStorage.GetAllPlaylists()
+		return h.playlistStorage.GetAllPlaylists()
 	case http.MethodPost:
 		var playlist storage.Playlist
 		err := json.NewDecoder(r.Body).Decode(&playlist)
@@ -34,7 +34,7 @@ func (h *playlistsHandler) Handle(r *http.Request) (any, error) {
 			return nil, err
 		}
 
-		return playlist, h.dataStorage.CreatePlaylist(&playlist)
+		return playlist, h.playlistStorage.CreatePlaylist(&playlist)
 	default:
 		return nil, http.ErrNotSupported
 	}

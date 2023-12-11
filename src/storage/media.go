@@ -7,22 +7,39 @@ import (
 )
 
 type MediaStorage struct {
-	dir         string
-	dataStorage *DataStorage
+	dir string
+
+	tapeStorage     *TapeStorage
+	playlistStorage *PlaylistStorage
+}
+
+type TrackDescriptor struct {
+	Path          string
+	StartOffsetMs int
+	EndOffsetMs   int
+	Format        string
+}
+
+type CoverDescriptor struct {
+	Path   string
+	Format string
 }
 
 func NewMediaStorage(
 	dir string,
-	dataStorage *DataStorage,
+	tapeStorage *TapeStorage,
+	playlistStorage *PlaylistStorage,
 ) *MediaStorage {
 	return &MediaStorage{
-		dir:         dir,
-		dataStorage: dataStorage,
+		dir: dir,
+
+		tapeStorage:     tapeStorage,
+		playlistStorage: playlistStorage,
 	}
 }
 
 func (ms *MediaStorage) GetTrack(id uuid.UUID) (TrackDescriptor, error) {
-	track, err := ms.dataStorage.GetTapeTrack(id)
+	track, err := ms.tapeStorage.GetTapeTrack(id)
 	if err != nil {
 		return TrackDescriptor{}, err
 	}
@@ -36,7 +53,7 @@ func (ms *MediaStorage) GetTrack(id uuid.UUID) (TrackDescriptor, error) {
 }
 
 func (ms *MediaStorage) GetTapeCover(id uuid.UUID) (CoverDescriptor, error) {
-	tape, err := ms.dataStorage.GetTapeWithoutTracks(id)
+	tape, err := ms.tapeStorage.GetTapeWithoutTracks(id)
 	if err != nil {
 		return CoverDescriptor{}, err
 	}
@@ -48,7 +65,7 @@ func (ms *MediaStorage) GetTapeCover(id uuid.UUID) (CoverDescriptor, error) {
 }
 
 func (ms *MediaStorage) GetPlaylistCover(id uuid.UUID) (CoverDescriptor, error) {
-	playlist, err := ms.dataStorage.GetPlaylistWithoutTracks(id)
+	playlist, err := ms.playlistStorage.GetPlaylistWithoutTracks(id)
 	if err != nil {
 		return CoverDescriptor{}, err
 	}

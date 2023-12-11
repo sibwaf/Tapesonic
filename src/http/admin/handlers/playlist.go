@@ -10,14 +10,14 @@ import (
 )
 
 type playlistHandler struct {
-	dataStorage *storage.DataStorage
+	playlistStorage *storage.PlaylistStorage
 }
 
 func NewPlaylistHandler(
-	dataStorage *storage.DataStorage,
+	playlistStorage *storage.PlaylistStorage,
 ) *playlistHandler {
 	return &playlistHandler{
-		dataStorage: dataStorage,
+		playlistStorage: playlistStorage,
 	}
 }
 
@@ -34,12 +34,12 @@ func (h *playlistHandler) Handle(r *http.Request) (any, error) {
 		if idErr != nil {
 			return nil, idErr
 		}
-		return h.dataStorage.GetPlaylistWithTracks(id)
+		return h.playlistStorage.GetPlaylistWithTracks(id)
 	case http.MethodDelete:
 		if idErr != nil {
 			return nil, idErr
 		}
-		return nil, h.dataStorage.DeletePlaylist(id)
+		return nil, h.playlistStorage.DeletePlaylist(id)
 	default:
 		return nil, http.ErrNotSupported
 	}

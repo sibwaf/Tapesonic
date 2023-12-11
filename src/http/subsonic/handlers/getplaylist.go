@@ -11,14 +11,14 @@ import (
 )
 
 type getPlaylistHandler struct {
-	dataStorage *storage.DataStorage
+	playlistStorage *storage.PlaylistStorage
 }
 
 func NewGetPlaylistHandler(
-	dataStorage *storage.DataStorage,
+	playlistStorage *storage.PlaylistStorage,
 ) *getPlaylistHandler {
 	return &getPlaylistHandler{
-		dataStorage: dataStorage,
+		playlistStorage: playlistStorage,
 	}
 }
 
@@ -33,7 +33,7 @@ func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicRespons
 		return nil, err
 	}
 
-	playlist, err := h.dataStorage.GetPlaylistWithTracks(id)
+	playlist, err := h.playlistStorage.GetPlaylistWithTracks(id)
 	if err != nil {
 		return nil, err
 	}

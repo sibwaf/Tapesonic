@@ -1,24 +1,31 @@
 package appcontext
 
 import (
+	"os"
+	"path"
 	"tapesonic/config"
 	"tapesonic/ffmpeg"
 	"tapesonic/storage"
 	"tapesonic/ytdlp"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 type Context struct {
 	Config *config.TapesonicConfig
 
-	DataStorage  *storage.DataStorage
-	MediaStorage *storage.MediaStorage
-	Importer     *storage.Importer
+	TapeStorage     *storage.TapeStorage
+	PlaylistStorage *storage.PlaylistStorage
+	MediaStorage    *storage.MediaStorage
+	Importer        *storage.Importer
 
 	Ytdlp  *ytdlp.Ytdlp
 	Ffmpeg *ffmpeg.Ffmpeg
 }
 
 func NewContext(config *config.TapesonicConfig) (*Context, error) {
+	var err error
 	context := Context{
 		Config: config,
 
@@ -26,21 +33,33 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 		Ffmpeg: ffmpeg.NewFfmpeg(config.FfmpegPath),
 	}
 
-	var err error
-	context.DataStorage, err = storage.NewDataStorage(config.DataStorageDir)
+	if err := os.MkdirAll(config.DataStorageDir, 0777); err != nil {
+		return nil, err
+	}
+	db, err := gorm.Open(sqlite.Open(path.Join(config.DataStorageDir, "data.sqlite")))
+	if err != nil {
+		return nil, err
+	}
+
+	context.TapeStorage, err = storage.NewTapeStorage(db)
+	if err != nil {
+		return nil, err
+	}
+	context.PlaylistStorage, err = storage.NewPlaylistStorage(db)
 	if err != nil {
 		return nil, err
 	}
 
 	context.MediaStorage = storage.NewMediaStorage(
 		config.MediaStorageDir,
-		context.DataStorage,
+		context.TapeStorage,
+		context.PlaylistStorage,
 	)
 
 	context.Importer = storage.NewImporter(
 		context.Config.MediaStorageDir,
 		context.Ytdlp,
-		context.DataStorage,
+		context.TapeStorage,
 	)
 
 	return &context, nil

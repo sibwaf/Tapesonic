@@ -16,13 +16,13 @@ func GetHandler(appCtx *appcontext.Context) (string, http.Handler) {
 		"/api/formats": handlers.NewGetFormatsHandler(appCtx.Ytdlp),
 		"/api/import":  handlers.NewImportHandler(appCtx.Importer),
 
-		"/api/tapes":                  handlers.NewTapesHandler(appCtx.DataStorage),
-		"/api/tapes/{tapeId}":         handlers.NewTapeHandler(appCtx.DataStorage),
-		"/api/tapes/{tapeId}/related": handlers.NewTapeRelatedHandler(appCtx.DataStorage),
+		"/api/tapes":                  handlers.NewTapesHandler(appCtx.TapeStorage),
+		"/api/tapes/{tapeId}":         handlers.NewTapeHandler(appCtx.TapeStorage),
+		"/api/tapes/{tapeId}/related": handlers.NewTapeRelatedHandler(appCtx.TapeStorage),
 
-		"/api/playlists":                      handlers.NewPlaylistsHandler(appCtx.DataStorage),
-		"/api/playlists/{playlistId}":         handlers.NewPlaylistHandler(appCtx.DataStorage),
-		"/api/playlists/{playlistId}/related": handlers.NewPlaylistRelatedHandler(appCtx.DataStorage),
+		"/api/playlists":                      handlers.NewPlaylistsHandler(appCtx.PlaylistStorage),
+		"/api/playlists/{playlistId}":         handlers.NewPlaylistHandler(appCtx.PlaylistStorage),
+		"/api/playlists/{playlistId}/related": handlers.NewPlaylistRelatedHandler(appCtx.PlaylistStorage),
 	}
 
 	router := mux.NewRouter()
