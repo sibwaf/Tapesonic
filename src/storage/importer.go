@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"tapesonic/util"
 	"tapesonic/ytdlp"
 
 	"github.com/google/uuid"
@@ -47,7 +48,24 @@ func (i *Importer) ImportTape(url string, format string) (*Tape, error) {
 			RawEndOffsetMs:   int(chapter.EndTime) * 1000,
 			EndOffsetMs:      int(chapter.EndTime) * 1000,
 
-			Title: chapter.Title,
+			Artist: metadata.Artist,
+			Title:  chapter.Title,
+		}
+		tracks = append(tracks, &track)
+	}
+	if len(tracks) == 0 {
+		track := TapeTrack{
+			Id: uuid.New(),
+
+			FilePath: downloadInfo.MediaPath,
+
+			RawStartOffsetMs: 0,
+			StartOffsetMs:    0,
+			RawEndOffsetMs:   metadata.Duration * 1000,
+			EndOffsetMs:      metadata.Duration * 1000,
+
+			Artist: metadata.Artist,
+			Title:  util.Coalesce(metadata.Track, metadata.Title),
 		}
 		tracks = append(tracks, &track)
 	}
@@ -62,7 +80,5 @@ func (i *Importer) ImportTape(url string, format string) (*Tape, error) {
 		Tracks:        tracks,
 	}
 
-	err = i.tapeStorage.UpsertTape(&tape)
-
-	return &tape, err
+	return &tape, i.tapeStorage.UpsertTape(&tape)
 }

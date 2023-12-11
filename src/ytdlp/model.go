@@ -15,14 +15,21 @@ func (di DownloadInfo) ParseMetadata() (YtdlpMetadata, error) {
 }
 
 type YtdlpMetadata struct {
-	Id         string         `json:"id"`
-	Title      string         `json:"title"`
-	Channel    string         `json:"channel"`
-	WebpageUrl string         `json:"webpage_url"`
-	Ext        string         `json:"ext"`
-	Formats    []YtdlpFormat  `json:"formats"`
-	Chapters   []YtdlpChapter `json:"chapters"`
-	Tags       []string       `json:"tags"`
+	Id         string `json:"id"`
+	Title      string `json:"title"`
+	Channel    string `json:"channel"`
+	WebpageUrl string `json:"webpage_url"`
+
+	Artist string `json:"artist"`
+	Album  string `json:"album"`
+	Track  string `json:"track"`
+
+	Duration int `json:"duration"`
+
+	Ext      string         `json:"ext"`
+	Formats  []YtdlpFormat  `json:"formats"`
+	Chapters []YtdlpChapter `json:"chapters"`
+	Tags     []string       `json:"tags"`
 }
 
 type YtdlpFormat struct {
