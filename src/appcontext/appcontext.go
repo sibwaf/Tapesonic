@@ -1,6 +1,7 @@
 package appcontext
 
 import (
+	"log/slog"
 	"os"
 	"path"
 	"tapesonic/config"
@@ -8,6 +9,7 @@ import (
 	"tapesonic/storage"
 	"tapesonic/ytdlp"
 
+	slogGorm "github.com/orandin/slog-gorm"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -36,7 +38,15 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 	if err := os.MkdirAll(config.DataStorageDir, 0777); err != nil {
 		return nil, err
 	}
-	db, err := gorm.Open(sqlite.Open(path.Join(config.DataStorageDir, "data.sqlite")))
+	db, err := gorm.Open(
+		sqlite.Open(path.Join(config.DataStorageDir, "data.sqlite")),
+		&gorm.Config{
+			Logger: slogGorm.New(
+				slogGorm.SetLogLevel(slogGorm.DefaultLogType, slog.LevelDebug),
+				slogGorm.WithTraceAll(),
+			),
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
