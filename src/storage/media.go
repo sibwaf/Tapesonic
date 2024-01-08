@@ -39,13 +39,13 @@ func NewMediaStorage(
 }
 
 func (ms *MediaStorage) GetTrack(id uuid.UUID) (TrackDescriptor, error) {
-	track, err := ms.tapeStorage.GetTapeTrack(id)
+	track, err := ms.tapeStorage.GetTapeTrackWithFile(id)
 	if err != nil {
 		return TrackDescriptor{}, err
 	}
 
 	return TrackDescriptor{
-		Path:          path.Join(ms.dir, track.FilePath),
+		Path:          path.Join(ms.dir, track.TapeFile.MediaPath),
 		StartOffsetMs: track.StartOffsetMs,
 		EndOffsetMs:   track.EndOffsetMs,
 		Format:        "opus", // todo
@@ -53,13 +53,22 @@ func (ms *MediaStorage) GetTrack(id uuid.UUID) (TrackDescriptor, error) {
 }
 
 func (ms *MediaStorage) GetTapeCover(id uuid.UUID) (CoverDescriptor, error) {
-	tape, err := ms.tapeStorage.GetTapeWithoutTracks(id)
+	tape, err := ms.tapeStorage.GetTapeWithFiles(id)
 	if err != nil {
 		return CoverDescriptor{}, err
 	}
 
+	thumbnail := tape.ThumbnailPath
+	for _, tapeFile := range tape.Files {
+		if thumbnail != "" {
+			break
+		}
+
+		thumbnail = tapeFile.ThumbnailPath
+	}
+
 	return CoverDescriptor{
-		Path:   path.Join(ms.dir, tape.ThumbnailPath),
+		Path:   path.Join(ms.dir, thumbnail),
 		Format: "png", // todo
 	}, nil
 }

@@ -78,8 +78,10 @@ func (storage *PlaylistStorage) GetPlaylistRelationships(id uuid.UUID) (*Related
 	result := RelatedItems{}
 
 	tapeIdFilter := storage.db.Raw(
-		"SELECT DISTINCT tape_id "+
-			"FROM tape_tracks "+
+		"SELECT DISTINCT tapes.id "+
+			"FROM tapes "+
+			"JOIN tape_files ON tapes.id = tape_files.tape_id "+
+			"JOIN tape_tracks ON tape_files.id = tape_tracks.tape_file_id "+
 			"JOIN playlist_tracks ON tape_tracks.id = playlist_tracks.tape_track_id "+
 			"WHERE playlist_tracks.playlist_id = ?",
 		id,

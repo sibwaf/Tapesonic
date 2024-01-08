@@ -8,13 +8,19 @@ export interface Tape {
     Name: string;
     AuthorName: string;
     ThumbnailPath: string;
+    Files: TapeFile[];
+}
+
+export interface TapeFile {
+    Id: string;
+    Name: string;
+    AuthorName: string;
+    ThumbnailPath: string;
     Tracks: TapeTrack[];
 }
 
 export interface TapeTrack {
     Id: string;
-
-    TapeId: string;
 
     RawStartOffsetMs: number;
     StartOffsetMs: number;

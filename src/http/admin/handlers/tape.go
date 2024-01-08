@@ -35,7 +35,7 @@ func (h *tapeHandler) Handle(r *http.Request) (any, error) {
 		if idErr != nil {
 			return nil, idErr
 		}
-		return h.tapeStorage.GetTapeWithTracks(id)
+		return h.tapeStorage.GetTapeWithFilesAndTracks(id)
 	case http.MethodPut:
 		var tape storage.Tape
 		err := json.NewDecoder(r.Body).Decode(&tape)

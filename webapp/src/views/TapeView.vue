@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api, { type Tape, type Playlist, type RelatedItems } from "@/api";
+import api, { type Tape, type Playlist, type RelatedItems, type TapeFile } from "@/api";
 import { useRoute } from "vue-router";
 import { computed, ref, toRaw } from "vue";
 import TapeTrackListEditor from "@/components/TapeTrackListEditor.vue";
@@ -69,11 +69,15 @@ async function createPlaylist() {
             Id: uuid4(),
             Name: tapeValue.Name,
             ThumbnailPath: tapeValue.ThumbnailPath,
-            Tracks: tapeValue.Tracks.map(it => ({
-                Id: uuid4(),
-                TapeTrackId: it.Id,
-                TapeTrack: undefined!
-            }))
+            Tracks: tapeValue.Files
+                .flatMap(it => it.Tracks)
+                .map(it => (
+                    {
+                        Id: uuid4(),
+                        TapeTrackId: it.Id,
+                        TapeTrack: undefined!
+                    }
+                ))
         };
 
         const response = await api.createPlaylist(playlist);
@@ -92,21 +96,23 @@ function guessArtistAndTitle() {
         return;
     }
 
-    for (const track of tape.Tracks) {
-        if (track.Artist == "") {
-            const parts = track.Title.split(" - ")
-            if (parts.length <= 1) {
-                continue;
+    for (const file of tape.Files) {
+        for (const track of file.Tracks) {
+            if (track.Artist == "") {
+                const parts = track.Title.split(" - ")
+                if (parts.length <= 1) {
+                    continue;
+                }
+
+                const cleanup = (text: string) => {
+                    const timestampRegex = "(?:\\d{1,}:)?\\d{1,2}:\\d{1,2}";
+                    const fullRegex = new RegExp(`^\\s*(?:${timestampRegex})?\\s*(.+?)\\s*$`);
+                    return fullRegex.exec(text)?.[1] ?? text;
+                };
+
+                track.Artist = cleanup(parts[0]);
+                track.Title = cleanup(parts.slice(1).join(" - "));
             }
-
-            const cleanup = (text: string) => {
-                const timestampRegex = "(?:\\d{1,}:)?\\d{1,2}:\\d{1,2}";
-                const fullRegex = new RegExp(`^\\s*(?:${timestampRegex})?\\s*(.+?)\\s*$`);
-                return fullRegex.exec(text)?.[1] ?? text;
-            };
-
-            track.Artist = cleanup(parts[0]);
-            track.Title = cleanup(parts.slice(1).join(" - "));
         }
     }
 }
@@ -117,10 +123,12 @@ function swapArtistAndTitle() {
         return;
     }
 
-    for (const track of tape.Tracks) {
-        const temp = track.Artist;
-        track.Artist = track.Title;
-        track.Title = temp;
+    for (const file of tape.Files) {
+        for (const track of file.Tracks) {
+            const temp = track.Artist;
+            track.Artist = track.Title;
+            track.Title = temp;
+        }
     }
 }
 
@@ -164,7 +172,10 @@ function swapArtistAndTitle() {
         <button :disabled="isBusy" @click="guessArtistAndTitle">Guess artist/title</button>
         <button :disabled="isBusy" @click="swapArtistAndTitle">Swap artist/title</button>
 
-        <TapeTrackListEditor v-if="editedTape" v-model="editedTape.Tracks" />
+        <div v-for="file in editedTape.Files">
+            <h3>{{ file.Name }}</h3>
+            <TapeTrackListEditor v-model="file.Tracks" />
+        </div>
 
         <button :disabled="!isEdited || isBusy" @click="reset">Reset</button>
         <button :disabled="!isEdited || isBusy" @click="save">Save</button>
