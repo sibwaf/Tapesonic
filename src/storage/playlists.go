@@ -52,7 +52,7 @@ func (storage *PlaylistStorage) CreatePlaylist(playlist *Playlist) error {
 }
 
 func (storage *PlaylistStorage) DeletePlaylist(id uuid.UUID) error {
-	return storage.db.Delete(&Playlist{}, id).Error
+	return storage.db.Select("Tracks").Delete(&Playlist{Id: id}).Error
 }
 
 func (storage *PlaylistStorage) GetAllPlaylists() ([]Playlist, error) {
