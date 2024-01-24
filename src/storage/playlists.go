@@ -23,6 +23,13 @@ type Playlist struct {
 	Tracks []*PlaylistTrack
 }
 
+func (e *Playlist) BeforeCreate(tx *gorm.DB) error {
+	if e.Id.ID() == 0 {
+		e.Id = uuid.New()
+	}
+	return nil
+}
+
 type PlaylistTrack struct {
 	Id uuid.UUID
 
@@ -33,6 +40,13 @@ type PlaylistTrack struct {
 	TapeTrack   *TapeTrack
 
 	TrackIndex int
+}
+
+func (e *PlaylistTrack) BeforeCreate(tx *gorm.DB) error {
+	if e.Id.ID() == 0 {
+		e.Id = uuid.New()
+	}
+	return nil
 }
 
 func NewPlaylistStorage(db *gorm.DB) (*PlaylistStorage, error) {

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import api, { type Tape, type Playlist, type RelatedItems, type TapeFile } from "@/api";
+import api, { type Tape, type Playlist, type PlaylistTrack, type RelatedItems } from "@/api";
 import { useRoute } from "vue-router";
 import { computed, ref, toRaw } from "vue";
 import TapeTrackListEditor from "@/components/TapeTrackListEditor.vue";
 import router from "@/router";
-import { v4 as uuid4 } from "uuid";
 import PlaylistGrid from "@/components/PlaylistGrid.vue";
 
 enum State {
@@ -66,18 +65,19 @@ async function createPlaylist() {
 
         const tapeValue = tape.value!;
         const playlist: Playlist = {
-            Id: uuid4(),
+            Id: undefined!,
             Name: tapeValue.Name,
             ThumbnailPath: tapeValue.ThumbnailPath,
             Tracks: tapeValue.Files
                 .flatMap(it => it.Tracks)
-                .map(it => (
-                    {
-                        Id: uuid4(),
+                .map(it => {
+                    const track: PlaylistTrack = {
+                        Id: undefined!,
                         TapeTrackId: it.Id,
-                        TapeTrack: undefined!
-                    }
-                ))
+                        TapeTrack: undefined!,
+                    };
+                    return track;
+                }),
         };
 
         const response = await api.createPlaylist(playlist);
