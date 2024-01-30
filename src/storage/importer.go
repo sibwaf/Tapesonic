@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"encoding/json"
+	"fmt"
 	"tapesonic/util"
 	"tapesonic/ytdlp"
 )
@@ -25,79 +25,61 @@ func NewImporter(
 }
 
 func (i *Importer) ImportTape(url string, format string) (*Tape, error) {
-	downloadInfo, err := i.ytdlp.Download(url, format, i.mediaDir)
+	downloadedPlaylist, err := i.ytdlp.Download(url, format, i.mediaDir)
 	if err != nil {
 		return &Tape{}, err
 	}
 
-	tapeFile, err := extractFile(
-		downloadInfo.RawMetadata,
-		downloadInfo.ThumbnailPath,
-		downloadInfo.MediaPath,
-	)
-	if err != nil {
-		return &Tape{}, err
+	if len(downloadedPlaylist.Files) == 0 {
+		return &Tape{}, fmt.Errorf("no files downloaded from %s", url)
 	}
 
-	files := []*TapeFile{tapeFile}
-
-	tapeMetadata, err := downloadInfo.ParseMetadata()
+	playlistMetadata, err := downloadedPlaylist.Metadata.Parse()
 	if err != nil {
 		return &Tape{}, err
 	}
 
 	tape := Tape{
-		Metadata:      string(downloadInfo.RawMetadata),
-		Url:           tapeMetadata.WebpageUrl,
-		Name:          tapeMetadata.Title,
-		AuthorName:    tapeMetadata.Channel,
-		ThumbnailPath: downloadInfo.ThumbnailPath,
-		Files:         files,
+		Metadata: string(downloadedPlaylist.Metadata.Raw),
+		Url:      playlistMetadata.WebpageUrl,
+
+		Name:       playlistMetadata.Title,
+		AuthorName: util.Coalesce(playlistMetadata.Uploader, playlistMetadata.UploaderId),
+	}
+
+	for _, downloadedFile := range downloadedPlaylist.Files {
+		tapeFile, err := extractFile(
+			downloadedFile.Metadata,
+			downloadedFile.ThumbnailPath,
+			downloadedFile.MediaPath,
+		)
+		if err != nil {
+			return &tape, err
+		}
+
+		tape.Files = append(tape.Files, tapeFile)
+
+		tape.Metadata = util.Coalesce(tape.Metadata, tapeFile.Metadata)
+		tape.Url = util.Coalesce(tape.Url, tapeFile.Url)
+		tape.Name = util.Coalesce(tape.Name, tapeFile.Name)
+		tape.AuthorName = util.Coalesce(tape.AuthorName, tapeFile.AuthorName)
 	}
 
 	return &tape, i.tapeStorage.UpsertTape(&tape)
 }
 
 func extractFile(
-	rawMetadata []byte,
+	metadataWrapper ytdlp.YtdlpFileWrapper,
 	thumbnailPath string,
 	mediaPath string,
 ) (*TapeFile, error) {
-	var metadata *ytdlp.YtdlpMetadata
-	err := json.Unmarshal(rawMetadata, &metadata)
+	metadata, err := metadataWrapper.Parse()
 	if err != nil {
 		return nil, err
 	}
 
-	tracks := []*TapeTrack{}
-	for _, chapter := range metadata.Chapters {
-		track := TapeTrack{
-			RawStartOffsetMs: int(chapter.StartTime) * 1000,
-			StartOffsetMs:    int(chapter.StartTime) * 1000,
-			RawEndOffsetMs:   int(chapter.EndTime) * 1000,
-			EndOffsetMs:      int(chapter.EndTime) * 1000,
-
-			Artist: metadata.Artist,
-			Title:  chapter.Title,
-		}
-		tracks = append(tracks, &track)
-	}
-
-	if len(tracks) == 0 {
-		track := TapeTrack{
-			RawStartOffsetMs: 0,
-			StartOffsetMs:    0,
-			RawEndOffsetMs:   metadata.Duration * 1000,
-			EndOffsetMs:      metadata.Duration * 1000,
-
-			Artist: metadata.Artist,
-			Title:  util.Coalesce(metadata.Track, metadata.Title),
-		}
-		tracks = append(tracks, &track)
-	}
-
-	return &TapeFile{
-		Metadata: string(rawMetadata),
+	tapeFile := TapeFile{
+		Metadata: string(metadataWrapper.Raw),
 		Url:      metadata.WebpageUrl,
 
 		Name:       metadata.Title,
@@ -105,7 +87,33 @@ func extractFile(
 
 		ThumbnailPath: thumbnailPath,
 		MediaPath:     mediaPath,
+	}
 
-		Tracks: tracks,
-	}, nil
+	for _, chapter := range metadata.Chapters {
+		track := TapeTrack{
+			RawStartOffsetMs: int(chapter.StartTime * 1000),
+			StartOffsetMs:    int(chapter.StartTime * 1000),
+			RawEndOffsetMs:   int(chapter.EndTime * 1000),
+			EndOffsetMs:      int(chapter.EndTime * 1000),
+
+			Artist: metadata.Artist,
+			Title:  chapter.Title,
+		}
+		tapeFile.Tracks = append(tapeFile.Tracks, &track)
+	}
+
+	if len(tapeFile.Tracks) == 0 {
+		track := TapeTrack{
+			RawStartOffsetMs: 0,
+			StartOffsetMs:    0,
+			RawEndOffsetMs:   int(metadata.Duration * 1000),
+			EndOffsetMs:      int(metadata.Duration * 1000),
+
+			Artist: metadata.Artist,
+			Title:  util.Coalesce(metadata.Track, metadata.Title),
+		}
+		tapeFile.Tracks = append(tapeFile.Tracks, &track)
+	}
+
+	return &tapeFile, nil
 }
