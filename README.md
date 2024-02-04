@@ -2,9 +2,17 @@
 
 ***THIS PROJECT IS IN IT'S EARLY PROTOTYPING/PROOF-OF-CONCEPT STAGE AND IS NOT READY FOR USE***
 
-A Subsonic-compatible music streaming server specifically for playing Youtube mixtapes through your favorite Subsonic client.
+A Subsonic-compatible music streaming server initially designed for playing Youtube mixtapes through your favorite Subsonic client.
 
 Planned features:
-* Channel subscriptions
-* Streams as radio
-* Album/playlist/track import support
+* Better UI/UX
+* YouTube channel subscriptions
+* YouTube streams as radio
+* Album support
+* No-download streaming
+* YouTube/Bandcamp search
+* Listenbrainz-backed recommendation playlists (probably with more provider options like last.fm)
+* Lidarr integration - "wanted album" auto-download, media hand-off
+
+Out of scope:
+* Handling user-provided libraries
