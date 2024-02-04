@@ -45,6 +45,8 @@ func (i *Importer) ImportTape(url string, format string) (*Tape, error) {
 
 		Name:       playlistMetadata.Title,
 		AuthorName: util.Coalesce(playlistMetadata.Uploader, playlistMetadata.UploaderId),
+
+		ThumbnailPath: downloadedPlaylist.ThumbnailPath,
 	}
 
 	for _, downloadedFile := range downloadedPlaylist.Files {
@@ -63,6 +65,7 @@ func (i *Importer) ImportTape(url string, format string) (*Tape, error) {
 		tape.Url = util.Coalesce(tape.Url, tapeFile.Url)
 		tape.Name = util.Coalesce(tape.Name, tapeFile.Name)
 		tape.AuthorName = util.Coalesce(tape.AuthorName, tapeFile.AuthorName)
+		tape.ThumbnailPath = util.Coalesce(tape.ThumbnailPath, tapeFile.ThumbnailPath)
 	}
 
 	return &tape, i.tapeStorage.UpsertTape(&tape)

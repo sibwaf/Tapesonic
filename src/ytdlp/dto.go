@@ -5,6 +5,8 @@ import "encoding/json"
 type DownloadedPlaylist struct {
 	Metadata YtdlpPlaylistWrapper
 
+	ThumbnailPath string
+
 	Files []DownloadedFile
 }
 

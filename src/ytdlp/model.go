@@ -1,10 +1,14 @@
 package ytdlp
 
 type YtdlpPlaylist struct {
+	Id string `json:"Id"`
+
 	Title      string `json:"title"`
 	Uploader   string `json:"uploader"`
 	UploaderId string `json:"uploader_id"`
 	WebpageUrl string `json:"webpage_url"`
+
+	ExtractorKey string `json:"extractor_key"`
 }
 
 type YtdlpFile struct {

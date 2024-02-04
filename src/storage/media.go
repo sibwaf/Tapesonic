@@ -58,18 +58,9 @@ func (ms *MediaStorage) GetTapeCover(id uuid.UUID) (CoverDescriptor, error) {
 		return CoverDescriptor{}, err
 	}
 
-	thumbnail := tape.ThumbnailPath
-	for _, tapeFile := range tape.Files {
-		if thumbnail != "" {
-			break
-		}
-
-		thumbnail = tapeFile.ThumbnailPath
-	}
-
 	return CoverDescriptor{
-		Path:   path.Join(ms.dir, thumbnail),
-		Format: "png", // todo
+		Path:   path.Join(ms.dir, tape.ThumbnailPath),
+		Format: path.Ext(tape.ThumbnailPath),
 	}, nil
 }
 
@@ -81,6 +72,6 @@ func (ms *MediaStorage) GetPlaylistCover(id uuid.UUID) (CoverDescriptor, error) 
 
 	return CoverDescriptor{
 		Path:   path.Join(ms.dir, playlist.ThumbnailPath),
-		Format: "png", // todo
+		Format: path.Ext(playlist.ThumbnailPath),
 	}, nil
 }

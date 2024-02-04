@@ -79,7 +79,7 @@ func (y *Ytdlp) Download(url string, formatId string, downloadDir string) (Downl
 
 	slog.Debug(fmt.Sprintf("Successfully downloaded `%s`", url))
 
-	playlist, err := parseDownloadedPlaylist(path.Join(infoDir, "playlist.info.json"))
+	playlist, err := parseDownloadedPlaylist(downloadDir, path.Join(infoDir, "playlist.info.json"))
 	if err != nil {
 		return playlist, err
 	}
@@ -118,13 +118,30 @@ func (y *Ytdlp) Download(url string, formatId string, downloadDir string) (Downl
 	return playlist, nil
 }
 
-func parseDownloadedPlaylist(infoPath string) (DownloadedPlaylist, error) {
+func parseDownloadedPlaylist(mediaDir string, infoPath string) (DownloadedPlaylist, error) {
 	var err error
 	playlist := DownloadedPlaylist{}
 
 	playlist.Metadata.Raw, err = os.ReadFile(infoPath)
 	if err != nil && !os.IsNotExist(err) {
 		return playlist, err
+	}
+
+	if len(playlist.Metadata.Raw) == 0 {
+		return playlist, nil
+	}
+
+	playlistMetadata, err := playlist.Metadata.Parse()
+	if err != nil {
+		return playlist, err
+	}
+
+	for _, extension := range []string{"png", "jpg", "jpeg"} {
+		filename := fmt.Sprintf("%s-%s.%s", playlistMetadata.ExtractorKey, playlistMetadata.Id, extension)
+		if _, err := os.Stat(path.Join(mediaDir, filename)); err == nil {
+			playlist.ThumbnailPath = filename
+			break
+		}
 	}
 
 	return playlist, nil
