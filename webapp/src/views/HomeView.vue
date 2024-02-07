@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import AlbumGrid from "@/components/AlbumGrid.vue";
 import TapeGrid from "@/components/TapeGrid.vue";
 import TapeImporter from "@/components/TapeImporter.vue";
 import PlaylistGrid from "@/components/PlaylistGrid.vue";
 import { ref } from "vue";
-import api, { type Playlist, type Tape } from "@/api";
+import api, { type Album, type Playlist, type Tape } from "@/api";
 
 enum State {
     LOADING,
@@ -14,6 +15,7 @@ enum State {
 const state = ref(State.LOADING);
 const tapes = ref<Tape[]>([]);
 const playlists = ref<Playlist[]>([]);
+const albums = ref<Album[]>([]);
 
 (async () => {
     try {
@@ -21,9 +23,11 @@ const playlists = ref<Playlist[]>([]);
 
         const tapesAsync = api.getAllTapes();
         const playlistsAsync = api.getAllPlaylists();
+        const albumsAsync = api.getAllAlbums();
 
         tapes.value = await tapesAsync;
         playlists.value = await playlistsAsync;
+        albums.value = await albumsAsync;
 
         state.value = State.OK;
     } catch (e) {
@@ -51,5 +55,10 @@ const playlists = ref<Playlist[]>([]);
 
         <h1>Playlists</h1>
         <PlaylistGrid v-model="playlists" />
+
+        <hr>
+
+        <h1>Albums</h1>
+        <AlbumGrid v-model="albums" />
     </div>
 </template>

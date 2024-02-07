@@ -23,6 +23,10 @@ func GetHandler(appCtx *appcontext.Context) (string, http.Handler) {
 		"/api/playlists":                      handlers.NewPlaylistsHandler(appCtx.PlaylistStorage),
 		"/api/playlists/{playlistId}":         handlers.NewPlaylistHandler(appCtx.PlaylistStorage),
 		"/api/playlists/{playlistId}/related": handlers.NewPlaylistRelatedHandler(appCtx.PlaylistStorage),
+
+		"/api/albums":                   handlers.NewAlbumsHandler(appCtx.AlbumStorage),
+		"/api/albums/{albumId}":         handlers.NewAlbumHandler(appCtx.AlbumStorage),
+		"/api/albums/{albumId}/related": handlers.NewAlbumRelatedHandler(appCtx.AlbumStorage),
 	}
 
 	router := mux.NewRouter()

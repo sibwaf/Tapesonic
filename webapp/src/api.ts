@@ -45,9 +45,29 @@ export interface PlaylistTrack {
     TapeTrack: TapeTrack;
 }
 
+export interface Album {
+    Id: string;
+
+    Name: string;
+    Artist: string;
+    ReleaseDate: string;
+
+    ThumbnailPath: string;
+
+    Tracks: AlbumTrack[];
+}
+
+export interface AlbumTrack {
+    Id: string;
+
+    TapeTrackId: string;
+    TapeTrack: TapeTrack;
+}
+
 export interface RelatedItems {
     Tapes: Tape[];
     Playlists: Playlist[];
+    Albums: Album[];
 }
 
 export default {
@@ -106,6 +126,33 @@ export default {
     },
     async getPlaylistRelationships(id: string): Promise<RelatedItems> {
         const response = await fetch(`/api/playlists/${id}/related`, { method: "GET" });
+        return await response.json();
+    },
+
+    async createAlbum(album: Album): Promise<Album> {
+        const response = await fetch(`/api/albums`, { method: "POST", body: JSON.stringify(album) });
+        if (!response.ok) {
+            throw await response.json();
+        } else {
+            return await response.json();
+        }
+    },
+    async deleteAlbum(id: string) {
+        const response = await fetch(`/api/albums/${id}`, { method: "DELETE" });
+        if (!response.ok) {
+            throw await response.json();
+        }
+    },
+    async getAllAlbums(): Promise<Album[]> {
+        const response = await fetch(`/api/albums`, { method: "GET" });
+        return await response.json();
+    },
+    async getAlbum(id: string): Promise<Album> {
+        const response = await fetch(`/api/albums/${id}`, { method: "GET" });
+        return await response.json();
+    },
+    async getAlbumRelationships(id: string): Promise<RelatedItems> {
+        const response = await fetch(`/api/albums/${id}/related`, { method: "GET" });
         return await response.json();
     },
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api, { type Tape, type Playlist, type PlaylistTrack, type RelatedItems } from "@/api";
+import api, { type Tape, type Playlist, type PlaylistTrack, type Album, type AlbumTrack, type RelatedItems } from "@/api";
 import { useRoute } from "vue-router";
 import { computed, ref, toRaw } from "vue";
 import TapeTrackListEditor from "@/components/TapeTrackListEditor.vue";
@@ -16,6 +16,9 @@ enum State {
     CREATING_PLAYLIST,
     CREATING_PLAYLIST_ERROR,
     CREATING_PLAYLIST_OK,
+    CREATING_ALBUM,
+    CREATING_ALBUM_ERROR,
+    CREATING_ALBUM_OK,
 }
 
 const route = useRoute();
@@ -41,6 +44,28 @@ const isBusy = computed(() => {
         default:
             return false;
     }
+});
+
+const canCreateAlbum = computed(() => {
+    const tapeValue = tape.value;
+    if (tapeValue == null) {
+        return false;
+    }
+
+    const tracks = tapeValue.Files.flatMap(it => it.Tracks);
+    if (tracks.length == 0) {
+        return false;
+    }
+
+    const artists = new Set(tracks.map(it => it.Artist));
+    if (artists.size != 1) {
+        return false;
+    }
+    if ([...artists][0].trim() == "") {
+        return false;
+    }
+
+    return true;
 });
 
 function reset() {
@@ -86,6 +111,40 @@ async function createPlaylist() {
         router.push({ name: "playlist", params: { "playlistId": response.Id } });
     } catch (e) {
         state.value = State.CREATING_PLAYLIST_ERROR;
+        console.error(e);
+    }
+}
+
+async function createAlbum() {
+    try {
+        state.value = State.CREATING_ALBUM;
+
+        const tapeValue = tape.value!;
+
+        const allTracks = tapeValue.Files.flatMap(it => it.Tracks);
+
+        const album: Album = {
+            Id: undefined!,
+            Name: tapeValue.Name,
+            Artist: allTracks[0].Artist,
+            ReleaseDate: undefined!,
+            ThumbnailPath: tapeValue.ThumbnailPath,
+            Tracks: allTracks.map(it => {
+                const track: AlbumTrack = {
+                    Id: undefined!,
+                    TapeTrackId: it.Id,
+                    TapeTrack: undefined!,
+                };
+                return track;
+            }),
+        };
+
+        const response = await api.createAlbum(album);
+        state.value = State.CREATING_ALBUM_OK;
+
+        router.push({ name: "album", params: { "albumId": response.Id } });
+    } catch (e) {
+        state.value = State.CREATING_ALBUM_ERROR;
         console.error(e);
     }
 }
@@ -168,6 +227,12 @@ function swapArtistAndTitle() {
             </div>
             <div v-if="state == State.CREATING_PLAYLIST_ERROR">Failed to created a playlist</div>
         </h2>
+        <h2 v-if="canCreateAlbum">
+            <div>
+                <button :disabled="isBusy" @click="createAlbum">Create album from this tape</button>
+            </div>
+            <div v-if="state == State.CREATING_ALBUM_ERROR">Failed to created an album</div>
+        </h2>
 
         <button :disabled="isBusy" @click="guessArtistAndTitle">Guess artist/title</button>
         <button :disabled="isBusy" @click="swapArtistAndTitle">Swap artist/title</button>
@@ -189,6 +254,13 @@ function swapArtistAndTitle() {
 
             <h2>Linked playlists</h2>
             <PlaylistGrid v-model="relatedItems.Playlists" />
+        </template>
+
+        <template v-if="relatedItems?.Albums">
+            <hr>
+
+            <h2>Linked albums</h2>
+            <PlaylistGrid v-model="relatedItems.Albums" />
         </template>
     </template>
     <template v-else>

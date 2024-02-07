@@ -186,9 +186,25 @@ func (storage *TapeStorage) GetTapeRelationships(id uuid.UUID) (*RelatedItems, e
 		id,
 	)
 
-	err := storage.db.Model(&Playlist{}).Where("id IN (?)", playlistIdFilter).Find(&result.Playlists).Error
+	albumIdFilter := storage.db.Raw(
+		"SELECT DISTINCT albums.id "+
+			"FROM albums "+
+			"JOIN album_tracks ON album_tracks.album_id = albums.id "+
+			"JOIN tape_tracks ON tape_tracks.id = album_tracks.tape_track_id "+
+			"JOIN tape_files ON tape_files.id = tape_tracks.tape_file_id "+
+			"WHERE tape_files.tape_id = ?",
+		id,
+	)
 
-	return &result, err
+	if err := storage.db.Model(&Playlist{}).Where("id IN (?)", playlistIdFilter).Find(&result.Playlists).Error; err != nil {
+		return nil, err
+	}
+
+	if err := storage.db.Model(&Album{}).Where("id IN (?)", albumIdFilter).Find(&result.Albums).Error; err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 func (storage *TapeStorage) GetTapeTrackWithFile(id uuid.UUID) (*TapeTrack, error) {

@@ -19,6 +19,7 @@ type Context struct {
 
 	TapeStorage     *storage.TapeStorage
 	PlaylistStorage *storage.PlaylistStorage
+	AlbumStorage    *storage.AlbumStorage
 	MediaStorage    *storage.MediaStorage
 	Importer        *storage.Importer
 
@@ -57,6 +58,9 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 	}
 	context.PlaylistStorage, err = storage.NewPlaylistStorage(db)
 	if err != nil {
+		return nil, err
+	}
+	if context.AlbumStorage, err = storage.NewAlbumStorage(db); err != nil {
 		return nil, err
 	}
 
