@@ -10,19 +10,19 @@ import (
 	"github.com/google/uuid"
 )
 
-type getPlaylistHandler struct {
-	playlistStorage *storage.PlaylistStorage
+type getAlbumHandler struct {
+	albumStorage *storage.AlbumStorage
 }
 
-func NewGetPlaylistHandler(
-	playlistStorage *storage.PlaylistStorage,
-) *getPlaylistHandler {
-	return &getPlaylistHandler{
-		playlistStorage: playlistStorage,
+func NewGetAlbumHandler(
+	albumStorage *storage.AlbumStorage,
+) *getAlbumHandler {
+	return &getAlbumHandler{
+		albumStorage: albumStorage,
 	}
 }
 
-func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicResponse, error) {
+func (h *getAlbumHandler) Handle(r *http.Request) (*responses.SubsonicResponse, error) {
 	rawId := r.URL.Query().Get("id")
 	if rawId == "" {
 		return responses.NewParameterMissingResponse("id"), nil
@@ -33,14 +33,14 @@ func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicRespons
 		return nil, err
 	}
 
-	playlist, err := h.playlistStorage.GetPlaylistWithTracks(id)
+	album, err := h.albumStorage.GetAlbumWithTracks(id)
 	if err != nil {
 		return nil, err
 	}
 
 	tracks := []responses.SubsonicChild{}
 	totalLengthMs := 0
-	for index, track := range playlist.Tracks {
+	for index, track := range album.Tracks {
 		lengthMs := track.TapeTrack.EndOffsetMs - track.TapeTrack.StartOffsetMs
 
 		trackResponse := responses.NewSubsonicChild(
@@ -57,16 +57,16 @@ func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicRespons
 	}
 
 	response := responses.NewOkResponse()
-	response.Playlist = responses.NewSubsonicPlaylist(
-		fmt.Sprint(playlist.Id),
-		playlist.Name,
-		len(playlist.Tracks),
+	response.Album = responses.NewAlbumId3(
+		fmt.Sprint(album.Id),
+		album.Name,
+		album.Artist,
+		"album/"+fmt.Sprint(album.Id),
+		len(album.Tracks),
 		totalLengthMs/1000,
-		playlist.CreatedAt,
-		playlist.UpdatedAt,
+		album.CreatedAt,
 	)
-	response.Playlist.CoverArt = "playlist/" + fmt.Sprint(playlist.Id)
-	response.Playlist.Entry = tracks
+	response.Album.Song = tracks
 
 	return response, nil
 }

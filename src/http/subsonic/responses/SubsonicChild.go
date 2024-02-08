@@ -5,6 +5,7 @@ type SubsonicChild struct {
 	IsDir    bool   `json:"isDir" xml:"isDir,attr"`
 	Artist   string `json:"artist" xml:"artist,attr"`
 	Title    string `json:"title" xml:"title,attr"`
+	Track    int    `json:"track" xml:"track,attr"`
 	Duration int    `json:"duration" xml:"duration,attr"`
 }
 
@@ -13,6 +14,7 @@ func NewSubsonicChild(
 	isDir bool,
 	artist string,
 	title string,
+	track int,
 	durationSec int,
 ) *SubsonicChild {
 	return &SubsonicChild{
@@ -20,6 +22,7 @@ func NewSubsonicChild(
 		IsDir:    isDir,
 		Artist:   artist,
 		Title:    title,
+		Track:    track,
 		Duration: durationSec,
 	}
 }

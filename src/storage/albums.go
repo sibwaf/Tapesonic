@@ -78,6 +78,51 @@ func (storage *AlbumStorage) GetAllAlbums() ([]Album, error) {
 	return result, storage.db.Preload("Tracks").Preload("Tracks.TapeTrack").Find(&result).Error
 }
 
+func (storage *AlbumStorage) GetSubsonicAlbumsSortRandom(count int, offset int) ([]SubsonicAlbumListItem, error) {
+	return storage.getSubsonicAlbums(count, offset, "random()")
+}
+
+func (storage *AlbumStorage) GetSubsonicAlbumsSortNewest(count int, offset int) ([]SubsonicAlbumListItem, error) {
+	return storage.getSubsonicAlbums(count, offset, "created_at DESC")
+}
+
+func (storage *AlbumStorage) GetSubsonicAlbumsSortName(count int, offset int) ([]SubsonicAlbumListItem, error) {
+	return storage.getSubsonicAlbums(count, offset, "lower(name)")
+}
+
+func (storage *AlbumStorage) GetSubsonicAlbumsSortArtist(count int, offset int) ([]SubsonicAlbumListItem, error) {
+	return storage.getSubsonicAlbums(count, offset, "lower(artist)")
+}
+
+func (storage *AlbumStorage) getSubsonicAlbums(count int, offset int, order string) ([]SubsonicAlbumListItem, error) {
+	albums := []Album{}
+
+	query := storage.db
+	query = query.Preload("Tracks").Preload("Tracks.TapeTrack") // todo: get rid of preload
+	query = query.Order(order)
+	query = query.Limit(count).Offset(offset)
+
+	if err := query.Find(&albums).Error; err != nil {
+		return []SubsonicAlbumListItem{}, err
+	}
+
+	result := []SubsonicAlbumListItem{}
+	for _, album := range albums {
+		durationMs := 0
+		for _, track := range album.Tracks {
+			durationMs = durationMs + (track.TapeTrack.EndOffsetMs - track.TapeTrack.StartOffsetMs)
+		}
+
+		subsonicAlbum := SubsonicAlbumListItem{
+			Album:       album,
+			SongCount:   len(album.Tracks),
+			DurationSec: durationMs / 1000,
+		}
+		result = append(result, subsonicAlbum)
+	}
+	return result, nil
+}
+
 func (storage *AlbumStorage) GetAlbumWithoutTracks(id uuid.UUID) (*Album, error) {
 	result := Album{}
 	return &result, storage.db.Where(&Tape{Id: id}).Take(&result).Error

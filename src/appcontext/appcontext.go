@@ -68,6 +68,7 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 		config.MediaStorageDir,
 		context.TapeStorage,
 		context.PlaylistStorage,
+		context.AlbumStorage,
 	)
 
 	context.Importer = storage.NewImporter(

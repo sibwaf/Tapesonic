@@ -12,7 +12,8 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 	rawHandlers := map[string]http.HandlerFunc{
 		"/ping": util.AsHandlerFunc(handlers.Ping),
 
-		"/getAlbumList2":            util.AsHandlerFunc(handlers.NewGetAlbumList2Handler().Handle),
+		"/getAlbumList2":            util.AsHandlerFunc(handlers.NewGetAlbumList2Handler(appCtx.AlbumStorage).Handle),
+		"/getAlbum":                 util.AsHandlerFunc(handlers.NewGetAlbumHandler(appCtx.AlbumStorage).Handle),
 		"/getArtists":               util.AsHandlerFunc(handlers.NewGetArtistsHandler().Handle),
 		"/getGenres":                util.AsHandlerFunc(handlers.NewGetGenresHandler().Handle),
 		"/getInternetRadioStations": util.AsHandlerFunc(handlers.NewGetInternetRadioStationsHandler().Handle),

@@ -41,7 +41,7 @@ func (h *getPlaylistsHandler) Handle(r *http.Request) (*responses.SubsonicRespon
 			playlist.CreatedAt,
 			playlist.UpdatedAt,
 		)
-		responsePlaylist.CoverArt = fmt.Sprint(responsePlaylist.Id)
+		responsePlaylist.CoverArt = "playlist/" + fmt.Sprint(responsePlaylist.Id)
 
 		responsePlaylists = append(responsePlaylists, *responsePlaylist)
 	}

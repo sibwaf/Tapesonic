@@ -15,6 +15,7 @@ const (
 	ERROR_CODE_GENERIC           = 0
 	ERROR_CODE_PARAMETER_MISSING = 10
 	ERROR_CODE_NOT_AUTHENTICATED = 40
+	ERROR_CODE_NOT_FOUND         = 70
 )
 
 type SubsonicResponseWrapper struct {
@@ -32,6 +33,7 @@ type SubsonicResponse struct {
 	Error *subsonicError `json:"error,omitempty" xml:"error"`
 
 	AlbumList2            *AlbumList2            `json:"albumList2,omitempty" xml:"albumList2"`
+	Album                 *AlbumId3              `json:"album,omitempty" xml:"album"`
 	Artists               *Artists               `json:"artists,omitempty" xml:"artists"`
 	Genres                *Genres                `json:"genres,omitempty" xml:"genres"`
 	InternetRadioStations *InternetRadioStations `json:"internetRadioStations,omitempty" xml:"internetRadioStations"`
@@ -72,10 +74,18 @@ func NewFailedResponse(code int, message string) *SubsonicResponse {
 	return response
 }
 
+func NewServerErrorResponse(message string) *SubsonicResponse {
+	return NewFailedResponse(ERROR_CODE_GENERIC, message)
+}
+
 func NewParameterMissingResponse(name string) *SubsonicResponse {
 	return NewFailedResponse(ERROR_CODE_PARAMETER_MISSING, fmt.Sprintf("Required parameter `%s` is missing", name))
 }
 
 func NewNotAuthenticatedResponse() *SubsonicResponse {
 	return NewFailedResponse(ERROR_CODE_NOT_AUTHENTICATED, "Wrong username/password or username/token")
+}
+
+func NewNotFoundResponse(what string) *SubsonicResponse {
+	return NewFailedResponse(ERROR_CODE_NOT_FOUND, fmt.Sprintf("Not found: %s", what))
 }

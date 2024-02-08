@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"tapesonic/http/subsonic/responses"
 	"tapesonic/http/util"
@@ -30,12 +32,26 @@ func (h *getCoverArtHandler) Handle(w http.ResponseWriter, r *http.Request) (*re
 		return responses.NewParameterMissingResponse("id"), nil
 	}
 
-	id, err := uuid.Parse(rawId)
-	if err != nil {
-		return nil, err
+	var cover storage.CoverDescriptor
+	var err error
+	if strings.HasPrefix(rawId, "playlist/") {
+		id, e := uuid.Parse(strings.TrimPrefix(rawId, "playlist/"))
+		if e != nil {
+			err = e
+		} else {
+			cover, err = h.mediaStorage.GetPlaylistCover(id)
+		}
+	} else if strings.HasPrefix(rawId, "album/") {
+		id, e := uuid.Parse(strings.TrimPrefix(rawId, "album/"))
+		if e != nil {
+			err = e
+		} else {
+			cover, err = h.mediaStorage.GetAlbumCover(id)
+		}
+	} else {
+		return responses.NewNotFoundResponse(fmt.Sprintf("Cover art `%s`", rawId)), nil
 	}
 
-	cover, err := h.mediaStorage.GetPlaylistCover(id)
 	if err != nil {
 		return nil, err
 	}

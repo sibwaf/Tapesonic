@@ -11,6 +11,7 @@ type MediaStorage struct {
 
 	tapeStorage     *TapeStorage
 	playlistStorage *PlaylistStorage
+	albumStorage    *AlbumStorage
 }
 
 type TrackDescriptor struct {
@@ -29,12 +30,14 @@ func NewMediaStorage(
 	dir string,
 	tapeStorage *TapeStorage,
 	playlistStorage *PlaylistStorage,
+	albumStorage *AlbumStorage,
 ) *MediaStorage {
 	return &MediaStorage{
 		dir: dir,
 
 		tapeStorage:     tapeStorage,
 		playlistStorage: playlistStorage,
+		albumStorage:    albumStorage,
 	}
 }
 
@@ -73,5 +76,17 @@ func (ms *MediaStorage) GetPlaylistCover(id uuid.UUID) (CoverDescriptor, error) 
 	return CoverDescriptor{
 		Path:   path.Join(ms.dir, playlist.ThumbnailPath),
 		Format: path.Ext(playlist.ThumbnailPath),
+	}, nil
+}
+
+func (ms *MediaStorage) GetAlbumCover(id uuid.UUID) (CoverDescriptor, error) {
+	album, err := ms.albumStorage.GetAlbumWithoutTracks(id)
+	if err != nil {
+		return CoverDescriptor{}, err
+	}
+
+	return CoverDescriptor{
+		Path:   path.Join(ms.dir, album.ThumbnailPath),
+		Format: path.Ext(album.ThumbnailPath),
 	}, nil
 }
