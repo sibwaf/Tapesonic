@@ -75,7 +75,9 @@ func (storage *AlbumStorage) DeleteAlbum(id uuid.UUID) error {
 func (storage *AlbumStorage) GetAllAlbums() ([]Album, error) {
 	result := []Album{}
 	// todo: get rid of preload
-	return result, storage.db.Preload("Tracks").Preload("Tracks.TapeTrack").Find(&result).Error
+	return result, storage.db.Preload("Tracks", func(db *gorm.DB) *gorm.DB {
+		return db.Order("track_index ASC")
+	}).Preload("Tracks.TapeTrack").Find(&result).Error
 }
 
 func (storage *AlbumStorage) GetSubsonicAlbumsSortRandom(count int, offset int) ([]SubsonicAlbumListItem, error) {
@@ -98,7 +100,8 @@ func (storage *AlbumStorage) getSubsonicAlbums(count int, offset int, order stri
 	albums := []Album{}
 
 	query := storage.db
-	query = query.Preload("Tracks").Preload("Tracks.TapeTrack") // todo: get rid of preload
+	query = query.Preload("Tracks", func(db *gorm.DB) *gorm.DB { return db.Order("track_index ASC") }) // todo: get rid of preload
+	query = query.Preload("Tracks.TapeTrack")                                                          // todo: get rid of preload
 	query = query.Order(order)
 	query = query.Limit(count).Offset(offset)
 

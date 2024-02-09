@@ -72,7 +72,9 @@ func (storage *PlaylistStorage) DeletePlaylist(id uuid.UUID) error {
 func (storage *PlaylistStorage) GetAllPlaylists() ([]Playlist, error) {
 	result := []Playlist{}
 	// todo: get rid of preload
-	return result, storage.db.Preload("Tracks").Preload("Tracks.TapeTrack").Find(&result).Error
+	return result, storage.db.Preload("Tracks", func(db *gorm.DB) *gorm.DB {
+		return db.Order("track_index ASC")
+	}).Preload("Tracks.TapeTrack").Find(&result).Error
 }
 
 func (storage *PlaylistStorage) GetPlaylistWithoutTracks(id uuid.UUID) (*Playlist, error) {
