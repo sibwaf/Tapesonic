@@ -14,7 +14,9 @@ func GetHandler(appCtx *appcontext.Context) (string, http.Handler) {
 	// todo: logging
 	rawHandlers := map[string]util.WebappHandler{
 		"/api/formats": handlers.NewGetFormatsHandler(appCtx.Ytdlp),
-		"/api/import":  handlers.NewImportHandler(appCtx.Importer),
+
+		"/api/import-queue":          handlers.NewImportQueueHandler(appCtx.ImportQueueStorage),
+		"/api/import-queue/{itemId}": handlers.NewImportQueueItemHandler(appCtx.ImportQueueStorage),
 
 		"/api/tapes":                  handlers.NewTapesHandler(appCtx.TapeStorage),
 		"/api/tapes/{tapeId}":         handlers.NewTapeHandler(appCtx.TapeStorage),

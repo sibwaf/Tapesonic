@@ -1,6 +1,6 @@
-export interface ImportResult {
-    Ok: boolean;
-    Error: string | null;
+export interface ImportQueueItem {
+    Id: string;
+    Url: string;
 }
 
 export interface Tape {
@@ -71,16 +71,22 @@ export interface RelatedItems {
 }
 
 export default {
-    async import(url: string, format: string): Promise<ImportResult> {
+    async getImportQueue(): Promise<ImportQueueItem[]> {
+        const response = await fetch(`/api/import-queue`, { method: "GET" });
+        return await response.json();
+    },
+    async addToImportQueue(url: string): Promise<ImportQueueItem> {
         const response = await fetch(
-            "/api/import?" + new URLSearchParams({ url, format }),
+            "/api/import-queue?" + new URLSearchParams({ url }),
             { method: "POST" },
         );
-
-        return {
-            Ok: response.ok,
-            Error: response.ok ? null : `${response.status} ${response.statusText}`,
-        };
+        return await response.json();
+    },
+    async deleteFromImportQueue(id: string) {
+        const response = await fetch(`/api/import-queue/${id}`, { method: "DELETE" });
+        if (!response.ok) {
+            throw await response.json();
+        }
     },
 
     async getAllTapes(): Promise<Tape[]> {

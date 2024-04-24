@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 )
 
 type TapesonicConfig struct {
@@ -17,6 +18,13 @@ type TapesonicConfig struct {
 
 	YtdlpPath  string
 	FfmpegPath string
+
+	TasksImportQueueImport BackgroundTaskConfig
+}
+
+type BackgroundTaskConfig struct {
+	Cron     string
+	Cooldown time.Duration
 }
 
 func NewConfig() (*TapesonicConfig, error) {
@@ -35,9 +43,22 @@ func NewConfig() (*TapesonicConfig, error) {
 		WebappDir:       getEnvOrDefault("TAPESONIC_WEBAPP_DIR", "webapp"),
 		DataStorageDir:  getEnvOrDefault("TAPESONIC_DATA_STORAGE_DIR", "data"),
 		MediaStorageDir: getEnvOrDefault("TAPESONIC_MEDIA_STORAGE_DIR", "media"),
+
+		TasksImportQueueImport: getBackgroundTaskConfig("IMPORT_QUEUE_IMPORT", "0 * * * * *", 15*time.Minute),
 	}
 
 	return config, nil
+}
+
+func getBackgroundTaskConfig(
+	name string,
+	defaultCron string,
+	defaultCooldown time.Duration,
+) BackgroundTaskConfig {
+	return BackgroundTaskConfig{
+		Cron:     getEnvOrDefault(fmt.Sprintf("TAPESONIC_TASKS_%s_CRON", name), defaultCron),
+		Cooldown: getEnvDurationOrDefault(fmt.Sprintf("TAPESONIC_TASKS_%s_COOLDOWN", name), defaultCooldown),
+	}
 }
 
 func getEnvOrDefault(name string, defaultValue string) string {
@@ -46,5 +67,18 @@ func getEnvOrDefault(name string, defaultValue string) string {
 		return value
 	} else {
 		return defaultValue
+	}
+}
+
+func getEnvDurationOrDefault(name string, defaultValue time.Duration) time.Duration {
+	value := os.Getenv(name)
+	if value == "" {
+		return defaultValue
+	}
+
+	if durationValue, err := time.ParseDuration(value); err != nil {
+		return defaultValue
+	} else {
+		return durationValue
 	}
 }

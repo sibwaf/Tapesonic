@@ -7,9 +7,11 @@ import (
 	"tapesonic/config"
 	"tapesonic/ffmpeg"
 	"tapesonic/storage"
+	"tapesonic/tasks"
 	"tapesonic/ytdlp"
 
 	slogGorm "github.com/orandin/slog-gorm"
+	"github.com/robfig/cron/v3"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -17,11 +19,12 @@ import (
 type Context struct {
 	Config *config.TapesonicConfig
 
-	TapeStorage     *storage.TapeStorage
-	PlaylistStorage *storage.PlaylistStorage
-	AlbumStorage    *storage.AlbumStorage
-	MediaStorage    *storage.MediaStorage
-	Importer        *storage.Importer
+	TapeStorage        *storage.TapeStorage
+	PlaylistStorage    *storage.PlaylistStorage
+	AlbumStorage       *storage.AlbumStorage
+	ImportQueueStorage *storage.ImportQueueStorage
+	MediaStorage       *storage.MediaStorage
+	Importer           *storage.Importer
 
 	Ytdlp  *ytdlp.Ytdlp
 	Ffmpeg *ffmpeg.Ffmpeg
@@ -63,6 +66,9 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 	if context.AlbumStorage, err = storage.NewAlbumStorage(db); err != nil {
 		return nil, err
 	}
+	if context.ImportQueueStorage, err = storage.NewImportQueueStorage(db); err != nil {
+		return nil, err
+	}
 
 	context.MediaStorage = storage.NewMediaStorage(
 		config.MediaStorageDir,
@@ -77,5 +83,30 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 		context.TapeStorage,
 	)
 
+	if err = registerBackgroundTasks(&context); err != nil {
+		return nil, err
+	}
+
 	return &context, nil
+}
+
+func registerBackgroundTasks(context *Context) error {
+	var err error
+
+	cron := cron.New(
+		cron.WithChain(cron.SkipIfStillRunning(cron.DefaultLogger)),
+		cron.WithSeconds(),
+	)
+
+	if err = tasks.NewImportQueueTaskHandler(
+		context.ImportQueueStorage,
+		context.Importer,
+		context.Config.TasksImportQueueImport,
+	).RegisterSchedules(cron); err != nil {
+		return err
+	}
+
+	cron.Start()
+
+	return nil
 }
