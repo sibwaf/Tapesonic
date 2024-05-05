@@ -2,6 +2,7 @@ package storage
 
 import (
 	"path"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -63,7 +64,7 @@ func (ms *MediaStorage) GetTapeCover(id uuid.UUID) (CoverDescriptor, error) {
 
 	return CoverDescriptor{
 		Path:   path.Join(ms.dir, tape.ThumbnailPath),
-		Format: path.Ext(tape.ThumbnailPath),
+		Format: strings.TrimPrefix(path.Ext(tape.ThumbnailPath), "."),
 	}, nil
 }
 
@@ -75,7 +76,7 @@ func (ms *MediaStorage) GetPlaylistCover(id uuid.UUID) (CoverDescriptor, error) 
 
 	return CoverDescriptor{
 		Path:   path.Join(ms.dir, playlist.ThumbnailPath),
-		Format: path.Ext(playlist.ThumbnailPath),
+		Format: strings.TrimPrefix(path.Ext(playlist.ThumbnailPath), "."),
 	}, nil
 }
 
@@ -87,6 +88,6 @@ func (ms *MediaStorage) GetAlbumCover(id uuid.UUID) (CoverDescriptor, error) {
 
 	return CoverDescriptor{
 		Path:   path.Join(ms.dir, album.ThumbnailPath),
-		Format: path.Ext(album.ThumbnailPath),
+		Format: strings.TrimPrefix(path.Ext(album.ThumbnailPath), "."),
 	}, nil
 }
