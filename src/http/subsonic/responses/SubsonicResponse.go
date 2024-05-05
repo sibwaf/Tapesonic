@@ -28,7 +28,7 @@ type SubsonicResponse struct {
 	Version       string `json:"version" xml:"version,attr"`
 	Type          string `json:"type" xml:"type,attr"`
 	ServerVersion string `json:"serverVersion" xml:"serverVersion,attr"`
-	OpenSubsonic  string `json:"openSubsonic" xml:"openSubsonic,attr"`
+	OpenSubsonic  bool   `json:"openSubsonic" xml:"openSubsonic,attr"`
 
 	Error *subsonicError `json:"error,omitempty" xml:"error"`
 
@@ -59,7 +59,7 @@ func NewOkResponse() *SubsonicResponse {
 		Version:       "1.16.1",
 		Type:          "Tapesonic",
 		ServerVersion: build.TAPESONIC_VERSION,
-		OpenSubsonic:  "true",
+		OpenSubsonic:  true,
 	}
 }
 
