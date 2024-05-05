@@ -1,72 +1,36 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"tapesonic/http/subsonic/responses"
-	"tapesonic/storage"
-
-	"github.com/google/uuid"
+	"tapesonic/logic"
 )
 
 type getAlbumHandler struct {
-	albumStorage *storage.AlbumStorage
+	subsonic logic.SubsonicService
 }
 
 func NewGetAlbumHandler(
-	albumStorage *storage.AlbumStorage,
+	subsonic logic.SubsonicService,
 ) *getAlbumHandler {
 	return &getAlbumHandler{
-		albumStorage: albumStorage,
+		subsonic: subsonic,
 	}
 }
 
 func (h *getAlbumHandler) Handle(r *http.Request) (*responses.SubsonicResponse, error) {
-	rawId := r.URL.Query().Get("id")
-	if rawId == "" {
+	id := r.URL.Query().Get("id")
+	if id == "" {
 		return responses.NewParameterMissingResponse("id"), nil
 	}
 
-	id, err := uuid.Parse(rawId)
+	album, err := h.subsonic.GetAlbum(id)
 	if err != nil {
 		return nil, err
-	}
-
-	album, err := h.albumStorage.GetAlbumWithTracks(id)
-	if err != nil {
-		return nil, err
-	}
-
-	tracks := []responses.SubsonicChild{}
-	totalLengthMs := 0
-	for index, track := range album.Tracks {
-		lengthMs := track.TapeTrack.EndOffsetMs - track.TapeTrack.StartOffsetMs
-
-		trackResponse := responses.NewSubsonicChild(
-			fmt.Sprint(track.TapeTrack.Id),
-			false,
-			track.TapeTrack.Artist,
-			track.TapeTrack.Title,
-			index+1,
-			lengthMs/1000,
-		)
-
-		tracks = append(tracks, *trackResponse)
-		totalLengthMs += lengthMs
 	}
 
 	response := responses.NewOkResponse()
-	response.Album = responses.NewAlbumId3(
-		fmt.Sprint(album.Id),
-		album.Name,
-		album.Artist,
-		"album/"+fmt.Sprint(album.Id),
-		len(album.Tracks),
-		totalLengthMs/1000,
-		album.CreatedAt,
-	)
-	response.Album.Song = tracks
-
+	response.Album = album
 	return response, nil
 }

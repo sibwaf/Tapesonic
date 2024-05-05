@@ -1,68 +1,41 @@
 package handlers
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
-	"os"
-	"strings"
 
 	"tapesonic/http/subsonic/responses"
-	"tapesonic/http/util"
-	"tapesonic/storage"
-
-	"github.com/google/uuid"
+	"tapesonic/logic"
 )
 
 type getCoverArtHandler struct {
-	mediaStorage *storage.MediaStorage
+	subsonic logic.SubsonicService
 }
 
 func NewGetCoverArtHandler(
-	mediaStorage *storage.MediaStorage,
+	subsonic logic.SubsonicService,
 ) *getCoverArtHandler {
 	return &getCoverArtHandler{
-		mediaStorage: mediaStorage,
+		subsonic: subsonic,
 	}
 }
 
 func (h *getCoverArtHandler) Handle(w http.ResponseWriter, r *http.Request) (*responses.SubsonicResponse, error) {
-	rawId := r.URL.Query().Get("id")
-	if rawId == "" {
+	id := r.URL.Query().Get("id")
+	if id == "" {
 		return responses.NewParameterMissingResponse("id"), nil
 	}
 
-	var cover storage.CoverDescriptor
-	var err error
-	if strings.HasPrefix(rawId, "playlist/") {
-		id, e := uuid.Parse(strings.TrimPrefix(rawId, "playlist/"))
-		if e != nil {
-			err = e
-		} else {
-			cover, err = h.mediaStorage.GetPlaylistCover(id)
-		}
-	} else if strings.HasPrefix(rawId, "album/") {
-		id, e := uuid.Parse(strings.TrimPrefix(rawId, "album/"))
-		if e != nil {
-			err = e
-		} else {
-			cover, err = h.mediaStorage.GetAlbumCover(id)
-		}
-	} else {
-		return responses.NewNotFoundResponse(fmt.Sprintf("Cover art `%s`", rawId)), nil
-	}
-
+	mimeType, reader, err := h.subsonic.GetCoverArt(id)
 	if err != nil {
 		return nil, err
 	}
 
-	reader, err := os.Open(cover.Path)
-	if err != nil {
-		return nil, err
-	}
-	defer reader.Close()
-
-	w.Header().Add("Content-Type", util.FormatToMediaType(cover.Format))
+	w.Header().Add("Content-Type", mimeType)
 	_, err = io.Copy(w, reader)
-	return nil, err
+	return nil, errors.Join(
+		err,
+		reader.Close(),
+	)
 }

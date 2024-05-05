@@ -6,6 +6,7 @@ import (
 	"path"
 	"tapesonic/config"
 	"tapesonic/ffmpeg"
+	"tapesonic/logic"
 	"tapesonic/storage"
 	"tapesonic/tasks"
 	"tapesonic/ytdlp"
@@ -28,6 +29,8 @@ type Context struct {
 
 	Ytdlp  *ytdlp.Ytdlp
 	Ffmpeg *ffmpeg.Ffmpeg
+
+	SubsonicService logic.SubsonicService
 }
 
 func NewContext(config *config.TapesonicConfig) (*Context, error) {
@@ -81,6 +84,13 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 		context.Config.MediaStorageDir,
 		context.Ytdlp,
 		context.TapeStorage,
+	)
+
+	context.SubsonicService = logic.NewSubsonicInternalService(
+		context.AlbumStorage,
+		context.PlaylistStorage,
+		context.MediaStorage,
+		context.Ffmpeg,
 	)
 
 	if err = registerBackgroundTasks(&context); err != nil {

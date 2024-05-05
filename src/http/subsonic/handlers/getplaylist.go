@@ -1,72 +1,36 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"tapesonic/http/subsonic/responses"
-	"tapesonic/storage"
-
-	"github.com/google/uuid"
+	"tapesonic/logic"
 )
 
 type getPlaylistHandler struct {
-	playlistStorage *storage.PlaylistStorage
+	subsonic logic.SubsonicService
 }
 
 func NewGetPlaylistHandler(
-	playlistStorage *storage.PlaylistStorage,
+	subsonic logic.SubsonicService,
 ) *getPlaylistHandler {
 	return &getPlaylistHandler{
-		playlistStorage: playlistStorage,
+		subsonic: subsonic,
 	}
 }
 
 func (h *getPlaylistHandler) Handle(r *http.Request) (*responses.SubsonicResponse, error) {
-	rawId := r.URL.Query().Get("id")
-	if rawId == "" {
+	id := r.URL.Query().Get("id")
+	if id == "" {
 		return responses.NewParameterMissingResponse("id"), nil
 	}
 
-	id, err := uuid.Parse(rawId)
+	playlist, err := h.subsonic.GetPlaylist(id)
 	if err != nil {
 		return nil, err
-	}
-
-	playlist, err := h.playlistStorage.GetPlaylistWithTracks(id)
-	if err != nil {
-		return nil, err
-	}
-
-	tracks := []responses.SubsonicChild{}
-	totalLengthMs := 0
-	for index, track := range playlist.Tracks {
-		lengthMs := track.TapeTrack.EndOffsetMs - track.TapeTrack.StartOffsetMs
-
-		trackResponse := responses.NewSubsonicChild(
-			fmt.Sprint(track.TapeTrack.Id),
-			false,
-			track.TapeTrack.Artist,
-			track.TapeTrack.Title,
-			index+1,
-			lengthMs/1000,
-		)
-
-		tracks = append(tracks, *trackResponse)
-		totalLengthMs += lengthMs
 	}
 
 	response := responses.NewOkResponse()
-	response.Playlist = responses.NewSubsonicPlaylist(
-		fmt.Sprint(playlist.Id),
-		playlist.Name,
-		len(playlist.Tracks),
-		totalLengthMs/1000,
-		playlist.CreatedAt,
-		playlist.UpdatedAt,
-	)
-	response.Playlist.CoverArt = "playlist/" + fmt.Sprint(playlist.Id)
-	response.Playlist.Entry = tracks
-
+	response.Playlist = playlist
 	return response, nil
 }

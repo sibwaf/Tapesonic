@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"os/exec"
+	"tapesonic/util"
 )
 
 type Ffmpeg struct {
@@ -19,7 +20,7 @@ func NewFfmpeg(path string) *Ffmpeg {
 	}
 }
 
-func (f *Ffmpeg) Stream(ctx context.Context, offsetMs int, durationMs int, reader *ReaderWithMeta, writer io.Writer) error {
+func (f *Ffmpeg) Stream(ctx context.Context, offsetMs int, durationMs int, reader *ReaderWithMeta) (io.ReadCloser, error) {
 	cmd := exec.CommandContext(
 		ctx,
 		f.path,
@@ -36,30 +37,36 @@ func (f *Ffmpeg) Stream(ctx context.Context, offsetMs int, durationMs int, reade
 		"-",
 	)
 	cmd.Stdin = reader.Reader
-	cmd.Stdout = writer
-
-	slog.Debug(fmt.Sprintf("Starting streaming `%s` via `%s`", reader.SourceInfo, cmd.String()))
-
-	err := cmd.Start()
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to start streaming `%s`: %s", reader.SourceInfo, err.Error()))
-		return err
+		return nil, err
 	}
 
-	err = cmd.Wait()
+	err = cmd.Start()
+	if err != nil {
+		slog.Error(fmt.Sprintf("Failed to start streaming `%s`: %s", reader.SourceInfo, err.Error()))
+		return nil, err
+	}
 
-	var exitError *exec.ExitError
-	if errors.As(err, &exitError) && ctx.Err() == context.Canceled {
-		slog.Debug(fmt.Sprintf("Stopped streaming `%s` because context was cancelled", reader.SourceInfo))
-		return nil
-	} else if err != nil {
-		slog.Error(fmt.Sprintf("Error while streaming `%s`: %s", reader.SourceInfo, err.Error()))
-		if exitError != nil && len(exitError.Stderr) > 0 {
-			slog.Error(string(exitError.Stderr))
+	slog.Debug(fmt.Sprintf("Streaming `%s` via `%s`", reader.SourceInfo, cmd.String()))
+
+	return util.NewCustomReadCloser(stdout, func() error {
+		err = cmd.Wait()
+
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) && ctx.Err() == context.Canceled {
+			slog.Debug(fmt.Sprintf("Stopped streaming `%s` because context was cancelled", reader.SourceInfo))
+			return nil
+		} else if err != nil {
+			slog.Error(fmt.Sprintf("Error while streaming `%s`: %s", reader.SourceInfo, err.Error()))
+			if exitError != nil && len(exitError.Stderr) > 0 {
+				slog.Error(string(exitError.Stderr))
+			}
+			return err
+		} else {
+			slog.Debug(fmt.Sprintf("Successfully finished streaming `%s`", reader.SourceInfo))
+			return nil
 		}
-		return err
-	} else {
-		slog.Debug(fmt.Sprintf("Successfully finished streaming `%s`", reader.SourceInfo))
-		return nil
-	}
+	}), nil
 }
