@@ -6,6 +6,7 @@ import (
 	"path"
 	"tapesonic/config"
 	"tapesonic/ffmpeg"
+	"tapesonic/http/subsonic/client"
 	"tapesonic/logic"
 	"tapesonic/storage"
 	"tapesonic/tasks"
@@ -86,12 +87,24 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 		context.TapeStorage,
 	)
 
-	context.SubsonicService = logic.NewSubsonicInternalService(
+	subsonicMux := logic.NewSubsonicMuxService()
+	context.SubsonicService = subsonicMux
+
+	subsonicMux.AddService("tapesonic", logic.NewSubsonicInternalService(
 		context.AlbumStorage,
 		context.PlaylistStorage,
 		context.MediaStorage,
 		context.Ffmpeg,
-	)
+	))
+	if config.SubsonicProxyUrl != "" {
+		subsonicMux.AddService("proxy", logic.NewSubsonicExternalService(
+			client.NewSubsonicClient(
+				config.SubsonicProxyUrl,
+				config.SubsonicProxyUsername,
+				config.SubsonicProxyPassword,
+			),
+		))
+	}
 
 	if err = registerBackgroundTasks(&context); err != nil {
 		return nil, err

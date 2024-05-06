@@ -20,6 +20,10 @@ type TapesonicConfig struct {
 	FfmpegPath string
 
 	TasksImportQueueImport BackgroundTaskConfig
+
+	SubsonicProxyUrl      string
+	SubsonicProxyUsername string
+	SubsonicProxyPassword string
 }
 
 type BackgroundTaskConfig struct {
@@ -35,16 +39,22 @@ func NewConfig() (*TapesonicConfig, error) {
 	}
 
 	config := &TapesonicConfig{
-		ServerPort:      port,
-		Username:        os.Getenv("TAPESONIC_USERNAME"),
-		Password:        os.Getenv("TAPESONIC_PASSWORD"),
-		YtdlpPath:       getEnvOrDefault("TAPESONIC_YTDLP_PATH", "yt-dlp"),
-		FfmpegPath:      getEnvOrDefault("TAPESONIC_FFMPEG_PATH", "ffmpeg"),
+		ServerPort: port,
+		Username:   os.Getenv("TAPESONIC_USERNAME"),
+		Password:   os.Getenv("TAPESONIC_PASSWORD"),
+
+		YtdlpPath:  getEnvOrDefault("TAPESONIC_YTDLP_PATH", "yt-dlp"),
+		FfmpegPath: getEnvOrDefault("TAPESONIC_FFMPEG_PATH", "ffmpeg"),
+
 		WebappDir:       getEnvOrDefault("TAPESONIC_WEBAPP_DIR", "webapp"),
 		DataStorageDir:  getEnvOrDefault("TAPESONIC_DATA_STORAGE_DIR", "data"),
 		MediaStorageDir: getEnvOrDefault("TAPESONIC_MEDIA_STORAGE_DIR", "media"),
 
 		TasksImportQueueImport: getBackgroundTaskConfig("IMPORT_QUEUE_IMPORT", "0 * * * * *", 15*time.Minute),
+
+		SubsonicProxyUrl:      os.Getenv("TAPESONIC_SUBSONIC_PROXY_URL"),
+		SubsonicProxyUsername: os.Getenv("TAPESONIC_SUBSONIC_PROXY_USERNAME"),
+		SubsonicProxyPassword: os.Getenv("TAPESONIC_SUBSONIC_PROXY_PASSWORD"),
 	}
 
 	return config, nil

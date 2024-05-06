@@ -95,6 +95,10 @@ func authenticateByToken(username string, token string, salt string, usernameCon
 		return false
 	}
 
-	expectedHash := md5.Sum([]byte(passwordConfig + salt))
-	return hex.EncodeToString(expectedHash[:]) == token
+	return GenerateToken(passwordConfig, salt) == token
+}
+
+func GenerateToken(password string, salt string) string {
+	hash := md5.Sum([]byte(password + salt))
+	return hex.EncodeToString(hash[:])
 }
