@@ -27,7 +27,7 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 		"/getStarred2":              util.AsHandlerFunc(handlers.NewGetStarred2Handler().Handle),
 		"/search3":                  util.AsHandlerFunc(handlers.NewSearch3Handler().Handle),
 
-		"/scrobble": util.AsHandlerFunc(handlers.NewScrobbleHandler().Handle),
+		"/scrobble": util.AsHandlerFunc(handlers.NewScrobbleHandler(appCtx.SubsonicService).Handle),
 
 		"/stream":      util.AsRawHandlerFunc(handlers.NewStreamHandler(appCtx.SubsonicService).Handle),
 		"/getCoverArt": util.AsRawHandlerFunc(handlers.NewGetCoverArtHandler(appCtx.SubsonicService).Handle),

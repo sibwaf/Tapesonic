@@ -149,6 +149,15 @@ func (svc *SubsonicMuxService) GetPlaylists() (*responses.SubsonicPlaylists, err
 	return responses.NewSubsonicPlaylists(playlists), nil
 }
 
+func (svc *SubsonicMuxService) Scrobble(prefixedId string, time_ time.Time, submission bool) error {
+	serviceName, service, err := svc.findService(prefixedId)
+	if err != nil {
+		return err
+	}
+
+	return service.Scrobble(removePrefix(serviceName, prefixedId), time_, submission)
+}
+
 func (svc *SubsonicMuxService) GetCoverArt(prefixedId string) (mime string, reader io.ReadCloser, err error) {
 	serviceName, service, err := svc.findService(prefixedId)
 	if err != nil {

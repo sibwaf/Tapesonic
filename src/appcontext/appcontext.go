@@ -21,12 +21,13 @@ import (
 type Context struct {
 	Config *config.TapesonicConfig
 
-	TapeStorage        *storage.TapeStorage
-	PlaylistStorage    *storage.PlaylistStorage
-	AlbumStorage       *storage.AlbumStorage
-	ImportQueueStorage *storage.ImportQueueStorage
-	MediaStorage       *storage.MediaStorage
-	Importer           *storage.Importer
+	TapeStorage             *storage.TapeStorage
+	PlaylistStorage         *storage.PlaylistStorage
+	AlbumStorage            *storage.AlbumStorage
+	ImportQueueStorage      *storage.ImportQueueStorage
+	TapeTrackListensStorage *storage.TapeTrackListensStorage
+	MediaStorage            *storage.MediaStorage
+	Importer                *storage.Importer
 
 	Ytdlp  *ytdlp.Ytdlp
 	Ffmpeg *ffmpeg.Ffmpeg
@@ -73,6 +74,9 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 	if context.ImportQueueStorage, err = storage.NewImportQueueStorage(db); err != nil {
 		return nil, err
 	}
+	if context.TapeTrackListensStorage, err = storage.NewTapeTrackListensStorage(db); err != nil {
+		return nil, err
+	}
 
 	context.MediaStorage = storage.NewMediaStorage(
 		config.MediaStorageDir,
@@ -93,6 +97,7 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 	subsonicMux.AddService("tapesonic", logic.NewSubsonicInternalService(
 		context.AlbumStorage,
 		context.PlaylistStorage,
+		context.TapeTrackListensStorage,
 		context.MediaStorage,
 		context.Ffmpeg,
 	))

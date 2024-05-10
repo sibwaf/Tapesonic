@@ -12,6 +12,7 @@ import (
 	httpUtil "tapesonic/http/util"
 	"tapesonic/storage"
 	commonUtil "tapesonic/util"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -19,6 +20,7 @@ import (
 type subsonicInternalService struct {
 	albums    *storage.AlbumStorage
 	playlists *storage.PlaylistStorage
+	listens   *storage.TapeTrackListensStorage
 	media     *storage.MediaStorage
 
 	ffmpeg *ffmpeg.Ffmpeg
@@ -27,12 +29,14 @@ type subsonicInternalService struct {
 func NewSubsonicInternalService(
 	albums *storage.AlbumStorage,
 	playlists *storage.PlaylistStorage,
+	listens *storage.TapeTrackListensStorage,
 	media *storage.MediaStorage,
 	ffmpeg *ffmpeg.Ffmpeg,
 ) SubsonicService {
 	return &subsonicInternalService{
 		albums:    albums,
 		playlists: playlists,
+		listens:   listens,
 		media:     media,
 		ffmpeg:    ffmpeg,
 	}
@@ -191,6 +195,15 @@ func (svc *subsonicInternalService) GetPlaylists() (*responses.SubsonicPlaylists
 	}
 
 	return responses.NewSubsonicPlaylists(playlistsResponse), nil
+}
+
+func (svc *subsonicInternalService) Scrobble(rawId string, time_ time.Time, submission bool) error {
+	id, err := uuid.Parse(rawId)
+	if err != nil {
+		return err
+	}
+
+	return svc.listens.Record(id, time_, submission)
 }
 
 func (svc *subsonicInternalService) GetCoverArt(rawId string) (mime string, reader io.ReadCloser, err error) {

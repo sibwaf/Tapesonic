@@ -5,6 +5,7 @@ import (
 	"io"
 	"tapesonic/http/subsonic/client"
 	"tapesonic/http/subsonic/responses"
+	"time"
 )
 
 type subsonicExternalService struct {
@@ -31,6 +32,10 @@ func (svc *subsonicExternalService) GetPlaylist(id string) (*responses.SubsonicP
 
 func (svc *subsonicExternalService) GetPlaylists() (*responses.SubsonicPlaylists, error) {
 	return svc.client.GetPlaylists()
+}
+
+func (svc *subsonicExternalService) Scrobble(id string, time_ time.Time, submission bool) error {
+	return svc.client.Scrobble(id, time_, submission)
 }
 
 func (svc *subsonicExternalService) GetCoverArt(id string) (mime string, reader io.ReadCloser, err error) {

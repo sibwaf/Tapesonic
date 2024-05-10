@@ -9,6 +9,7 @@ import (
 	"tapesonic/http/subsonic/responses"
 	subsonicUtil "tapesonic/http/subsonic/util"
 	commonUtil "tapesonic/util"
+	"time"
 )
 
 type SubsonicClient struct {
@@ -74,6 +75,15 @@ func (c *SubsonicClient) GetPlaylists() (*responses.SubsonicPlaylists, error) {
 	}
 
 	return res.Playlists, nil
+}
+
+func (c *SubsonicClient) Scrobble(id string, time_ time.Time, submission bool) error {
+	_, err := c.doParsedQuery("/rest/scrobble", map[string]string{
+		"id":         id,
+		"time":       fmt.Sprint(time_.UnixMilli()),
+		"submission": fmt.Sprint(submission),
+	})
+	return err
 }
 
 func (c *SubsonicClient) GetCoverArt(id string) (mime string, reader io.ReadCloser, err error) {

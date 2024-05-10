@@ -29,6 +29,22 @@ func StringToIntOrDefault(text string, dflt int) int {
 	return result
 }
 
+func StringToInt64OrDefault(text string, dflt int64) int64 {
+	result, err := strconv.ParseInt(text, 10, 64)
+	if err != nil {
+		return dflt
+	}
+	return result
+}
+
+func StringToBoolOrDefault(text string, dflt bool) bool {
+	result, err := strconv.ParseBool(text)
+	if err != nil {
+		return dflt
+	}
+	return result
+}
+
 func GenerateRandomString(length int) string {
 	alphabet := alphabetLowerLatin + alphabetUpperLatin + alphabetDigits
 
