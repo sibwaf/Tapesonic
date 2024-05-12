@@ -51,6 +51,23 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 	size int,
 	offset int,
 ) (*responses.AlbumList2, error) {
+	if len(svc.services) == 1 {
+		for serviceName, service := range svc.services {
+			albums, err := service.GetAlbumList2(type_, size, offset)
+			if err != nil {
+				return nil, err
+			}
+
+			for i := range albums.Album {
+				album := &albums.Album[i]
+				album.Id = addPrefix(serviceName, album.Id)
+				album.CoverArt = addPrefix(serviceName, album.CoverArt)
+			}
+
+			return albums, nil
+		}
+	}
+
 	albums := []responses.AlbumId3{}
 	for serviceName, service := range svc.services {
 		more, err := service.GetAlbumList2(type_, offset+size, 0)
