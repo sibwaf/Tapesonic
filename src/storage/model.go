@@ -11,6 +11,7 @@ type SubsonicAlbumItem struct {
 
 	SongCount   int
 	DurationSec int
+	PlayCount   int
 
 	Tracks []SubsonicTrackItem `gorm:"-"`
 }
@@ -22,4 +23,5 @@ type SubsonicTrackItem struct {
 	Title  string
 
 	DurationSec int
+	PlayCount   int
 }

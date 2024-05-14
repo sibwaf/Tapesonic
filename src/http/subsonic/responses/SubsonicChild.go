@@ -1,12 +1,13 @@
 package responses
 
 type SubsonicChild struct {
-	Id       string `json:"id" xml:"id,attr"`
-	IsDir    bool   `json:"isDir" xml:"isDir,attr"`
-	Artist   string `json:"artist" xml:"artist,attr"`
-	Title    string `json:"title" xml:"title,attr"`
-	Track    int    `json:"track" xml:"track,attr"`
-	Duration int    `json:"duration" xml:"duration,attr"`
+	Id        string `json:"id" xml:"id,attr"`
+	IsDir     bool   `json:"isDir" xml:"isDir,attr"`
+	Artist    string `json:"artist" xml:"artist,attr"`
+	Title     string `json:"title" xml:"title,attr"`
+	Track     int    `json:"track" xml:"track,attr"`
+	Duration  int    `json:"duration" xml:"duration,attr"`
+	PlayCount int    `json:"playCount" xml:"playCount,attr"`
 }
 
 func NewSubsonicChild(

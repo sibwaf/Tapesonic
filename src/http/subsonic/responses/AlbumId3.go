@@ -12,6 +12,7 @@ type AlbumId3 struct {
 
 	SongCount int `json:"songCount" xml:"songCount,attr"`
 	Duration  int `json:"duration" xml:"duration,attr"`
+	PlayCount int `json:"playCount" xml:"playCount,attr"`
 
 	Created string `json:"created" xml:"created,attr"`
 

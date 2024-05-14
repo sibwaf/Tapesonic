@@ -62,6 +62,8 @@ func (svc *subsonicInternalService) GetAlbum(rawId string) (*responses.AlbumId3,
 		album.DurationSec,
 		album.CreatedAt,
 	)
+	albumResponse.PlayCount = album.PlayCount
+
 	for index, track := range album.Tracks {
 		trackResponse := responses.NewSubsonicChild(
 			fmt.Sprint(track.TapeTrackId),
@@ -71,6 +73,7 @@ func (svc *subsonicInternalService) GetAlbum(rawId string) (*responses.AlbumId3,
 			index+1,
 			track.DurationSec,
 		)
+		trackResponse.PlayCount = track.PlayCount
 
 		albumResponse.Song = append(albumResponse.Song, *trackResponse)
 	}
@@ -114,6 +117,9 @@ func (svc *subsonicInternalService) GetAlbumList2(
 			album.DurationSec,
 			album.CreatedAt,
 		)
+
+		albumResponse.PlayCount = album.PlayCount
+
 		albumsResponse = append(albumsResponse, *albumResponse)
 	}
 

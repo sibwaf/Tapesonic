@@ -127,7 +127,8 @@ func (storage *AlbumStorage) getSubsonicAlbums(count int, offset int, filter str
 				album_tracks.album_id AS album_id,
 				count(album_tracks.id) AS song_count,
 				sum(tape_tracks.end_offset_ms - tape_tracks.start_offset_ms) / 1000 AS duration_sec,
-				max(tape_track_listens.last_listened_at) AS last_listened_at
+				max(tape_track_listens.last_listened_at) AS last_listened_at,
+				sum(tape_track_listens.listen_count) AS play_count
 			FROM album_tracks
 			LEFT JOIN tape_tracks ON tape_tracks.id = album_tracks.tape_track_id
 			LEFT JOIN tape_track_listens ON tape_track_listens.tape_track_id = album_tracks.tape_track_id
@@ -155,7 +156,8 @@ func (storage *AlbumStorage) getSubsonicTracks(filter string, order string) ([]S
 			album_tracks.*,
 			(tape_tracks.end_offset_ms - tape_tracks.start_offset_ms) / 1000 AS duration_sec,
 			tape_tracks.artist AS artist,
-			tape_tracks.title AS title
+			tape_tracks.title AS title,
+			tape_track_listens.listen_count AS play_count
 		FROM album_tracks
 		LEFT JOIN tape_track_listens ON tape_track_listens.tape_track_id = album_tracks.tape_track_id
 		LEFT JOIN tape_tracks ON tape_tracks.id = album_tracks.tape_track_id
