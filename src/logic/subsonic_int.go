@@ -111,13 +111,13 @@ func (svc *subsonicInternalService) GetAlbumList2(
 	albumsResponse := []responses.AlbumId3{}
 	for _, album := range albums {
 		albumResponse := responses.NewAlbumId3(
-			fmt.Sprint(album.Album.Id),
-			album.Album.Name,
-			album.Album.Artist,
-			"album/"+fmt.Sprint(album.Album.Id),
+			fmt.Sprint(album.Id),
+			album.Name,
+			album.Artist,
+			"album/"+fmt.Sprint(album.Id),
 			album.SongCount,
 			album.DurationSec,
-			album.Album.CreatedAt,
+			album.CreatedAt,
 		)
 		albumsResponse = append(albumsResponse, *albumResponse)
 	}

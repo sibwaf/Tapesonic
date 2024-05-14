@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -85,45 +86,37 @@ func (storage *AlbumStorage) GetSubsonicAlbumsSortRandom(count int, offset int) 
 }
 
 func (storage *AlbumStorage) GetSubsonicAlbumsSortNewest(count int, offset int) ([]SubsonicAlbumListItem, error) {
-	return storage.getSubsonicAlbums(count, offset, "created_at DESC")
+	return storage.getSubsonicAlbums(count, offset, "albums.created_at DESC")
 }
 
 func (storage *AlbumStorage) GetSubsonicAlbumsSortName(count int, offset int) ([]SubsonicAlbumListItem, error) {
-	return storage.getSubsonicAlbums(count, offset, "lower(name)")
+	return storage.getSubsonicAlbums(count, offset, "lower(albums.name)")
 }
 
 func (storage *AlbumStorage) GetSubsonicAlbumsSortArtist(count int, offset int) ([]SubsonicAlbumListItem, error) {
-	return storage.getSubsonicAlbums(count, offset, "lower(artist)")
+	return storage.getSubsonicAlbums(count, offset, "lower(albums.artist)")
 }
 
 func (storage *AlbumStorage) getSubsonicAlbums(count int, offset int, order string) ([]SubsonicAlbumListItem, error) {
-	albums := []Album{}
-
-	query := storage.db
-	query = query.Preload("Tracks", func(db *gorm.DB) *gorm.DB { return db.Order("track_index ASC") }) // todo: get rid of preload
-	query = query.Preload("Tracks.TapeTrack")                                                          // todo: get rid of preload
-	query = query.Order(order)
-	query = query.Limit(count).Offset(offset)
-
-	if err := query.Find(&albums).Error; err != nil {
-		return []SubsonicAlbumListItem{}, err
-	}
+	query := `
+		WITH album_extra_info AS (
+			SELECT
+				album_tracks.album_id AS album_id,
+				count(album_tracks.id) AS song_count,
+				sum(tape_tracks.end_offset_ms - tape_tracks.start_offset_ms) / 1000 AS duration_sec
+			FROM album_tracks
+			LEFT JOIN tape_tracks ON tape_tracks.id = album_tracks.tape_track_id
+			GROUP BY album_tracks.album_id
+		)
+		SELECT *
+		FROM albums
+		LEFT JOIN album_extra_info ON album_extra_info.album_id = albums.id
+	`
+	query += fmt.Sprintf(" ORDER BY %s", order)
+	query += fmt.Sprintf(" LIMIT %d OFFSET %d", count, offset)
 
 	result := []SubsonicAlbumListItem{}
-	for _, album := range albums {
-		durationMs := 0
-		for _, track := range album.Tracks {
-			durationMs = durationMs + (track.TapeTrack.EndOffsetMs - track.TapeTrack.StartOffsetMs)
-		}
-
-		subsonicAlbum := SubsonicAlbumListItem{
-			Album:       album,
-			SongCount:   len(album.Tracks),
-			DurationSec: durationMs / 1000,
-		}
-		result = append(result, subsonicAlbum)
-	}
-	return result, nil
+	return result, storage.db.Raw(query).Find(&result).Error
 }
 
 func (storage *AlbumStorage) GetAlbumWithoutTracks(id uuid.UUID) (*Album, error) {
