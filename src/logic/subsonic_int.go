@@ -48,27 +48,9 @@ func (svc *subsonicInternalService) GetAlbum(rawId string) (*responses.AlbumId3,
 		return nil, err
 	}
 
-	album, err := svc.albums.GetAlbumWithTracks(id)
+	album, err := svc.albums.GetSubsonicAlbum(id)
 	if err != nil {
 		return nil, err
-	}
-
-	tracks := []responses.SubsonicChild{}
-	totalLengthMs := 0
-	for index, track := range album.Tracks {
-		lengthMs := track.TapeTrack.EndOffsetMs - track.TapeTrack.StartOffsetMs
-
-		trackResponse := responses.NewSubsonicChild(
-			fmt.Sprint(track.TapeTrack.Id),
-			false,
-			track.TapeTrack.Artist,
-			track.TapeTrack.Title,
-			index+1,
-			lengthMs/1000,
-		)
-
-		tracks = append(tracks, *trackResponse)
-		totalLengthMs += lengthMs
 	}
 
 	albumResponse := responses.NewAlbumId3(
@@ -76,11 +58,22 @@ func (svc *subsonicInternalService) GetAlbum(rawId string) (*responses.AlbumId3,
 		album.Name,
 		album.Artist,
 		"album/"+fmt.Sprint(album.Id),
-		len(album.Tracks),
-		totalLengthMs/1000,
+		album.SongCount,
+		album.DurationSec,
 		album.CreatedAt,
 	)
-	albumResponse.Song = tracks
+	for index, track := range album.Tracks {
+		trackResponse := responses.NewSubsonicChild(
+			fmt.Sprint(track.TapeTrackId),
+			false,
+			track.Artist,
+			track.Title,
+			index+1,
+			track.DurationSec,
+		)
+
+		albumResponse.Song = append(albumResponse.Song, *trackResponse)
+	}
 
 	return albumResponse, nil
 }
@@ -90,7 +83,7 @@ func (svc *subsonicInternalService) GetAlbumList2(
 	size int,
 	offset int,
 ) (*responses.AlbumList2, error) {
-	var albums []storage.SubsonicAlbumListItem
+	var albums []storage.SubsonicAlbumItem
 	var err error
 	if type_ == LIST_RANDOM {
 		albums, err = svc.albums.GetSubsonicAlbumsSortRandom(size, offset)
