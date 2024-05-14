@@ -82,36 +82,47 @@ func (storage *AlbumStorage) GetAllAlbums() ([]Album, error) {
 }
 
 func (storage *AlbumStorage) GetSubsonicAlbumsSortRandom(count int, offset int) ([]SubsonicAlbumListItem, error) {
-	return storage.getSubsonicAlbums(count, offset, "random()")
+	return storage.getSubsonicAlbums(count, offset, "", "random()")
 }
 
 func (storage *AlbumStorage) GetSubsonicAlbumsSortNewest(count int, offset int) ([]SubsonicAlbumListItem, error) {
-	return storage.getSubsonicAlbums(count, offset, "albums.created_at DESC")
+	return storage.getSubsonicAlbums(count, offset, "", "albums.created_at DESC")
 }
 
 func (storage *AlbumStorage) GetSubsonicAlbumsSortName(count int, offset int) ([]SubsonicAlbumListItem, error) {
-	return storage.getSubsonicAlbums(count, offset, "lower(albums.name)")
+	return storage.getSubsonicAlbums(count, offset, "", "lower(albums.name)")
 }
 
 func (storage *AlbumStorage) GetSubsonicAlbumsSortArtist(count int, offset int) ([]SubsonicAlbumListItem, error) {
-	return storage.getSubsonicAlbums(count, offset, "lower(albums.artist)")
+	return storage.getSubsonicAlbums(count, offset, "", "lower(albums.artist)")
 }
 
-func (storage *AlbumStorage) getSubsonicAlbums(count int, offset int, order string) ([]SubsonicAlbumListItem, error) {
+func (storage *AlbumStorage) GetSubsonicAlbumsSortRecent(count int, offset int) ([]SubsonicAlbumListItem, error) {
+	return storage.getSubsonicAlbums(count, offset, "album_extra_info.last_listened_at IS NOT NULL", "album_extra_info.last_listened_at DESC")
+}
+
+func (storage *AlbumStorage) getSubsonicAlbums(count int, offset int, filter string, order string) ([]SubsonicAlbumListItem, error) {
 	query := `
 		WITH album_extra_info AS (
 			SELECT
 				album_tracks.album_id AS album_id,
 				count(album_tracks.id) AS song_count,
-				sum(tape_tracks.end_offset_ms - tape_tracks.start_offset_ms) / 1000 AS duration_sec
+				sum(tape_tracks.end_offset_ms - tape_tracks.start_offset_ms) / 1000 AS duration_sec,
+				max(tape_track_listens.last_listened_at) AS last_listened_at
 			FROM album_tracks
 			LEFT JOIN tape_tracks ON tape_tracks.id = album_tracks.tape_track_id
+			LEFT JOIN tape_track_listens ON tape_track_listens.tape_track_id = album_tracks.tape_track_id
 			GROUP BY album_tracks.album_id
 		)
 		SELECT *
 		FROM albums
 		LEFT JOIN album_extra_info ON album_extra_info.album_id = albums.id
 	`
+
+	if filter != "" {
+		query += fmt.Sprintf(" WHERE %s", filter)
+	}
+
 	query += fmt.Sprintf(" ORDER BY %s", order)
 	query += fmt.Sprintf(" LIMIT %d OFFSET %d", count, offset)
 

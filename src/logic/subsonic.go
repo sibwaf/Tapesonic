@@ -32,7 +32,7 @@ const (
 	LIST_NEWEST = "newest"
 	// LIST_HIGHEST   = "highest" // todo
 	// LIST_FREQUENT  = "frequent" // todo
-	// LIST_RECENT    = "recent" // todo
+	LIST_RECENT    = "recent"
 	LIST_BY_NAME   = "alphabeticalByName"
 	LIST_BY_ARTIST = "alphabeticalByArtist"
 )

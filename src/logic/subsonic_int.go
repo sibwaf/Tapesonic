@@ -100,6 +100,8 @@ func (svc *subsonicInternalService) GetAlbumList2(
 		albums, err = svc.albums.GetSubsonicAlbumsSortName(size, offset)
 	} else if type_ == LIST_BY_ARTIST {
 		albums, err = svc.albums.GetSubsonicAlbumsSortArtist(size, offset)
+	} else if type_ == LIST_RECENT {
+		albums, err = svc.albums.GetSubsonicAlbumsSortRecent(size, offset)
 	} else {
 		return nil, fmt.Errorf("unsupported album sort order %s", type_)
 	}
