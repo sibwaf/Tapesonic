@@ -120,6 +120,10 @@ func (storage *AlbumStorage) GetSubsonicAlbumsSortRecent(count int, offset int) 
 	return storage.getSubsonicAlbums(count, offset, "album_extra_info.last_listened_at IS NOT NULL", "album_extra_info.last_listened_at DESC")
 }
 
+func (storage *AlbumStorage) GetSubsonicAlbumsSortFrequent(count int, offset int) ([]SubsonicAlbumItem, error) {
+	return storage.getSubsonicAlbums(count, offset, "album_extra_info.total_play_time > 0", "album_extra_info.total_play_time DESC")
+}
+
 func (storage *AlbumStorage) getSubsonicAlbums(count int, offset int, filter string, order string) ([]SubsonicAlbumItem, error) {
 	query := `
 		WITH album_extra_info AS (
@@ -128,7 +132,8 @@ func (storage *AlbumStorage) getSubsonicAlbums(count int, offset int, filter str
 				count(album_tracks.id) AS song_count,
 				sum(tape_tracks.end_offset_ms - tape_tracks.start_offset_ms) / 1000 AS duration_sec,
 				max(tape_track_listens.last_listened_at) AS last_listened_at,
-				sum(tape_track_listens.listen_count) AS play_count
+				sum(tape_track_listens.listen_count) AS play_count,
+				sum(tape_track_listens.listen_count * (tape_tracks.end_offset_ms - tape_tracks.start_offset_ms)) AS total_play_time
 			FROM album_tracks
 			LEFT JOIN tape_tracks ON tape_tracks.id = album_tracks.tape_track_id
 			LEFT JOIN tape_track_listens ON tape_track_listens.tape_track_id = album_tracks.tape_track_id
