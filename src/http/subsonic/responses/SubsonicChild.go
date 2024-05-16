@@ -6,6 +6,7 @@ type SubsonicChild struct {
 	Artist    string `json:"artist" xml:"artist,attr"`
 	Title     string `json:"title" xml:"title,attr"`
 	Track     int    `json:"track" xml:"track,attr"`
+	CoverArt  string `json:"coverArt" xml:"coverArt,attr"`
 	Duration  int    `json:"duration" xml:"duration,attr"`
 	PlayCount int    `json:"playCount" xml:"playCount,attr"`
 }

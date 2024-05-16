@@ -73,6 +73,7 @@ func (svc *subsonicInternalService) GetAlbum(rawId string) (*responses.AlbumId3,
 			index+1,
 			track.DurationSec,
 		)
+		trackResponse.CoverArt = albumResponse.CoverArt
 		trackResponse.PlayCount = track.PlayCount
 
 		albumResponse.Song = append(albumResponse.Song, *trackResponse)
@@ -139,6 +140,8 @@ func (svc *subsonicInternalService) GetPlaylist(rawId string) (*responses.Subson
 		return nil, err
 	}
 
+	coverArtId := "playlist/" + fmt.Sprint(playlist.Id)
+
 	tracks := []responses.SubsonicChild{}
 	totalLengthMs := 0
 	for index, track := range playlist.Tracks {
@@ -152,6 +155,7 @@ func (svc *subsonicInternalService) GetPlaylist(rawId string) (*responses.Subson
 			index+1,
 			lengthMs/1000,
 		)
+		trackResponse.CoverArt = coverArtId
 
 		tracks = append(tracks, *trackResponse)
 		totalLengthMs += lengthMs
@@ -165,7 +169,7 @@ func (svc *subsonicInternalService) GetPlaylist(rawId string) (*responses.Subson
 		playlist.CreatedAt,
 		playlist.UpdatedAt,
 	)
-	playlistResponse.CoverArt = "playlist/" + fmt.Sprint(playlist.Id)
+	playlistResponse.CoverArt = coverArtId
 	playlistResponse.Entry = tracks
 
 	return playlistResponse, nil
