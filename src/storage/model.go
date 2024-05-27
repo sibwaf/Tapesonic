@@ -19,6 +19,7 @@ type SubsonicAlbumItem struct {
 type SubsonicTrackItem struct {
 	AlbumTrack
 
+	Album  string
 	Artist string
 	Title  string
 

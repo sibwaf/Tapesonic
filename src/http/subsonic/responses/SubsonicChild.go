@@ -5,10 +5,12 @@ type SubsonicChild struct {
 	IsDir     bool   `json:"isDir" xml:"isDir,attr"`
 	Artist    string `json:"artist" xml:"artist,attr"`
 	Title     string `json:"title" xml:"title,attr"`
+	Album     string `json:"album" xml:"album,attr"`
 	Track     int    `json:"track" xml:"track,attr"`
 	CoverArt  string `json:"coverArt" xml:"coverArt,attr"`
 	Duration  int    `json:"duration" xml:"duration,attr"`
 	PlayCount int    `json:"playCount" xml:"playCount,attr"`
+	AlbumId   string `json:"albumId" xml:"albumId,attr"`
 }
 
 func NewSubsonicChild(

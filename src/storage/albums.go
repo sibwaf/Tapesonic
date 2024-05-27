@@ -159,11 +159,13 @@ func (storage *AlbumStorage) getSubsonicTracks(filter string, order string) ([]S
 	query := `
 		SELECT
 			album_tracks.*,
+			albums.name AS album,
 			(tape_tracks.end_offset_ms - tape_tracks.start_offset_ms) / 1000 AS duration_sec,
 			tape_tracks.artist AS artist,
 			tape_tracks.title AS title,
 			tape_track_listens.listen_count AS play_count
 		FROM album_tracks
+		LEFT JOIN albums ON albums.id = album_tracks.album_id
 		LEFT JOIN tape_track_listens ON tape_track_listens.tape_track_id = album_tracks.tape_track_id
 		LEFT JOIN tape_tracks ON tape_tracks.id = album_tracks.tape_track_id
 	`

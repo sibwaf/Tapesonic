@@ -42,6 +42,7 @@ func (svc *SubsonicMuxService) GetAlbum(prefixedId string) (*responses.AlbumId3,
 		song := &album.Song[i]
 		song.Id = addPrefix(serviceName, song.Id)
 		song.CoverArt = addPrefix(serviceName, song.CoverArt)
+		song.AlbumId = addPrefix(serviceName, song.AlbumId)
 	}
 
 	return album, nil
@@ -142,6 +143,7 @@ func (svc *SubsonicMuxService) GetPlaylist(prefixedId string) (*responses.Subson
 		entry := &playlist.Entry[i]
 		entry.Id = addPrefix(serviceName, entry.Id)
 		entry.CoverArt = addPrefix(serviceName, entry.CoverArt)
+		entry.AlbumId = addPrefix(serviceName, entry.AlbumId)
 	}
 
 	return playlist, nil
