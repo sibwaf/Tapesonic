@@ -209,6 +209,10 @@ func (svc *SubsonicMuxService) findService(prefixedId string) (string, SubsonicS
 }
 
 func addPrefix(serviceName string, unprefixedId string) string {
+	if unprefixedId == "" {
+		return ""
+	}
+
 	return generatePrefix(serviceName) + unprefixedId
 }
 
