@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -88,6 +89,50 @@ func (storage *PlaylistStorage) GetPlaylistWithTracks(id uuid.UUID) (*Playlist, 
 	return &result, storage.db.Where(&Tape{Id: id}).Preload("Tracks", func(db *gorm.DB) *gorm.DB {
 		return db.Order("track_index ASC")
 	}).Preload("Tracks.TapeTrack").Take(&result).Error
+}
+
+func (storage *PlaylistStorage) GetSubsonicPlaylist(id uuid.UUID) (*SubsonicPlaylistItem, error) {
+	playlists, err := storage.getSubsonicPlaylists(1, 0, fmt.Sprintf("playlists.id = '%s'", id.String()), "playlists.id")
+	if err != nil {
+		return nil, err
+	}
+	if len(playlists) == 0 {
+		return nil, fmt.Errorf("playlist with id %s doesn't exist", id.String())
+	}
+
+	return &playlists[0], nil
+}
+
+func (storage *PlaylistStorage) GetSubsonicPlaylists(count int, offset int) ([]SubsonicPlaylistItem, error) {
+	return storage.getSubsonicPlaylists(count, offset, "", "playlists.updated_at DESC")
+}
+
+func (storage *PlaylistStorage) getSubsonicPlaylists(count int, offset int, filter string, order string) ([]SubsonicPlaylistItem, error) {
+	query := `
+		WITH playlist_extra_info AS (
+			SELECT
+				playlist_tracks.playlist_id AS playlist_id,
+				count(playlist_tracks.id) AS song_count,
+				sum(tape_tracks.end_offset_ms - tape_tracks.start_offset_ms) / 1000 AS duration_sec
+			FROM playlist_tracks
+			LEFT JOIN tape_tracks ON tape_tracks.id = playlist_tracks.tape_track_id
+			LEFT JOIN tape_track_listens ON tape_track_listens.tape_track_id = playlist_tracks.tape_track_id
+			GROUP BY playlist_tracks.playlist_id
+		)
+		SELECT *
+		FROM playlists
+		LEFT JOIN playlist_extra_info ON playlist_extra_info.playlist_id = playlists.id
+	`
+
+	if filter != "" {
+		query += fmt.Sprintf(" WHERE %s", filter)
+	}
+
+	query += fmt.Sprintf(" ORDER BY %s", order)
+	query += fmt.Sprintf(" LIMIT %d OFFSET %d", count, offset)
+
+	result := []SubsonicPlaylistItem{}
+	return result, storage.db.Raw(query).Find(&result).Error
 }
 
 func (storage *PlaylistStorage) GetPlaylistRelationships(id uuid.UUID) (*RelatedItems, error) {

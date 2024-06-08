@@ -90,14 +90,7 @@ func (storage *AlbumStorage) GetSubsonicAlbum(id uuid.UUID) (*SubsonicAlbumItem,
 		return nil, fmt.Errorf("album with id %s doesn't exist", id.String())
 	}
 
-	tracks, err := storage.getSubsonicTracks(fmt.Sprintf("album_tracks.album_id = '%s'", id.String()), "album_tracks.track_index")
-	if err != nil {
-		return nil, err
-	}
-
-	album := albums[0]
-	album.Tracks = tracks
-	return &album, nil
+	return &albums[0], nil
 }
 
 func (storage *AlbumStorage) GetSubsonicAlbumsSortRandom(count int, offset int) ([]SubsonicAlbumItem, error) {
@@ -152,31 +145,6 @@ func (storage *AlbumStorage) getSubsonicAlbums(count int, offset int, filter str
 	query += fmt.Sprintf(" LIMIT %d OFFSET %d", count, offset)
 
 	result := []SubsonicAlbumItem{}
-	return result, storage.db.Raw(query).Find(&result).Error
-}
-
-func (storage *AlbumStorage) getSubsonicTracks(filter string, order string) ([]SubsonicTrackItem, error) {
-	query := `
-		SELECT
-			album_tracks.*,
-			albums.name AS album,
-			(tape_tracks.end_offset_ms - tape_tracks.start_offset_ms) / 1000 AS duration_sec,
-			tape_tracks.artist AS artist,
-			tape_tracks.title AS title,
-			tape_track_listens.listen_count AS play_count
-		FROM album_tracks
-		LEFT JOIN albums ON albums.id = album_tracks.album_id
-		LEFT JOIN tape_track_listens ON tape_track_listens.tape_track_id = album_tracks.tape_track_id
-		LEFT JOIN tape_tracks ON tape_tracks.id = album_tracks.tape_track_id
-	`
-
-	if filter != "" {
-		query += fmt.Sprintf(" WHERE %s", filter)
-	}
-
-	query += fmt.Sprintf(" ORDER BY %s", order)
-
-	result := []SubsonicTrackItem{}
 	return result, storage.db.Raw(query).Find(&result).Error
 }
 

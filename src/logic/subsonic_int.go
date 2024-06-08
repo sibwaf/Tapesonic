@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strings"
 	"tapesonic/ffmpeg"
@@ -18,6 +19,7 @@ import (
 )
 
 type subsonicInternalService struct {
+	tracks    *storage.TrackStorage
 	albums    *storage.AlbumStorage
 	playlists *storage.PlaylistStorage
 	listens   *storage.TapeTrackListensStorage
@@ -27,6 +29,7 @@ type subsonicInternalService struct {
 }
 
 func NewSubsonicInternalService(
+	tracks *storage.TrackStorage,
 	albums *storage.AlbumStorage,
 	playlists *storage.PlaylistStorage,
 	listens *storage.TapeTrackListensStorage,
@@ -34,6 +37,7 @@ func NewSubsonicInternalService(
 	ffmpeg *ffmpeg.Ffmpeg,
 ) SubsonicService {
 	return &subsonicInternalService{
+		tracks:    tracks,
 		albums:    albums,
 		playlists: playlists,
 		listens:   listens,
@@ -53,6 +57,11 @@ func (svc *subsonicInternalService) GetAlbum(rawId string) (*responses.AlbumId3,
 		return nil, err
 	}
 
+	tracks, err := svc.tracks.GetSubsonicTracksByAlbum(id)
+	if err != nil {
+		return nil, err
+	}
+
 	albumResponse := responses.NewAlbumId3(
 		fmt.Sprint(album.Id),
 		album.Name,
@@ -64,13 +73,13 @@ func (svc *subsonicInternalService) GetAlbum(rawId string) (*responses.AlbumId3,
 	)
 	albumResponse.PlayCount = album.PlayCount
 
-	for _, track := range album.Tracks {
+	for _, track := range tracks {
 		trackResponse := responses.NewSubsonicChild(
-			fmt.Sprint(track.TapeTrackId),
+			fmt.Sprint(track.Id),
 			false,
 			track.Artist,
 			track.Title,
-			track.TrackIndex+1,
+			track.AlbumTrackIndex+1,
 			track.DurationSec,
 		)
 		trackResponse.Album = album.Name
@@ -137,64 +146,59 @@ func (svc *subsonicInternalService) GetPlaylist(rawId string) (*responses.Subson
 		return nil, err
 	}
 
-	playlist, err := svc.playlists.GetPlaylistWithTracks(id)
+	playlist, err := svc.playlists.GetSubsonicPlaylist(id)
 	if err != nil {
 		return nil, err
 	}
 
-	coverArtId := "playlist/" + fmt.Sprint(playlist.Id)
-
-	tracks := []responses.SubsonicChild{}
-	totalLengthMs := 0
-	for index, track := range playlist.Tracks {
-		lengthMs := track.TapeTrack.EndOffsetMs - track.TapeTrack.StartOffsetMs
-
-		trackResponse := responses.NewSubsonicChild(
-			fmt.Sprint(track.TapeTrack.Id),
-			false,
-			track.TapeTrack.Artist,
-			track.TapeTrack.Title,
-			index+1,
-			lengthMs/1000,
-		)
-		trackResponse.CoverArt = coverArtId
-
-		tracks = append(tracks, *trackResponse)
-		totalLengthMs += lengthMs
+	tracks, err := svc.tracks.GetSubsonicTracksByPlaylist(id)
+	if err != nil {
+		return nil, err
 	}
 
 	playlistResponse := responses.NewSubsonicPlaylist(
 		fmt.Sprint(playlist.Id),
 		playlist.Name,
-		len(playlist.Tracks),
-		totalLengthMs/1000,
+		playlist.SongCount,
+		playlist.DurationSec,
 		playlist.CreatedAt,
 		playlist.UpdatedAt,
 	)
-	playlistResponse.CoverArt = coverArtId
-	playlistResponse.Entry = tracks
+	playlistResponse.CoverArt = "playlist/" + fmt.Sprint(playlist.Id)
+
+	for _, track := range tracks {
+		trackResponse := responses.NewSubsonicChild(
+			fmt.Sprint(track.Id),
+			false,
+			track.Artist,
+			track.Title,
+			track.PlaylistTrackIndex+1,
+			track.DurationSec,
+		)
+		trackResponse.Album = track.Album
+		trackResponse.AlbumId = track.AlbumId.String()
+		trackResponse.CoverArt = playlistResponse.CoverArt
+		trackResponse.PlayCount = track.PlayCount
+
+		playlistResponse.Entry = append(playlistResponse.Entry, *trackResponse)
+	}
 
 	return playlistResponse, nil
 }
 
 func (svc *subsonicInternalService) GetPlaylists() (*responses.SubsonicPlaylists, error) {
-	playlists, err := svc.playlists.GetAllPlaylists()
+	playlists, err := svc.playlists.GetSubsonicPlaylists(math.MaxInt32, 0)
 	if err != nil {
 		return nil, err
 	}
 
 	playlistsResponse := []responses.SubsonicPlaylist{}
 	for _, playlist := range playlists {
-		totalLengthMs := 0
-		for _, track := range playlist.Tracks {
-			totalLengthMs += track.TapeTrack.EndOffsetMs - track.TapeTrack.StartOffsetMs
-		}
-
 		responsePlaylist := responses.NewSubsonicPlaylist(
 			fmt.Sprint(playlist.Id),
 			playlist.Name,
-			len(playlist.Tracks),
-			totalLengthMs/1000,
+			playlist.SongCount,
+			playlist.DurationSec,
 			playlist.CreatedAt,
 			playlist.UpdatedAt,
 		)

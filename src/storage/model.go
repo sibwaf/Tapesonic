@@ -1,5 +1,11 @@
 package storage
 
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
 type RelatedItems struct {
 	Tapes     []*Tape
 	Playlists []*Playlist
@@ -7,17 +13,44 @@ type RelatedItems struct {
 }
 
 type SubsonicAlbumItem struct {
-	Album
+	Id uuid.UUID
+
+	Name        string
+	Artist      string
+	ReleaseDate *time.Time
+
+	ThumbnailPath string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 
 	SongCount   int
 	DurationSec int
 	PlayCount   int
+}
 
-	Tracks []SubsonicTrackItem `gorm:"-"`
+type SubsonicPlaylistItem struct {
+	Id uuid.UUID
+
+	Name   string
+	Artist string
+
+	ThumbnailPath string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+
+	SongCount   int
+	DurationSec int
 }
 
 type SubsonicTrackItem struct {
-	AlbumTrack
+	Id uuid.UUID
+
+	AlbumId uuid.UUID
+
+	AlbumTrackIndex    int
+	PlaylistTrackIndex int
 
 	Album  string
 	Artist string
