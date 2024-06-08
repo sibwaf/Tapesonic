@@ -18,6 +18,10 @@ func NewSubsonicExternalService(client *client.SubsonicClient) SubsonicService {
 	}
 }
 
+func (svc *subsonicExternalService) GetSong(id string) (*responses.SubsonicChild, error) {
+	return svc.client.GetSong(id)
+}
+
 func (svc *subsonicExternalService) GetAlbum(id string) (*responses.AlbumId3, error) {
 	return svc.client.GetAlbum(id)
 }

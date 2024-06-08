@@ -30,6 +30,15 @@ func NewSubsonicClient(
 	}
 }
 
+func (c *SubsonicClient) GetSong(id string) (*responses.SubsonicChild, error) {
+	res, err := c.doParsedQuery("/rest/getSong", map[string]string{"id": id})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Song, nil
+}
+
 func (c *SubsonicClient) GetAlbum(id string) (*responses.AlbumId3, error) {
 	res, err := c.doParsedQuery("/rest/getAlbum", map[string]string{"id": id})
 	if err != nil {

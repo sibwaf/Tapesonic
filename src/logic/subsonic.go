@@ -8,6 +8,8 @@ import (
 )
 
 type SubsonicService interface {
+	GetSong(id string) (*responses.SubsonicChild, error)
+
 	GetAlbum(id string) (*responses.AlbumId3, error)
 
 	GetAlbumList2(

@@ -24,6 +24,7 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 		"/getPodcasts":              util.AsHandlerFunc(handlers.NewGetPodcastsHandler().Handle),
 		"/getRandomSongs":           util.AsHandlerFunc(handlers.NewGetRandomSongsHandler().Handle),
 		"/getScanStatus":            util.AsHandlerFunc(handlers.NewGetScanStatusHandler().Handle),
+		"/getSong":                  util.AsHandlerFunc(handlers.NewGetSongHandler(appCtx.SubsonicService).Handle),
 		"/getStarred2":              util.AsHandlerFunc(handlers.NewGetStarred2Handler().Handle),
 		"/search3":                  util.AsHandlerFunc(handlers.NewSearch3Handler().Handle),
 

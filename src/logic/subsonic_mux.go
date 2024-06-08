@@ -25,6 +25,24 @@ func (svc *SubsonicMuxService) AddService(prefix string, service SubsonicService
 	svc.services[prefix] = service
 }
 
+func (svc *SubsonicMuxService) GetSong(prefixedId string) (*responses.SubsonicChild, error) {
+	serviceName, service, err := svc.findService(prefixedId)
+	if err != nil {
+		return nil, err
+	}
+
+	song, err := service.GetSong(removePrefix(serviceName, prefixedId))
+	if err != nil {
+		return nil, err
+	}
+
+	song.Id = addPrefix(serviceName, song.Id)
+	song.CoverArt = addPrefix(serviceName, song.CoverArt)
+	song.AlbumId = addPrefix(serviceName, song.AlbumId)
+
+	return song, nil
+}
+
 func (svc *SubsonicMuxService) GetAlbum(prefixedId string) (*responses.AlbumId3, error) {
 	serviceName, service, err := svc.findService(prefixedId)
 	if err != nil {

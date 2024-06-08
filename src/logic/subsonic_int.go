@@ -46,6 +46,36 @@ func NewSubsonicInternalService(
 	}
 }
 
+func (svc *subsonicInternalService) GetSong(rawId string) (*responses.SubsonicChild, error) {
+	id, err := uuid.Parse(rawId)
+	if err != nil {
+		return nil, err
+	}
+
+	track, err := svc.tracks.GetSubsonicTrack(id)
+	if err != nil {
+		return nil, err
+	}
+
+	songResponse := responses.NewSubsonicChild(
+		track.Id.String(),
+		false,
+		track.Artist,
+		track.Title,
+		0,
+		track.DurationSec,
+	)
+	songResponse.PlayCount = track.PlayCount
+
+	if track.AlbumId != uuid.Nil {
+		songResponse.Album = track.Album
+		songResponse.AlbumId = track.AlbumId.String()
+		songResponse.CoverArt = getAlbumCoverId(track.AlbumId)
+	}
+
+	return songResponse, nil
+}
+
 func (svc *subsonicInternalService) GetAlbum(rawId string) (*responses.AlbumId3, error) {
 	id, err := uuid.Parse(rawId)
 	if err != nil {

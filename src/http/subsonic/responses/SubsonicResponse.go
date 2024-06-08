@@ -45,6 +45,7 @@ type SubsonicResponse struct {
 	RandomSongs           *RandomSongs           `json:"randomSongs,omitempty" xml:"randomSongs"`
 	ScanStatus            *ScanStatus            `json:"scanStatus,omitempty" xml:"scanStatus"`
 	SearchResult3         *SearchResult3         `json:"searchResult3,omitempty" xml:"searchResult3"`
+	Song                  *SubsonicChild         `json:"song,omitempty" xml:"song"`
 	Starred2              *Starred2              `json:"starred2,omitempty" xml:"starred2"`
 }
 
