@@ -4,6 +4,7 @@ import { useRoute } from "vue-router";
 import { computed, ref, toRaw } from "vue";
 import TapeTrackListEditor from "@/components/TapeTrackListEditor.vue";
 import router from "@/router";
+import AlbumGrid from "@/components/AlbumGrid.vue";
 import PlaylistGrid from "@/components/PlaylistGrid.vue";
 
 enum State {
@@ -260,7 +261,7 @@ function swapArtistAndTitle() {
             <hr>
 
             <h2>Linked albums</h2>
-            <PlaylistGrid v-model="relatedItems.Albums" />
+            <AlbumGrid v-model="relatedItems.Albums" />
         </template>
     </template>
     <template v-else>
