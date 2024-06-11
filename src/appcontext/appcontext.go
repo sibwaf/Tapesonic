@@ -27,6 +27,8 @@ type Context struct {
 	AlbumStorage            *storage.AlbumStorage
 	ImportQueueStorage      *storage.ImportQueueStorage
 	TapeTrackListensStorage *storage.TapeTrackListensStorage
+	CachedMuxSongStorage    *storage.CachedMuxSongStorage
+	MuxedSongListensStorage *storage.MuxedSongListensStorage
 	MediaStorage            *storage.MediaStorage
 	Importer                *storage.Importer
 
@@ -81,6 +83,12 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 	if context.TapeTrackListensStorage, err = storage.NewTapeTrackListensStorage(db); err != nil {
 		return nil, err
 	}
+	if context.CachedMuxSongStorage, err = storage.NewCachedMuxSongStorage(db); err != nil {
+		return nil, err
+	}
+	if context.MuxedSongListensStorage, err = storage.NewMuxedSongListensStorage(db); err != nil {
+		return nil, err
+	}
 
 	context.MediaStorage = storage.NewMediaStorage(
 		config.MediaStorageDir,
@@ -95,7 +103,10 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 		context.TapeStorage,
 	)
 
-	subsonicMux := logic.NewSubsonicMuxService()
+	subsonicMux := logic.NewSubsonicMuxService(
+		context.CachedMuxSongStorage,
+		context.MuxedSongListensStorage,
+	)
 	context.SubsonicService = subsonicMux
 
 	subsonicMux.AddService("tapesonic", logic.NewSubsonicInternalService(

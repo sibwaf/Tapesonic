@@ -59,3 +59,8 @@ type SubsonicTrackItem struct {
 	DurationSec int
 	PlayCount   int
 }
+
+type MuxedAlbumListenStats struct {
+	ServiceName string
+	Id          string
+}

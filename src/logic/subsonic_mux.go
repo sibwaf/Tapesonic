@@ -2,22 +2,34 @@ package logic
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/rand"
 	"sort"
 	"strings"
 	"tapesonic/http/subsonic/responses"
+	"tapesonic/storage"
+	"tapesonic/util"
 	"time"
 )
 
 type SubsonicMuxService struct {
 	services map[string]SubsonicService
+
+	cachedMuxSong    *storage.CachedMuxSongStorage
+	muxedSongListens *storage.MuxedSongListensStorage
 }
 
-func NewSubsonicMuxService() *SubsonicMuxService {
+func NewSubsonicMuxService(
+	cachedMuxSong *storage.CachedMuxSongStorage,
+	muxedSongListens *storage.MuxedSongListensStorage,
+) *SubsonicMuxService {
 	return &SubsonicMuxService{
-		services: map[string]SubsonicService{},
+		services:         map[string]SubsonicService{},
+		cachedMuxSong:    cachedMuxSong,
+		muxedSongListens: muxedSongListens,
 	}
 }
 
@@ -34,6 +46,11 @@ func (svc *SubsonicMuxService) GetSong(prefixedId string) (*responses.SubsonicCh
 	song, err := service.GetSong(removePrefix(serviceName, prefixedId))
 	if err != nil {
 		return nil, err
+	}
+
+	_, cacheWriteErr := svc.cachedMuxSong.Save(serviceName, song.Id, song.AlbumId, song.Duration)
+	if cacheWriteErr != nil {
+		slog.Error(fmt.Sprintf("Failed to cache song info when proxying getSong: %s", cacheWriteErr.Error()))
 	}
 
 	song.Id = addPrefix(serviceName, song.Id)
@@ -54,8 +71,8 @@ func (svc *SubsonicMuxService) GetAlbum(prefixedId string) (*responses.AlbumId3,
 		return nil, err
 	}
 
-	album.Id = addPrefix(serviceName, album.Id)
-	album.CoverArt = addPrefix(serviceName, album.CoverArt)
+	rewrittenAlbum := rewriteAlbumInfo(serviceName, *album)
+	album = &rewrittenAlbum
 	for i := range album.Song {
 		song := &album.Song[i]
 		song.Id = addPrefix(serviceName, song.Id)
@@ -79,13 +96,44 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 			}
 
 			for i := range albums.Album {
-				album := &albums.Album[i]
-				album.Id = addPrefix(serviceName, album.Id)
-				album.CoverArt = addPrefix(serviceName, album.CoverArt)
+				albums.Album[i] = rewriteAlbumInfo(serviceName, albums.Album[i])
 			}
 
 			return albums, nil
 		}
+	}
+
+	if type_ == LIST_RECENT || type_ == LIST_FREQUENT {
+		var albumListenStats []storage.MuxedAlbumListenStats
+		var err error
+		if type_ == LIST_RECENT {
+			albumListenStats, err = svc.muxedSongListens.GetRecentAlbumListenStats(size, offset)
+		} else {
+			albumListenStats, err = svc.muxedSongListens.GetFrequentAlbumListenStats(size, offset)
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		albums, err := util.ParallelMap(albumListenStats, func(item storage.MuxedAlbumListenStats) (responses.AlbumId3, error) {
+			service, err := svc.findServiceByName(item.ServiceName)
+			if err != nil {
+				return responses.AlbumId3{}, err
+			}
+
+			album, err := service.GetAlbum(item.Id)
+			if err != nil {
+				return responses.AlbumId3{}, err
+			}
+
+			album.Song = []responses.SubsonicChild{}
+			return rewriteAlbumInfo(item.ServiceName, *album), nil
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return responses.NewAlbumList2(albums), nil
 	}
 
 	albums := []responses.AlbumId3{}
@@ -96,9 +144,7 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 		}
 
 		for i := range more.Album {
-			album := &more.Album[i]
-			album.Id = addPrefix(serviceName, album.Id)
-			album.CoverArt = addPrefix(serviceName, album.CoverArt)
+			more.Album[i] = rewriteAlbumInfo(serviceName, more.Album[i])
 		}
 
 		albums = append(albums, more.Album...)
@@ -194,7 +240,20 @@ func (svc *SubsonicMuxService) Scrobble(prefixedId string, time_ time.Time, subm
 		return err
 	}
 
-	return service.Scrobble(removePrefix(serviceName, prefixedId), time_, submission)
+	unprefixedId := removePrefix(serviceName, prefixedId)
+
+	song, cacheWriteErr := service.GetSong(unprefixedId)
+	if cacheWriteErr == nil {
+		_, cacheWriteErr = svc.cachedMuxSong.Save(serviceName, song.Id, song.AlbumId, song.Duration)
+	}
+	if cacheWriteErr != nil {
+		slog.Error(fmt.Sprintf("Failed to cache song info when scrobbling: %s", cacheWriteErr.Error()))
+	}
+
+	selfErr := svc.muxedSongListens.Record(serviceName, unprefixedId, time_, submission)
+	serviceErr := service.Scrobble(unprefixedId, time_, submission)
+
+	return errors.Join(selfErr, serviceErr)
 }
 
 func (svc *SubsonicMuxService) GetCoverArt(prefixedId string) (mime string, reader io.ReadCloser, err error) {
@@ -213,6 +272,21 @@ func (svc *SubsonicMuxService) Stream(ctx context.Context, prefixedId string) (m
 	}
 
 	return service.Stream(ctx, removePrefix(serviceName, prefixedId))
+}
+
+func rewriteAlbumInfo(serviceName string, album responses.AlbumId3) responses.AlbumId3 {
+	album.Id = addPrefix(serviceName, album.Id)
+	album.CoverArt = addPrefix(serviceName, album.CoverArt)
+	return album
+}
+
+func (svc *SubsonicMuxService) findServiceByName(serviceName string) (SubsonicService, error) {
+	service := svc.services[serviceName]
+	if service == nil {
+		return nil, fmt.Errorf("unknown subsonic service `%s`", serviceName)
+	} else {
+		return service, nil
+	}
 }
 
 func (svc *SubsonicMuxService) findService(prefixedId string) (string, SubsonicService, error) {
