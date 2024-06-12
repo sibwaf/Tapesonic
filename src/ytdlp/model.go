@@ -1,7 +1,7 @@
 package ytdlp
 
 type YtdlpPlaylist struct {
-	Id string `json:"Id"`
+	Id string `json:"id"`
 
 	Title      string `json:"title"`
 	Uploader   string `json:"uploader"`
