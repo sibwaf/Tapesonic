@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -19,6 +21,8 @@ type Tape struct {
 	AuthorName string
 
 	ThumbnailPath string
+
+	ReleaseDate *time.Time
 
 	Files []*TapeFile
 }
@@ -45,6 +49,8 @@ type TapeFile struct {
 	ThumbnailPath string
 	MediaPath     string
 
+	ReleaseDate *time.Time
+
 	FileIndex int
 
 	Tracks []*TapeTrack
@@ -70,6 +76,8 @@ type TapeTrack struct {
 
 	Artist string
 	Title  string
+
+	ReleaseDate *time.Time
 
 	TrackIndex int
 }

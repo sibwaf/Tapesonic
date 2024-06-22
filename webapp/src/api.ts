@@ -8,6 +8,7 @@ export interface Tape {
     Name: string;
     AuthorName: string;
     ThumbnailPath: string;
+    ReleaseDate: string | null;
     Files: TapeFile[];
 }
 
@@ -16,6 +17,7 @@ export interface TapeFile {
     Name: string;
     AuthorName: string;
     ThumbnailPath: string;
+    ReleaseDate: string | null;
     Tracks: TapeTrack[];
 }
 

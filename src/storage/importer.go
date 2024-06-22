@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"tapesonic/util"
 	"tapesonic/ytdlp"
+	"time"
 )
 
 type Importer struct {
@@ -47,7 +48,11 @@ func (i *Importer) ImportTape(url string, format string) (*Tape, error) {
 		AuthorName: util.Coalesce(playlistMetadata.Uploader, playlistMetadata.UploaderId),
 
 		ThumbnailPath: downloadedPlaylist.ThumbnailPath,
+
+		ReleaseDate: parseDateOrNull(playlistMetadata.ReleaseDate),
 	}
+
+	fileReleaseDates := map[time.Time]bool{}
 
 	for _, downloadedFile := range downloadedPlaylist.Files {
 		tapeFile, err := extractFile(
@@ -66,6 +71,16 @@ func (i *Importer) ImportTape(url string, format string) (*Tape, error) {
 		tape.Name = util.Coalesce(tape.Name, tapeFile.Name)
 		tape.AuthorName = util.Coalesce(tape.AuthorName, tapeFile.AuthorName)
 		tape.ThumbnailPath = util.Coalesce(tape.ThumbnailPath, tapeFile.ThumbnailPath)
+
+		if tapeFile.ReleaseDate != nil {
+			fileReleaseDates[*tapeFile.ReleaseDate] = true
+		}
+	}
+
+	if tape.ReleaseDate == nil && len(fileReleaseDates) == 1 {
+		for releaseDate := range fileReleaseDates {
+			tape.ReleaseDate = &releaseDate
+		}
 	}
 
 	return &tape, i.tapeStorage.UpsertTape(&tape)
@@ -90,6 +105,8 @@ func extractFile(
 
 		ThumbnailPath: thumbnailPath,
 		MediaPath:     mediaPath,
+
+		ReleaseDate: parseDateOrNull(metadata.ReleaseDate),
 	}
 
 	for _, chapter := range metadata.Chapters {
@@ -101,6 +118,8 @@ func extractFile(
 
 			Artist: metadata.Artist,
 			Title:  chapter.Title,
+
+			ReleaseDate: tapeFile.ReleaseDate,
 		}
 		tapeFile.Tracks = append(tapeFile.Tracks, &track)
 	}
@@ -114,9 +133,20 @@ func extractFile(
 
 			Artist: metadata.Artist,
 			Title:  util.Coalesce(metadata.Track, metadata.Title),
+
+			ReleaseDate: tapeFile.ReleaseDate,
 		}
 		tapeFile.Tracks = append(tapeFile.Tracks, &track)
 	}
 
 	return &tapeFile, nil
+}
+
+func parseDateOrNull(str string) *time.Time {
+	result, err := time.Parse("20060102", str)
+	if err != nil {
+		return nil
+	} else {
+		return &result
+	}
 }

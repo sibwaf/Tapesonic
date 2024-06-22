@@ -128,7 +128,7 @@ async function createAlbum() {
             Id: undefined!,
             Name: tapeValue.Name,
             Artist: allTracks[0].Artist,
-            ReleaseDate: undefined!,
+            ReleaseDate: tapeValue.ReleaseDate,
             ThumbnailPath: tapeValue.ThumbnailPath,
             Tracks: allTracks.map(it => {
                 const track: AlbumTrack = {
@@ -210,6 +210,15 @@ function swapArtistAndTitle() {
 
     reset();
 })();
+
+function toDisplayableDate(datetime: string): string {
+    const match = datetime.match(/^(\d{4}-\d{2}-\d{2})T.+/);
+    if (match != null) {
+        return match[1];
+    } else {
+        return datetime;
+    }
+}
 </script>
 
 <template>
@@ -222,6 +231,11 @@ function swapArtistAndTitle() {
     <template v-else-if="editedTape">
         <h1>{{ editedTape.Name }}</h1>
         <h2>by {{ editedTape.AuthorName }}</h2>
+
+        <h3 v-if="editedTape.ReleaseDate">released {{ toDisplayableDate(editedTape.ReleaseDate) }}</h3>
+
+        <hr>
+
         <h2>
             <div>
                 <button :disabled="isBusy" @click="createPlaylist">Create playlist from this tape</button>
@@ -235,11 +249,14 @@ function swapArtistAndTitle() {
             <div v-if="state == State.CREATING_ALBUM_ERROR">Failed to created an album</div>
         </h2>
 
+        <hr>
+
         <button :disabled="isBusy" @click="guessArtistAndTitle">Guess artist/title</button>
         <button :disabled="isBusy" @click="swapArtistAndTitle">Swap artist/title</button>
 
         <div v-for="file in editedTape.Files">
             <h3>{{ file.Name }}</h3>
+            <h4 v-if="file.ReleaseDate">released {{ toDisplayableDate(file.ReleaseDate) }}</h4>
             <TapeTrackListEditor v-model="file.Tracks" />
         </div>
 
@@ -250,14 +267,14 @@ function swapArtistAndTitle() {
         <div v-else-if="state == State.SAVING_OK">Saved</div>
         <div v-else-if="state == State.SAVING_ERROR">Failed to save</div>
 
-        <template v-if="relatedItems?.Playlists">
+        <template v-if="relatedItems?.Playlists && relatedItems.Playlists.length > 0">
             <hr>
 
             <h2>Linked playlists</h2>
             <PlaylistGrid v-model="relatedItems.Playlists" />
         </template>
 
-        <template v-if="relatedItems?.Albums">
+        <template v-if="relatedItems?.Albums && relatedItems.Albums.length > 0">
             <hr>
 
             <h2>Linked albums</h2>

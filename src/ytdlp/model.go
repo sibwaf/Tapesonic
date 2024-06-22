@@ -8,6 +8,8 @@ type YtdlpPlaylist struct {
 	UploaderId string `json:"uploader_id"`
 	WebpageUrl string `json:"webpage_url"`
 
+	ReleaseDate string `json:"release_date"`
+
 	ExtractorKey string `json:"extractor_key"`
 }
 
@@ -24,6 +26,8 @@ type YtdlpFile struct {
 	Track  string `json:"track"`
 
 	Duration float64 `json:"duration"`
+
+	ReleaseDate string `json:"release_date"`
 
 	Ext      string         `json:"ext"`
 	Formats  []YtdlpFormat  `json:"formats"`
