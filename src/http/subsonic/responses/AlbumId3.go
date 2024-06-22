@@ -16,6 +16,8 @@ type AlbumId3 struct {
 
 	Created string `json:"created" xml:"created,attr"`
 
+	Year int `json:"year" xml:"year,attr"`
+
 	Song []SubsonicChild `json:"song,omitempty" xml:"song"`
 }
 

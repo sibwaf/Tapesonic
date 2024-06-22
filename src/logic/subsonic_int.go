@@ -101,6 +101,11 @@ func (svc *subsonicInternalService) GetAlbum(rawId string) (*responses.AlbumId3,
 		album.DurationSec,
 		album.CreatedAt,
 	)
+
+	if album.ReleaseDate != nil {
+		albumResponse.Year = album.ReleaseDate.Year()
+	}
+
 	albumResponse.PlayCount = album.PlayCount
 
 	for _, track := range tracks {
@@ -161,6 +166,10 @@ func (svc *subsonicInternalService) GetAlbumList2(
 			album.DurationSec,
 			album.CreatedAt,
 		)
+
+		if album.ReleaseDate != nil {
+			albumResponse.Year = album.ReleaseDate.Year()
+		}
 
 		albumResponse.PlayCount = album.PlayCount
 
