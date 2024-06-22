@@ -69,6 +69,36 @@ func (storage *AlbumStorage) CreateAlbum(album *Album) error {
 	return storage.db.Session(&gorm.Session{FullSaveAssociations: true}).Create(album).Error
 }
 
+func (storage *AlbumStorage) UpdateAlbum(album *Album) (*Album, error) {
+	return album, storage.db.Transaction(func(tx *gorm.DB) error {
+		oldTrackIds := []uuid.UUID{}
+		if err := tx.Model(&AlbumTrack{}).Where("album_id = ?", album.Id).Pluck("id", &oldTrackIds).Error; err != nil {
+			return err
+		}
+
+		newTrackIds := []uuid.UUID{}
+		for _, track := range album.Tracks {
+			newTrackIds = append(newTrackIds, track.Id)
+		}
+
+		if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Save(album).Error; err != nil {
+			return err
+		}
+
+		if len(newTrackIds) > 0 {
+			if err := tx.Where("id IN ? AND id NOT IN ?", oldTrackIds, newTrackIds).Delete(&AlbumTrack{}).Error; err != nil {
+				return err
+			}
+		} else {
+			if err := tx.Where("id IN ?", oldTrackIds).Delete(&AlbumTrack{}).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
 func (storage *AlbumStorage) DeleteAlbum(id uuid.UUID) error {
 	return storage.db.Select("Tracks").Delete(&Album{Id: id}).Error
 }

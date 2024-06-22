@@ -50,7 +50,7 @@ export interface Album {
 
     Name: string;
     Artist: string;
-    ReleaseDate: string;
+    ReleaseDate: string | null;
 
     ThumbnailPath: string;
 
@@ -137,6 +137,14 @@ export default {
 
     async createAlbum(album: Album): Promise<Album> {
         const response = await fetch(`/api/albums`, { method: "POST", body: JSON.stringify(album) });
+        if (!response.ok) {
+            throw await response.json();
+        } else {
+            return await response.json();
+        }
+    },
+    async updateAlbum(id: string, album: Album): Promise<Album> {
+        const response = await fetch(`/api/albums/${id}`, { method: "PUT", body: JSON.stringify(album) });
         if (!response.ok) {
             throw await response.json();
         } else {

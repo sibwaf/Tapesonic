@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"tapesonic/storage"
@@ -22,23 +23,29 @@ func NewAlbumHandler(
 }
 
 func (h *albumHandler) Methods() []string {
-	return []string{http.MethodGet, http.MethodDelete}
+	return []string{http.MethodGet, http.MethodPut, http.MethodDelete}
 }
 
 func (h *albumHandler) Handle(r *http.Request) (any, error) {
 	rawId := mux.Vars(r)["albumId"]
 	id, idErr := uuid.Parse(rawId)
+	if idErr != nil {
+		return nil, idErr
+	}
 
 	switch r.Method {
 	case http.MethodGet:
-		if idErr != nil {
-			return nil, idErr
-		}
 		return h.albumStorage.GetAlbumWithTracks(id)
-	case http.MethodDelete:
-		if idErr != nil {
-			return nil, idErr
+	case http.MethodPut:
+		var album storage.Album
+		err := json.NewDecoder(r.Body).Decode(&album)
+		if err != nil {
+			return nil, err
 		}
+
+		album.Id = id
+		return h.albumStorage.UpdateAlbum(&album)
+	case http.MethodDelete:
 		return nil, h.albumStorage.DeleteAlbum(id)
 	default:
 		return nil, http.ErrNotSupported
