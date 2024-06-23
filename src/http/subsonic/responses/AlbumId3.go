@@ -14,7 +14,7 @@ type AlbumId3 struct {
 	Duration  int `json:"duration" xml:"duration,attr"`
 	PlayCount int `json:"playCount" xml:"playCount,attr"`
 
-	Created string `json:"created" xml:"created,attr"`
+	Created time.Time `json:"created" xml:"created,attr"`
 
 	Year int `json:"year" xml:"year,attr"`
 
@@ -37,6 +37,6 @@ func NewAlbumId3(
 		CoverArt:  coverArt,
 		SongCount: songCount,
 		Duration:  durationSec,
-		Created:   created.Format(time.RFC3339),
+		Created:   created,
 	}
 }

@@ -9,8 +9,9 @@ type SubsonicPlaylist struct {
 	Name      string `json:"name" xml:"name,attr"`
 	SongCount int    `json:"songCount" xml:"songCount,attr"`
 	Duration  int    `json:"duration" xml:"duration,attr"`
-	Created   string `json:"created" xml:"created,attr"`
-	Changed   string `json:"changed" xml:"changed,attr"`
+
+	Created time.Time `json:"created" xml:"created,attr"`
+	Changed time.Time `json:"changed" xml:"changed,attr"`
 
 	CoverArt string `json:"coverArt" xml:"coverArt,attr"`
 	Owner    string `json:"owner" xml:"owner,attr"`
@@ -31,7 +32,7 @@ func NewSubsonicPlaylist(
 		Name:      name,
 		SongCount: songCount,
 		Duration:  durationSec,
-		Created:   created.Format(time.RFC3339),
-		Changed:   changed.Format(time.RFC3339),
+		Created:   created,
+		Changed:   changed,
 	}
 }

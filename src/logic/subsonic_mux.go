@@ -174,17 +174,7 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 		rand.Shuffle(len(albums), func(i int, j int) { albums[i], albums[j] = albums[j], albums[i] })
 	case LIST_NEWEST:
 		sort.Slice(albums, func(i, j int) bool {
-			created1, err := time.Parse(time.RFC3339, albums[i].Created)
-			if err != nil {
-				return false
-			}
-
-			created2, err := time.Parse(time.RFC3339, albums[j].Created)
-			if err != nil {
-				return true
-			}
-
-			return created1.After(created2)
+			return albums[i].Created.After(albums[j].Created)
 		})
 	case LIST_BY_NAME:
 		sort.Slice(albums, func(i, j int) bool {
@@ -211,7 +201,7 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 			if albums[i].Year != albums[j].Year {
 				return albums[i].Year < albums[j].Year
 			} else {
-				return albums[i].Created < albums[j].Created
+				return albums[i].Created.Before(albums[j].Created)
 			}
 		})
 	default:
