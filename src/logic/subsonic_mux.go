@@ -15,6 +15,10 @@ import (
 	"time"
 )
 
+const (
+	albumListFetchSize = 500
+)
+
 type SubsonicMuxService struct {
 	services map[string]SubsonicService
 
@@ -87,10 +91,12 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 	type_ string,
 	size int,
 	offset int,
+	fromYear *int,
+	toYear *int,
 ) (*responses.AlbumList2, error) {
 	if len(svc.services) == 1 {
 		for serviceName, service := range svc.services {
-			albums, err := service.GetAlbumList2(type_, size, offset)
+			albums, err := service.GetAlbumList2(type_, size, offset, fromYear, toYear)
 			if err != nil {
 				return nil, err
 			}
@@ -138,16 +144,29 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 
 	albums := []responses.AlbumId3{}
 	for serviceName, service := range svc.services {
-		more, err := service.GetAlbumList2(type_, offset+size, 0)
-		if err != nil {
-			return nil, err
-		}
+		// yes, this is absolutely disgusting;
+		// but it's the only way to keep the sorting/pagination stable between different backing servers
+		// and also work around the fact that some servers don't follow the specification;
+		// will be solved properly later by just caching the complete album list in the database
+		serviceOffset := 0
+		for {
+			more, err := service.GetAlbumList2(type_, albumListFetchSize, serviceOffset, fromYear, toYear)
+			if err != nil {
+				return nil, err
+			}
 
-		for i := range more.Album {
-			more.Album[i] = rewriteAlbumInfo(serviceName, more.Album[i])
-		}
+			for i := range more.Album {
+				more.Album[i] = rewriteAlbumInfo(serviceName, more.Album[i])
+			}
 
-		albums = append(albums, more.Album...)
+			albums = append(albums, more.Album...)
+
+			if len(more.Album) < albumListFetchSize {
+				break
+			} else {
+				serviceOffset += len(more.Album)
+			}
+		}
 	}
 
 	switch type_ {
@@ -174,6 +193,26 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 	case LIST_BY_ARTIST:
 		sort.Slice(albums, func(i, j int) bool {
 			return strings.ToLower(albums[i].Artist) < strings.ToLower(albums[j].Artist)
+		})
+	case LIST_BY_YEAR:
+		sort.Slice(albums, func(i, j int) bool {
+			// todo: filter no-release-date albums out; pushing those to the end for now
+			if albums[i].Year == 0 {
+				return false
+			}
+			if albums[j].Year == 0 {
+				return true
+			}
+
+			if *fromYear > *toYear {
+				i, j = j, i
+			}
+
+			if albums[i].Year != albums[j].Year {
+				return albums[i].Year < albums[j].Year
+			} else {
+				return albums[i].Created < albums[j].Created
+			}
 		})
 	default:
 		return nil, fmt.Errorf("unsupported type=%s in getAlbumList2", type_)

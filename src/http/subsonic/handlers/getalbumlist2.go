@@ -26,8 +26,10 @@ func (h *getAlbumList2Handler) Handle(r *http.Request) (*responses.SubsonicRespo
 
 	size := util.StringToIntOrDefault(r.URL.Query().Get("size"), 10)
 	offset := util.StringToIntOrDefault(r.URL.Query().Get("offset"), 0)
+	fromYear := util.StringToIntOrNull(r.URL.Query().Get("fromYear"))
+	toYear := util.StringToIntOrNull(r.URL.Query().Get("toYear"))
 
-	albums, err := h.subsonic.GetAlbumList2(listType, size, offset)
+	albums, err := h.subsonic.GetAlbumList2(listType, size, offset, fromYear, toYear)
 	if err != nil {
 		return nil, err
 	}

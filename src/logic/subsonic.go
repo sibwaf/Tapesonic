@@ -16,6 +16,8 @@ type SubsonicService interface {
 		type_ string,
 		size int,
 		offset int,
+		fromYear *int,
+		toYear *int,
 	) (*responses.AlbumList2, error)
 
 	GetPlaylist(id string) (*responses.SubsonicPlaylist, error)
@@ -37,4 +39,5 @@ const (
 	LIST_RECENT    = "recent"
 	LIST_BY_NAME   = "alphabeticalByName"
 	LIST_BY_ARTIST = "alphabeticalByArtist"
+	LIST_BY_YEAR   = "byYear"
 )

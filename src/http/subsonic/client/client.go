@@ -52,15 +52,22 @@ func (c *SubsonicClient) GetAlbumList2(
 	type_ string,
 	size int,
 	offset int,
+	fromYear *int,
+	toYear *int,
 ) (*responses.AlbumList2, error) {
-	res, err := c.doParsedQuery(
-		"/rest/getAlbumList2",
-		map[string]string{
-			"type":   type_,
-			"size":   fmt.Sprint(size),
-			"offset": fmt.Sprint(offset),
-		},
-	)
+	params := map[string]string{
+		"type":   type_,
+		"size":   fmt.Sprint(size),
+		"offset": fmt.Sprint(offset),
+	}
+	if fromYear != nil {
+		params["fromYear"] = fmt.Sprint(*fromYear)
+	}
+	if toYear != nil {
+		params["toYear"] = fmt.Sprint(*toYear)
+	}
+
+	res, err := c.doParsedQuery("/rest/getAlbumList2", params)
 	if err != nil {
 		return nil, err
 	}

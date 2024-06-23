@@ -147,6 +147,21 @@ func (storage *AlbumStorage) GetSubsonicAlbumsSortFrequent(count int, offset int
 	return storage.getSubsonicAlbums(count, offset, "album_extra_info.total_play_time > 0", "album_extra_info.total_play_time DESC")
 }
 
+func (storage *AlbumStorage) GetSubsonicAlbumsSortReleaseDate(count int, offset int, fromYear int, toYear int) ([]SubsonicAlbumItem, error) {
+	var order string
+	if fromYear <= toYear {
+		order = "albums.release_date ASC"
+	} else {
+		fromYear, toYear = toYear, fromYear
+		order = "albums.release_date DESC"
+	}
+
+	filter := "albums.release_date IS NOT NULL"
+	filter += fmt.Sprintf(" AND cast(strftime('%%Y', albums.release_date) AS INTEGER) BETWEEN %d AND %d", fromYear, toYear)
+
+	return storage.getSubsonicAlbums(count, offset, filter, order)
+}
+
 func (storage *AlbumStorage) getSubsonicAlbums(count int, offset int, filter string, order string) ([]SubsonicAlbumItem, error) {
 	query := `
 		WITH album_extra_info AS (

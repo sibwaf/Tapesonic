@@ -26,8 +26,8 @@ func (svc *subsonicExternalService) GetAlbum(id string) (*responses.AlbumId3, er
 	return svc.client.GetAlbum(id)
 }
 
-func (svc *subsonicExternalService) GetAlbumList2(type_ string, size int, offset int) (*responses.AlbumList2, error) {
-	return svc.client.GetAlbumList2(type_, size, offset)
+func (svc *subsonicExternalService) GetAlbumList2(type_ string, size int, offset int, fromYear *int, toYear *int) (*responses.AlbumList2, error) {
+	return svc.client.GetAlbumList2(type_, size, offset, fromYear, toYear)
 }
 
 func (svc *subsonicExternalService) GetPlaylist(id string) (*responses.SubsonicPlaylist, error) {
