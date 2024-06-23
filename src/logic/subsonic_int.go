@@ -149,6 +149,8 @@ func (svc *subsonicInternalService) GetAlbumList2(
 		albums, err = svc.albums.GetSubsonicAlbumsSortRecent(size, offset)
 	} else if type_ == LIST_FREQUENT {
 		albums, err = svc.albums.GetSubsonicAlbumsSortFrequent(size, offset)
+	} else if type_ == LIST_STARRED {
+		albums, err = []storage.SubsonicAlbumItem{}, nil
 	} else if type_ == LIST_BY_YEAR {
 		if fromYear == nil || toYear == nil {
 			return nil, fmt.Errorf("fromYear or toYear parameter missing")

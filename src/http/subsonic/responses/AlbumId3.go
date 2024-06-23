@@ -14,7 +14,8 @@ type AlbumId3 struct {
 	Duration  int `json:"duration" xml:"duration,attr"`
 	PlayCount int `json:"playCount" xml:"playCount,attr"`
 
-	Created time.Time `json:"created" xml:"created,attr"`
+	Created time.Time  `json:"created" xml:"created,attr"`
+	Starred *time.Time `json:"starred" xml:"starred,attr,omitempty"`
 
 	Year int `json:"year" xml:"year,attr"`
 

@@ -39,5 +39,6 @@ const (
 	LIST_RECENT    = "recent"
 	LIST_BY_NAME   = "alphabeticalByName"
 	LIST_BY_ARTIST = "alphabeticalByArtist"
+	LIST_STARRED   = "starred"
 	LIST_BY_YEAR   = "byYear"
 )

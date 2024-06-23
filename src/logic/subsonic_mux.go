@@ -184,6 +184,22 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 		sort.Slice(albums, func(i, j int) bool {
 			return strings.ToLower(albums[i].Artist) < strings.ToLower(albums[j].Artist)
 		})
+	case LIST_STARRED:
+		sort.Slice(albums, func(i, j int) bool {
+			// todo: filter no-starred-date albums out; pushing those to the end for now
+			if albums[i].Starred == nil {
+				return false
+			}
+			if albums[j].Starred == nil {
+				return true
+			}
+
+			if albums[i].Starred != albums[j].Starred {
+				return (*albums[i].Starred).After(*albums[j].Starred)
+			} else {
+				return albums[i].Created.After(albums[j].Created)
+			}
+		})
 	case LIST_BY_YEAR:
 		sort.Slice(albums, func(i, j int) bool {
 			// todo: filter no-release-date albums out; pushing those to the end for now
