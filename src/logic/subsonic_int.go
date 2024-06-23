@@ -76,6 +76,41 @@ func (svc *subsonicInternalService) GetSong(rawId string) (*responses.SubsonicCh
 	return songResponse, nil
 }
 
+func (svc *subsonicInternalService) GetRandomSongs(size int, genre string, fromYear *int, toYear *int) (*responses.RandomSongs, error) {
+	if genre != "" {
+		// todo
+		return responses.NewRandomSongs([]responses.SubsonicChild{}), nil
+	}
+
+	songs, err := svc.tracks.GetSubsonicTracksRandom(size, fromYear, toYear)
+	if err != nil {
+		return nil, err
+	}
+
+	songsResponse := []responses.SubsonicChild{}
+	for _, song := range songs {
+		songResponse := responses.NewSubsonicChild(
+			song.Id.String(),
+			false,
+			song.Artist,
+			song.Title,
+			0,
+			song.DurationSec,
+		)
+		songResponse.PlayCount = song.PlayCount
+
+		if song.AlbumId != uuid.Nil {
+			songResponse.Album = song.Album
+			songResponse.AlbumId = song.AlbumId.String()
+			songResponse.CoverArt = getAlbumCoverId(song.AlbumId)
+		}
+
+		songsResponse = append(songsResponse, *songResponse)
+	}
+
+	return responses.NewRandomSongs(songsResponse), nil
+}
+
 func (svc *subsonicInternalService) GetAlbum(rawId string) (*responses.AlbumId3, error) {
 	id, err := uuid.Parse(rawId)
 	if err != nil {

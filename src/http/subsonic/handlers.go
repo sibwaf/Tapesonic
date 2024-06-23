@@ -22,7 +22,7 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 		"/getPlaylists":             util.AsHandlerFunc(handlers.NewGetPlaylistsHandler(appCtx.SubsonicService).Handle),
 		"/getPlaylist":              util.AsHandlerFunc(handlers.NewGetPlaylistHandler(appCtx.SubsonicService).Handle),
 		"/getPodcasts":              util.AsHandlerFunc(handlers.NewGetPodcastsHandler().Handle),
-		"/getRandomSongs":           util.AsHandlerFunc(handlers.NewGetRandomSongsHandler().Handle),
+		"/getRandomSongs":           util.AsHandlerFunc(handlers.NewGetRandomSongsHandler(appCtx.SubsonicService).Handle),
 		"/getScanStatus":            util.AsHandlerFunc(handlers.NewGetScanStatusHandler().Handle),
 		"/getSong":                  util.AsHandlerFunc(handlers.NewGetSongHandler(appCtx.SubsonicService).Handle),
 		"/getStarred2":              util.AsHandlerFunc(handlers.NewGetStarred2Handler().Handle),

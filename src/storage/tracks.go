@@ -8,6 +8,10 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	maxCount = 9999
+)
+
 type TrackStorage struct {
 	db *DbHelper
 }
@@ -17,7 +21,7 @@ func NewTrackStorage(db *gorm.DB) (*TrackStorage, error) {
 }
 
 func (storage *TrackStorage) GetSubsonicTrack(id uuid.UUID) (*SubsonicTrackItem, error) {
-	tracks, err := storage.getSubsonicTracks(fmt.Sprintf("tape_tracks.id = '%s'", id.String()), "", "tape_tracks.id")
+	tracks, err := storage.getSubsonicTracks(1, fmt.Sprintf("tape_tracks.id = '%s'", id.String()), "", "tape_tracks.id")
 	if err != nil {
 		return nil, err
 	}
@@ -28,15 +32,30 @@ func (storage *TrackStorage) GetSubsonicTrack(id uuid.UUID) (*SubsonicTrackItem,
 	return &tracks[0], nil
 }
 
+func (storage *TrackStorage) GetSubsonicTracksRandom(count int, fromYear *int, toYear *int) ([]SubsonicTrackItem, error) {
+	conditions := []string{}
+
+	if fromYear != nil && toYear != nil {
+		conditions = append(conditions, fmt.Sprintf("cast(strftime('%%Y', albums.release_date) AS INTEGER) BETWEEN %d AND %d", *fromYear, *toYear))
+	} else if fromYear != nil {
+		conditions = append(conditions, fmt.Sprintf("cast(strftime('%%Y', albums.release_date) AS INTEGER) >= %d", *fromYear))
+	} else if toYear != nil {
+		conditions = append(conditions, fmt.Sprintf("cast(strftime('%%Y', albums.release_date) AS INTEGER) <= %d", *toYear))
+	}
+
+	return storage.getSubsonicTracks(count, strings.Join(conditions, " AND "), "", "random()")
+}
+
 func (storage *TrackStorage) GetSubsonicTracksByAlbum(albumId uuid.UUID) ([]SubsonicTrackItem, error) {
-	return storage.getSubsonicTracks(fmt.Sprintf("album_tracks.album_id = '%s'", albumId.String()), "", "album_tracks.track_index")
+	return storage.getSubsonicTracks(maxCount, fmt.Sprintf("album_tracks.album_id = '%s'", albumId.String()), "", "album_tracks.track_index")
 }
 
 func (storage *TrackStorage) GetSubsonicTracksByPlaylist(playlistId uuid.UUID) ([]SubsonicTrackItem, error) {
-	return storage.getSubsonicTracks("", playlistId.String(), "playlist_tracks.track_index")
+	return storage.getSubsonicTracks(maxCount, "", playlistId.String(), "playlist_tracks.track_index")
 }
 
 func (storage *TrackStorage) getSubsonicTracks(
+	count int,
 	filter string,
 	playlistId string,
 	order string,
@@ -84,6 +103,8 @@ func (storage *TrackStorage) getSubsonicTracks(
 	}
 
 	query += fmt.Sprintf("\nORDER BY %s", order)
+
+	query += fmt.Sprintf("\nLIMIT %d", count)
 
 	result := []SubsonicTrackItem{}
 	return result, storage.db.Raw(query).Find(&result).Error

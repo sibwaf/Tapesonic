@@ -22,6 +22,10 @@ func (svc *subsonicExternalService) GetSong(id string) (*responses.SubsonicChild
 	return svc.client.GetSong(id)
 }
 
+func (svc *subsonicExternalService) GetRandomSongs(size int, genre string, fromYear *int, toYear *int) (*responses.RandomSongs, error) {
+	return svc.client.GetRandomSongs(size, genre, fromYear, toYear)
+}
+
 func (svc *subsonicExternalService) GetAlbum(id string) (*responses.AlbumId3, error) {
 	return svc.client.GetAlbum(id)
 }

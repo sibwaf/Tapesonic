@@ -39,6 +39,26 @@ func (c *SubsonicClient) GetSong(id string) (*responses.SubsonicChild, error) {
 	return res.Song, nil
 }
 
+func (c *SubsonicClient) GetRandomSongs(size int, genre string, fromYear *int, toYear *int) (*responses.RandomSongs, error) {
+	params := map[string]string{"size": fmt.Sprint(size)}
+	if genre != "" {
+		params["genre"] = genre
+	}
+	if fromYear != nil {
+		params["fromYear"] = fmt.Sprint(*fromYear)
+	}
+	if toYear != nil {
+		params["toYear"] = fmt.Sprint(*toYear)
+	}
+
+	res, err := c.doParsedQuery("/rest/getRandomSongs", params)
+	if err != nil {
+		return nil, err
+	}
+
+	return res.RandomSongs, nil
+}
+
 func (c *SubsonicClient) GetAlbum(id string) (*responses.AlbumId3, error) {
 	res, err := c.doParsedQuery("/rest/getAlbum", map[string]string{"id": id})
 	if err != nil {

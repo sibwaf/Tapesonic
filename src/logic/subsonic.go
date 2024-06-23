@@ -10,6 +10,8 @@ import (
 type SubsonicService interface {
 	GetSong(id string) (*responses.SubsonicChild, error)
 
+	GetRandomSongs(size int, genre string, fromYear *int, toYear *int) (*responses.RandomSongs, error)
+
 	GetAlbum(id string) (*responses.AlbumId3, error)
 
 	GetAlbumList2(

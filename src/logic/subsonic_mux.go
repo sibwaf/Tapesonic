@@ -57,11 +57,34 @@ func (svc *SubsonicMuxService) GetSong(prefixedId string) (*responses.SubsonicCh
 		slog.Error(fmt.Sprintf("Failed to cache song info when proxying getSong: %s", cacheWriteErr.Error()))
 	}
 
-	song.Id = addPrefix(serviceName, song.Id)
-	song.CoverArt = addPrefix(serviceName, song.CoverArt)
-	song.AlbumId = addPrefix(serviceName, song.AlbumId)
+	rewrittenSong := rewriteSongInfo(serviceName, *song)
+	song = &rewrittenSong
 
 	return song, nil
+}
+
+func (svc *SubsonicMuxService) GetRandomSongs(size int, genre string, fromYear *int, toYear *int) (*responses.RandomSongs, error) {
+	songs := []responses.SubsonicChild{}
+	for serviceName, service := range svc.services {
+		// todo: a pretty bad implementation, but it makes at least a somewhat more balanced result
+		// when different services have a different count of total songs than just getting `size` songs from each one
+		more, err := service.GetRandomSongs(500, genre, fromYear, toYear)
+		if err != nil {
+			return nil, err
+		}
+
+		for i := range more.Song {
+			more.Song[i] = rewriteSongInfo(serviceName, more.Song[i])
+		}
+
+		songs = append(songs, more.Song...)
+	}
+
+	rand.Shuffle(len(songs), func(i int, j int) { songs[i], songs[j] = songs[j], songs[i] })
+
+	songs = songs[:min(size, len(songs))]
+
+	return responses.NewRandomSongs(songs), nil
 }
 
 func (svc *SubsonicMuxService) GetAlbum(prefixedId string) (*responses.AlbumId3, error) {
@@ -78,10 +101,7 @@ func (svc *SubsonicMuxService) GetAlbum(prefixedId string) (*responses.AlbumId3,
 	rewrittenAlbum := rewriteAlbumInfo(serviceName, *album)
 	album = &rewrittenAlbum
 	for i := range album.Song {
-		song := &album.Song[i]
-		song.Id = addPrefix(serviceName, song.Id)
-		song.CoverArt = addPrefix(serviceName, song.CoverArt)
-		song.AlbumId = addPrefix(serviceName, song.AlbumId)
+		album.Song[i] = rewriteSongInfo(serviceName, album.Song[i])
 	}
 
 	return album, nil
@@ -249,10 +269,7 @@ func (svc *SubsonicMuxService) GetPlaylist(prefixedId string) (*responses.Subson
 	playlist.Id = addPrefix(serviceName, playlist.Id)
 	playlist.CoverArt = addPrefix(serviceName, playlist.CoverArt)
 	for i := range playlist.Entry {
-		entry := &playlist.Entry[i]
-		entry.Id = addPrefix(serviceName, entry.Id)
-		entry.CoverArt = addPrefix(serviceName, entry.CoverArt)
-		entry.AlbumId = addPrefix(serviceName, entry.AlbumId)
+		playlist.Entry[i] = rewriteSongInfo(serviceName, playlist.Entry[i])
 	}
 
 	return playlist, nil
@@ -323,6 +340,13 @@ func rewriteAlbumInfo(serviceName string, album responses.AlbumId3) responses.Al
 	album.Id = addPrefix(serviceName, album.Id)
 	album.CoverArt = addPrefix(serviceName, album.CoverArt)
 	return album
+}
+
+func rewriteSongInfo(serviceName string, song responses.SubsonicChild) responses.SubsonicChild {
+	song.Id = addPrefix(serviceName, song.Id)
+	song.CoverArt = addPrefix(serviceName, song.CoverArt)
+	song.AlbumId = addPrefix(serviceName, song.AlbumId)
+	return song
 }
 
 func (svc *SubsonicMuxService) findServiceByName(serviceName string) (SubsonicService, error) {
