@@ -57,23 +57,10 @@ func (svc *subsonicInternalService) GetSong(rawId string) (*responses.SubsonicCh
 		return nil, err
 	}
 
-	songResponse := responses.NewSubsonicChild(
-		track.Id.String(),
-		false,
-		track.Artist,
-		track.Title,
-		0,
-		track.DurationSec,
-	)
-	songResponse.PlayCount = track.PlayCount
+	songResponse := toChild(*track)
+	songResponse.Track = 0
 
-	if track.AlbumId != uuid.Nil {
-		songResponse.Album = track.Album
-		songResponse.AlbumId = track.AlbumId.String()
-		songResponse.CoverArt = getAlbumCoverId(track.AlbumId)
-	}
-
-	return songResponse, nil
+	return &songResponse, nil
 }
 
 func (svc *subsonicInternalService) GetRandomSongs(size int, genre string, fromYear *int, toYear *int) (*responses.RandomSongs, error) {
@@ -89,23 +76,10 @@ func (svc *subsonicInternalService) GetRandomSongs(size int, genre string, fromY
 
 	songsResponse := []responses.SubsonicChild{}
 	for _, song := range songs {
-		songResponse := responses.NewSubsonicChild(
-			song.Id.String(),
-			false,
-			song.Artist,
-			song.Title,
-			0,
-			song.DurationSec,
-		)
-		songResponse.PlayCount = song.PlayCount
+		songResponse := toChild(song)
+		songResponse.Track = 0
 
-		if song.AlbumId != uuid.Nil {
-			songResponse.Album = song.Album
-			songResponse.AlbumId = song.AlbumId.String()
-			songResponse.CoverArt = getAlbumCoverId(song.AlbumId)
-		}
-
-		songsResponse = append(songsResponse, *songResponse)
+		songsResponse = append(songsResponse, songResponse)
 	}
 
 	return responses.NewRandomSongs(songsResponse), nil
@@ -127,40 +101,13 @@ func (svc *subsonicInternalService) GetAlbum(rawId string) (*responses.AlbumId3,
 		return nil, err
 	}
 
-	albumResponse := responses.NewAlbumId3(
-		fmt.Sprint(album.Id),
-		album.Name,
-		album.Artist,
-		getAlbumCoverId(album.Id),
-		album.SongCount,
-		album.DurationSec,
-		album.CreatedAt,
-	)
-
-	if album.ReleaseDate != nil {
-		albumResponse.Year = album.ReleaseDate.Year()
-	}
-
-	albumResponse.PlayCount = album.PlayCount
+	albumResponse := toAlbumId3(*album)
 
 	for _, track := range tracks {
-		trackResponse := responses.NewSubsonicChild(
-			fmt.Sprint(track.Id),
-			false,
-			track.Artist,
-			track.Title,
-			track.AlbumTrackIndex+1,
-			track.DurationSec,
-		)
-		trackResponse.Album = album.Name
-		trackResponse.AlbumId = album.Id.String()
-		trackResponse.CoverArt = getAlbumCoverId(album.Id)
-		trackResponse.PlayCount = track.PlayCount
-
-		albumResponse.Song = append(albumResponse.Song, *trackResponse)
+		albumResponse.Song = append(albumResponse.Song, toChild(track))
 	}
 
-	return albumResponse, nil
+	return &albumResponse, nil
 }
 
 func (svc *subsonicInternalService) GetAlbumList2(
@@ -202,23 +149,7 @@ func (svc *subsonicInternalService) GetAlbumList2(
 
 	albumsResponse := []responses.AlbumId3{}
 	for _, album := range albums {
-		albumResponse := responses.NewAlbumId3(
-			fmt.Sprint(album.Id),
-			album.Name,
-			album.Artist,
-			getAlbumCoverId(album.Id),
-			album.SongCount,
-			album.DurationSec,
-			album.CreatedAt,
-		)
-
-		if album.ReleaseDate != nil {
-			albumResponse.Year = album.ReleaseDate.Year()
-		}
-
-		albumResponse.PlayCount = album.PlayCount
-
-		albumsResponse = append(albumsResponse, *albumResponse)
+		albumsResponse = append(albumsResponse, toAlbumId3(album))
 	}
 
 	return responses.NewAlbumList2(albumsResponse), nil
@@ -240,38 +171,20 @@ func (svc *subsonicInternalService) GetPlaylist(rawId string) (*responses.Subson
 		return nil, err
 	}
 
-	playlistResponse := responses.NewSubsonicPlaylist(
-		fmt.Sprint(playlist.Id),
-		playlist.Name,
-		playlist.SongCount,
-		playlist.DurationSec,
-		playlist.CreatedAt,
-		playlist.UpdatedAt,
-	)
-	playlistResponse.CoverArt = getPlaylistCoverId(playlist.Id)
+	playlistResponse := toPlaylist(*playlist)
 
 	for _, track := range tracks {
-		trackResponse := responses.NewSubsonicChild(
-			fmt.Sprint(track.Id),
-			false,
-			track.Artist,
-			track.Title,
-			track.PlaylistTrackIndex+1,
-			track.DurationSec,
-		)
-		trackResponse.CoverArt = getPlaylistCoverId(playlist.Id)
-		trackResponse.PlayCount = track.PlayCount
+		trackResponse := toChild(track)
 
-		if track.AlbumId != uuid.Nil {
-			trackResponse.Album = track.Album
-			trackResponse.AlbumId = track.AlbumId.String()
-			trackResponse.CoverArt = getAlbumCoverId(track.AlbumId)
+		trackResponse.Track = track.PlaylistTrackIndex + 1
+		if trackResponse.CoverArt == "" {
+			trackResponse.CoverArt = getPlaylistCoverId(playlist.Id)
 		}
 
-		playlistResponse.Entry = append(playlistResponse.Entry, *trackResponse)
+		playlistResponse.Entry = append(playlistResponse.Entry, trackResponse)
 	}
 
-	return playlistResponse, nil
+	return &playlistResponse, nil
 }
 
 func (svc *subsonicInternalService) GetPlaylists() (*responses.SubsonicPlaylists, error) {
@@ -282,27 +195,79 @@ func (svc *subsonicInternalService) GetPlaylists() (*responses.SubsonicPlaylists
 
 	playlistsResponse := []responses.SubsonicPlaylist{}
 	for _, playlist := range playlists {
-		responsePlaylist := responses.NewSubsonicPlaylist(
-			fmt.Sprint(playlist.Id),
-			playlist.Name,
-			playlist.SongCount,
-			playlist.DurationSec,
-			playlist.CreatedAt,
-			playlist.UpdatedAt,
-		)
-		responsePlaylist.CoverArt = getPlaylistCoverId(playlist.Id)
-
-		playlistsResponse = append(playlistsResponse, *responsePlaylist)
+		playlistsResponse = append(playlistsResponse, toPlaylist(playlist))
 	}
 
 	return responses.NewSubsonicPlaylists(playlistsResponse), nil
 }
 
+func toAlbumId3(album storage.SubsonicAlbumItem) responses.AlbumId3 {
+	albumResponse := responses.NewAlbumId3(
+		fmt.Sprint(album.Id),
+		album.Name,
+		album.Artist,
+		getAlbumCoverId(album.Id),
+		album.SongCount,
+		album.DurationSec,
+		album.CreatedAt,
+	)
+
+	if album.ReleaseDate != nil {
+		albumResponse.Year = album.ReleaseDate.Year()
+	}
+
+	albumResponse.PlayCount = album.PlayCount
+
+	return *albumResponse
+}
+
+func toPlaylist(playlist storage.SubsonicPlaylistItem) responses.SubsonicPlaylist {
+	responsePlaylist := responses.NewSubsonicPlaylist(
+		fmt.Sprint(playlist.Id),
+		playlist.Name,
+		playlist.SongCount,
+		playlist.DurationSec,
+		playlist.CreatedAt,
+		playlist.UpdatedAt,
+	)
+
+	responsePlaylist.CoverArt = getPlaylistCoverId(playlist.Id)
+
+	return *responsePlaylist
+}
+
+func toChild(track storage.SubsonicTrackItem) responses.SubsonicChild {
+	trackResponse := responses.NewSubsonicChild(
+		fmt.Sprint(track.Id),
+		false,
+		track.Artist,
+		track.Title,
+		track.AlbumTrackIndex+1,
+		track.DurationSec,
+	)
+
+	if track.AlbumId != uuid.Nil {
+		trackResponse.Album = track.Album
+		trackResponse.AlbumId = fmt.Sprint(track.AlbumId)
+		trackResponse.CoverArt = getAlbumCoverId(track.AlbumId)
+	}
+
+	trackResponse.PlayCount = track.PlayCount
+
+	return *trackResponse
+}
+
 func getAlbumCoverId(albumId uuid.UUID) string {
+	if albumId == uuid.Nil {
+		return ""
+	}
 	return "album/" + fmt.Sprint(albumId)
 }
 
 func getPlaylistCoverId(playlistId uuid.UUID) string {
+	if playlistId == uuid.Nil {
+		return ""
+	}
 	return "playlist/" + fmt.Sprint(playlistId)
 }
 
