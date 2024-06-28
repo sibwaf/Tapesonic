@@ -333,13 +333,7 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 		return nil, fmt.Errorf("unsupported type=%s in getAlbumList2", type_)
 	}
 
-	var listEnd int
-	if len(albums) < offset+size {
-		listEnd = len(albums)
-	} else {
-		listEnd = offset + size
-	}
-	albums = albums[offset:listEnd]
+	albums = albums[min(offset, len(albums)):min(offset+size, len(albums))]
 
 	return responses.NewAlbumList2(albums), nil
 }
