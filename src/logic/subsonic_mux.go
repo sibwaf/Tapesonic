@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"math/rand"
+	"slices"
 	"sort"
 	"strings"
 	"tapesonic/http/subsonic/responses"
@@ -16,7 +17,7 @@ import (
 )
 
 const (
-	albumListFetchSize = 500
+	fetchSize = 500
 )
 
 type SubsonicMuxService struct {
@@ -39,6 +40,94 @@ func NewSubsonicMuxService(
 
 func (svc *SubsonicMuxService) AddService(prefix string, service SubsonicService) {
 	svc.services[prefix] = service
+}
+
+func (svc *SubsonicMuxService) Search3(
+	query string,
+	artistCount int,
+	artistOffset int,
+	albumCount int,
+	albumOffset int,
+	songCount int,
+	songOffset int,
+) (*responses.SearchResult3, error) {
+	if len(svc.services) == 1 {
+		for serviceName, service := range svc.services {
+			searchResult, err := service.Search3(query, artistCount, artistOffset, albumCount, albumOffset, songCount, songOffset)
+			if err != nil {
+				return nil, err
+			}
+
+			for i := range searchResult.Artist {
+				searchResult.Artist[i] = rewriteArtistInfo(serviceName, searchResult.Artist[i])
+			}
+			for i := range searchResult.Album {
+				searchResult.Album[i] = rewriteAlbumInfo(serviceName, searchResult.Album[i])
+			}
+			for i := range searchResult.Song {
+				searchResult.Song[i] = rewriteSongInfo(serviceName, searchResult.Song[i])
+			}
+
+			return searchResult, nil
+		}
+	}
+
+	artists := []responses.ArtistId3{}
+	albums := []responses.AlbumId3{}
+	songs := []responses.SubsonicChild{}
+
+	for serviceName, service := range svc.services {
+		// i hate this; see more in getAlbumList2
+		serviceArtistOffset := 0
+		serviceAlbumOffset := 0
+		serviceSongOffset := 0
+		for {
+			searchResult, err := service.Search3(
+				query,
+				fetchSize,
+				serviceArtistOffset,
+				fetchSize,
+				serviceAlbumOffset,
+				fetchSize,
+				serviceSongOffset,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			for i := range searchResult.Artist {
+				searchResult.Artist[i] = rewriteArtistInfo(serviceName, searchResult.Artist[i])
+			}
+			serviceArtistOffset += len(searchResult.Artist)
+			artists = append(artists, searchResult.Artist...)
+
+			for i := range searchResult.Album {
+				searchResult.Album[i] = rewriteAlbumInfo(serviceName, searchResult.Album[i])
+			}
+			serviceAlbumOffset += len(searchResult.Album)
+			albums = append(albums, searchResult.Album...)
+
+			for i := range searchResult.Song {
+				searchResult.Song[i] = rewriteSongInfo(serviceName, searchResult.Song[i])
+			}
+			serviceSongOffset += len(searchResult.Song)
+			songs = append(songs, searchResult.Song...)
+
+			if len(searchResult.Artist) < fetchSize && len(searchResult.Album) < fetchSize && len(searchResult.Song) < fetchSize {
+				break
+			}
+		}
+	}
+
+	slices.SortFunc(artists, func(a responses.ArtistId3, b responses.ArtistId3) int { return strings.Compare(a.Id, b.Id) })
+	slices.SortFunc(albums, func(a responses.AlbumId3, b responses.AlbumId3) int { return strings.Compare(a.Id, b.Id) })
+	slices.SortFunc(songs, func(a responses.SubsonicChild, b responses.SubsonicChild) int { return strings.Compare(a.Id, b.Id) })
+
+	return &responses.SearchResult3{
+		Artist: artists[min(artistOffset, len(artists)):min(artistOffset+artistCount, len(artists))],
+		Album:  albums[min(albumOffset, len(albums)):min(albumOffset+albumCount, len(albums))],
+		Song:   songs[min(songOffset, len(songs)):min(songOffset+songCount, len(songs))],
+	}, nil
 }
 
 func (svc *SubsonicMuxService) GetSong(prefixedId string) (*responses.SubsonicChild, error) {
@@ -170,7 +259,7 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 		// will be solved properly later by just caching the complete album list in the database
 		serviceOffset := 0
 		for {
-			more, err := service.GetAlbumList2(type_, albumListFetchSize, serviceOffset, fromYear, toYear)
+			more, err := service.GetAlbumList2(type_, fetchSize, serviceOffset, fromYear, toYear)
 			if err != nil {
 				return nil, err
 			}
@@ -181,7 +270,7 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 
 			albums = append(albums, more.Album...)
 
-			if len(more.Album) < albumListFetchSize {
+			if len(more.Album) < fetchSize {
 				break
 			} else {
 				serviceOffset += len(more.Album)
@@ -334,6 +423,12 @@ func (svc *SubsonicMuxService) Stream(ctx context.Context, prefixedId string) (m
 	}
 
 	return service.Stream(ctx, removePrefix(serviceName, prefixedId))
+}
+
+func rewriteArtistInfo(serviceName string, artist responses.ArtistId3) responses.ArtistId3 {
+	artist.Id = addPrefix(serviceName, artist.Id)
+	artist.CoverArt = addPrefix(serviceName, artist.CoverArt)
+	return artist
 }
 
 func rewriteAlbumInfo(serviceName string, album responses.AlbumId3) responses.AlbumId3 {

@@ -18,6 +18,26 @@ func NewSubsonicExternalService(client *client.SubsonicClient) SubsonicService {
 	}
 }
 
+func (svc *subsonicExternalService) Search3(
+	query string,
+	artistCount int,
+	artistOffset int,
+	albumCount int,
+	albumOffset int,
+	songCount int,
+	songOffset int,
+) (*responses.SearchResult3, error) {
+	return svc.client.Search3(
+		query,
+		artistCount,
+		artistOffset,
+		albumCount,
+		albumOffset,
+		songCount,
+		songOffset,
+	)
+}
+
 func (svc *subsonicExternalService) GetSong(id string) (*responses.SubsonicChild, error) {
 	return svc.client.GetSong(id)
 }

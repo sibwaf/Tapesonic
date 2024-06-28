@@ -30,6 +30,34 @@ func NewSubsonicClient(
 	}
 }
 
+func (c *SubsonicClient) Search3(
+	query string,
+	artistCount int,
+	artistOffset int,
+	albumCount int,
+	albumOffset int,
+	songCount int,
+	songOffset int,
+) (*responses.SearchResult3, error) {
+	res, err := c.doParsedQuery(
+		"/rest/search3",
+		map[string]string{
+			"query":        query,
+			"artistCount":  fmt.Sprint(artistCount),
+			"artistOffset": fmt.Sprint(artistOffset),
+			"albumCount":   fmt.Sprint(albumCount),
+			"albumOffset":  fmt.Sprint(albumOffset),
+			"songCount":    fmt.Sprint(songCount),
+			"songOffset":   fmt.Sprint(songOffset),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return res.SearchResult3, nil
+}
+
 func (c *SubsonicClient) GetSong(id string) (*responses.SubsonicChild, error) {
 	res, err := c.doParsedQuery("/rest/getSong", map[string]string{"id": id})
 	if err != nil {

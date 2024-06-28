@@ -8,6 +8,16 @@ import (
 )
 
 type SubsonicService interface {
+	Search3(
+		query string,
+		artistCount int,
+		artistOffset int,
+		albumCount int,
+		albumOffset int,
+		songCount int,
+		songOffset int,
+	) (*responses.SearchResult3, error)
+
 	GetSong(id string) (*responses.SubsonicChild, error)
 
 	GetRandomSongs(size int, genre string, fromYear *int, toYear *int) (*responses.RandomSongs, error)

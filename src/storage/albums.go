@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -123,6 +124,20 @@ func (storage *AlbumStorage) GetSubsonicAlbum(id uuid.UUID) (*SubsonicAlbumItem,
 	return &albums[0], nil
 }
 
+func (storage *AlbumStorage) SearchSubsonicAlbums(count int, offset int, query []string) ([]SubsonicAlbumItem, error) {
+	filter := []string{}
+	for _, term := range query {
+		searchField := "' ' || albums.artist || ' ' || albums.name"
+		filter = append(filter, fmt.Sprintf("%s LIKE '%% %s%%' ESCAPE '%s'", searchField, EscapeTextLiteralForLike(term, "\\"), "\\"))
+	}
+
+	return storage.getSubsonicAlbums(count, offset, strings.Join(filter, " AND "), "albums.id")
+}
+
+func (storage *AlbumStorage) GetSubsonicAlbumsSortId(count int, offset int) ([]SubsonicAlbumItem, error) {
+	return storage.getSubsonicAlbums(count, offset, "", "albums.id")
+}
+
 func (storage *AlbumStorage) GetSubsonicAlbumsSortRandom(count int, offset int) ([]SubsonicAlbumItem, error) {
 	return storage.getSubsonicAlbums(count, offset, "", "random()")
 }
@@ -183,11 +198,11 @@ func (storage *AlbumStorage) getSubsonicAlbums(count int, offset int, filter str
 	`
 
 	if filter != "" {
-		query += fmt.Sprintf(" WHERE %s", filter)
+		query += fmt.Sprintf("\nWHERE %s", filter)
 	}
 
-	query += fmt.Sprintf(" ORDER BY %s", order)
-	query += fmt.Sprintf(" LIMIT %d OFFSET %d", count, offset)
+	query += fmt.Sprintf("\nORDER BY %s", order)
+	query += fmt.Sprintf("\nLIMIT %d OFFSET %d", count, offset)
 
 	result := []SubsonicAlbumItem{}
 	return result, storage.db.Raw(query).Find(&result).Error

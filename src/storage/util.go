@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -36,4 +37,16 @@ func (db *DbHelper) ExclusiveTransaction(tx func(*gorm.DB) error) error {
 			return exclusiveTxNoLog.Exec("COMMIT").Error
 		}
 	})
+}
+
+func EscapeTextLiteral(str string) string {
+	return strings.ReplaceAll(str, "'", "''")
+}
+
+func EscapeTextLiteralForLike(str string, escape string) string {
+	str = EscapeTextLiteral(str)
+	str = strings.ReplaceAll(str, escape, escape+escape)
+	str = strings.ReplaceAll(str, "_", escape+"_")
+	str = strings.ReplaceAll(str, "%", escape+"%")
+	return str
 }

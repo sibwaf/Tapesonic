@@ -46,6 +46,61 @@ func NewSubsonicInternalService(
 	}
 }
 
+func (svc *subsonicInternalService) Search3(
+	query string,
+	artistCount int,
+	artistOffset int,
+	albumCount int,
+	albumOffset int,
+	songCount int,
+	songOffset int,
+) (*responses.SearchResult3, error) {
+	var err error = nil
+
+	var albums []storage.SubsonicAlbumItem
+	var songs []storage.SubsonicTrackItem
+
+	query = strings.TrimSpace(query)
+	if query == "" {
+		if albums, err = svc.albums.GetSubsonicAlbumsSortId(albumCount, albumOffset); err != nil {
+			return nil, err
+		}
+		if songs, err = svc.tracks.GetSubsonicTracksSortId(songCount, songOffset); err != nil {
+			return nil, err
+		}
+	} else {
+		terms := []string{}
+		for _, term := range strings.Split(query, " ") {
+			if term != "" {
+				terms = append(terms, term)
+			}
+		}
+
+		if albums, err = svc.albums.SearchSubsonicAlbums(albumCount, albumOffset, terms); err != nil {
+			return nil, err
+		}
+		if songs, err = svc.tracks.SearchSubsonicTracks(songCount, songOffset, terms); err != nil {
+			return nil, err
+		}
+	}
+
+	albumsResponse := []responses.AlbumId3{}
+	for _, album := range albums {
+		albumsResponse = append(albumsResponse, toAlbumId3(album))
+	}
+
+	songsResponse := []responses.SubsonicChild{}
+	for _, song := range songs {
+		songsResponse = append(songsResponse, toChild(song))
+	}
+
+	return &responses.SearchResult3{
+		Artist: []responses.ArtistId3{}, // todo
+		Album:  albumsResponse,
+		Song:   songsResponse,
+	}, nil
+}
+
 func (svc *subsonicInternalService) GetSong(rawId string) (*responses.SubsonicChild, error) {
 	id, err := uuid.Parse(rawId)
 	if err != nil {
@@ -69,7 +124,7 @@ func (svc *subsonicInternalService) GetRandomSongs(size int, genre string, fromY
 		return responses.NewRandomSongs([]responses.SubsonicChild{}), nil
 	}
 
-	songs, err := svc.tracks.GetSubsonicTracksRandom(size, fromYear, toYear)
+	songs, err := svc.tracks.GetSubsonicTracksSortRandom(size, fromYear, toYear)
 	if err != nil {
 		return nil, err
 	}

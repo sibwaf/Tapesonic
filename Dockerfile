@@ -5,10 +5,9 @@ ARG APP_VERSION
 WORKDIR /build
 COPY src .
 
-RUN apk add --no-cache --no-interactive build-base
-
-RUN sed -i "s/\"dev\"/\"$APP_VERSION\"/" build/version.go && \
-    CGO_ENABLED=1 go build
+RUN sed -i "s/\"dev\"/\"$APP_VERSION\"/" build/version.go
+RUN apk add --no-cache --no-interactive build-base icu-dev
+RUN CGO_ENABLED=1 go build --tags icu
 
 FROM alpine:3.18
 
@@ -16,7 +15,8 @@ RUN apk add \
     --no-cache \
     --no-interactive \
     yt-dlp \
-    ffmpeg
+    ffmpeg \
+    icu
 
 WORKDIR /app
 COPY --from=builder /build/tapesonic /app/tapesonic
