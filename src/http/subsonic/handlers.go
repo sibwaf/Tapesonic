@@ -1,6 +1,7 @@
 package subsonic
 
 import (
+	"fmt"
 	"net/http"
 
 	"tapesonic/appcontext"
@@ -44,7 +45,7 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 	resultHandlers["/rest/"] = util.Logged(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
-			util.LogWarning(r, "Handler is not implemented")
+			util.LogWarning(r, fmt.Sprintf("Handler is not implemented for %s %s", r.Method, r.URL.Path))
 		},
 	)
 
