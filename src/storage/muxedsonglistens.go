@@ -65,6 +65,7 @@ func (storage *MuxedSongListensStorage) getAlbumListenStats(count int, offset in
 				sum(muxed_song_listens.listen_count * cached_mux_songs.duration_sec) AS total_play_time
 			FROM muxed_song_listens
 			JOIN cached_mux_songs ON cached_mux_songs.service_name = muxed_song_listens.service_name AND cached_mux_songs.song_id = muxed_song_listens.song_id
+			WHERE cached_mux_songs.album_id != '' AND cached_mux_songs.album_id IS NOT NULL
 			GROUP BY cached_mux_songs.service_name, cached_mux_songs.album_id
 		)
 		SELECT
