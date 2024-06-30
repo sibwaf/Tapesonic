@@ -102,7 +102,7 @@ func (svc *subsonicInternalService) Search3(
 }
 
 func (svc *subsonicInternalService) GetSong(rawId string) (*responses.SubsonicChild, error) {
-	id, err := uuid.Parse(rawId)
+	id, err := decodeId(rawId)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (svc *subsonicInternalService) GetRandomSongs(size int, genre string, fromY
 }
 
 func (svc *subsonicInternalService) GetAlbum(rawId string) (*responses.AlbumId3, error) {
-	id, err := uuid.Parse(rawId)
+	id, err := decodeId(rawId)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func (svc *subsonicInternalService) GetAlbumList2(
 }
 
 func (svc *subsonicInternalService) GetPlaylist(rawId string) (*responses.SubsonicPlaylist, error) {
-	id, err := uuid.Parse(rawId)
+	id, err := decodeId(rawId)
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +258,7 @@ func (svc *subsonicInternalService) GetPlaylists() (*responses.SubsonicPlaylists
 
 func toAlbumId3(album storage.SubsonicAlbumItem) responses.AlbumId3 {
 	albumResponse := responses.NewAlbumId3(
-		fmt.Sprint(album.Id),
+		encodeId(album.Id),
 		album.Name,
 		album.Artist,
 		getAlbumCoverId(album.Id),
@@ -278,7 +278,7 @@ func toAlbumId3(album storage.SubsonicAlbumItem) responses.AlbumId3 {
 
 func toPlaylist(playlist storage.SubsonicPlaylistItem) responses.SubsonicPlaylist {
 	responsePlaylist := responses.NewSubsonicPlaylist(
-		fmt.Sprint(playlist.Id),
+		encodeId(playlist.Id),
 		playlist.Name,
 		playlist.SongCount,
 		playlist.DurationSec,
@@ -293,7 +293,7 @@ func toPlaylist(playlist storage.SubsonicPlaylistItem) responses.SubsonicPlaylis
 
 func toChild(track storage.SubsonicTrackItem) responses.SubsonicChild {
 	trackResponse := responses.NewSubsonicChild(
-		fmt.Sprint(track.Id),
+		encodeId(track.Id),
 		false,
 		track.Artist,
 		track.Title,
@@ -303,7 +303,7 @@ func toChild(track storage.SubsonicTrackItem) responses.SubsonicChild {
 
 	if track.AlbumId != uuid.Nil {
 		trackResponse.Album = track.Album
-		trackResponse.AlbumId = fmt.Sprint(track.AlbumId)
+		trackResponse.AlbumId = encodeId(track.AlbumId)
 		trackResponse.CoverArt = getAlbumCoverId(track.AlbumId)
 	}
 
@@ -316,18 +316,18 @@ func getAlbumCoverId(albumId uuid.UUID) string {
 	if albumId == uuid.Nil {
 		return ""
 	}
-	return "album_" + fmt.Sprint(albumId)
+	return fmt.Sprintf("album_%s", encodeId(albumId))
 }
 
 func getPlaylistCoverId(playlistId uuid.UUID) string {
 	if playlistId == uuid.Nil {
 		return ""
 	}
-	return "playlist_" + fmt.Sprint(playlistId)
+	return fmt.Sprintf("playlist_%s", encodeId(playlistId))
 }
 
 func (svc *subsonicInternalService) Scrobble(rawId string, time_ time.Time, submission bool) error {
-	id, err := uuid.Parse(rawId)
+	id, err := decodeId(rawId)
 	if err != nil {
 		return err
 	}
@@ -338,14 +338,14 @@ func (svc *subsonicInternalService) Scrobble(rawId string, time_ time.Time, subm
 func (svc *subsonicInternalService) GetCoverArt(rawId string) (mime string, reader io.ReadCloser, err error) {
 	var cover storage.CoverDescriptor
 	if strings.HasPrefix(rawId, "playlist_") {
-		id, e := uuid.Parse(strings.TrimPrefix(rawId, "playlist_"))
+		id, e := decodeId(strings.TrimPrefix(rawId, "playlist_"))
 		if e != nil {
 			err = e
 		} else {
 			cover, err = svc.media.GetPlaylistCover(id)
 		}
 	} else if strings.HasPrefix(rawId, "album_") {
-		id, e := uuid.Parse(strings.TrimPrefix(rawId, "album_"))
+		id, e := decodeId(strings.TrimPrefix(rawId, "album_"))
 		if e != nil {
 			err = e
 		} else {
@@ -365,7 +365,7 @@ func (svc *subsonicInternalService) GetCoverArt(rawId string) (mime string, read
 }
 
 func (svc *subsonicInternalService) Stream(ctx context.Context, rawId string) (mime string, reader io.ReadCloser, err error) {
-	id, err := uuid.Parse(rawId)
+	id, err := decodeId(rawId)
 	if err != nil {
 		return
 	}
@@ -402,4 +402,12 @@ func (svc *subsonicInternalService) Stream(ctx context.Context, rawId string) (m
 			sourceReader.Close(),
 		)
 	}), nil
+}
+
+func encodeId(id uuid.UUID) string {
+	return strings.ReplaceAll(fmt.Sprint(id), "-", "_")
+}
+
+func decodeId(rawId string) (uuid.UUID, error) {
+	return uuid.Parse(strings.ReplaceAll(rawId, "_", "-"))
 }
