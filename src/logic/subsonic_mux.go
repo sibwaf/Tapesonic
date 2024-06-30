@@ -472,5 +472,5 @@ func removePrefix(serviceName string, prefixedId string) string {
 }
 
 func generatePrefix(serviceName string) string {
-	return "@" + serviceName + "/"
+	return serviceName + "_"
 }

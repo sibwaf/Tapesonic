@@ -316,14 +316,14 @@ func getAlbumCoverId(albumId uuid.UUID) string {
 	if albumId == uuid.Nil {
 		return ""
 	}
-	return "album/" + fmt.Sprint(albumId)
+	return "album_" + fmt.Sprint(albumId)
 }
 
 func getPlaylistCoverId(playlistId uuid.UUID) string {
 	if playlistId == uuid.Nil {
 		return ""
 	}
-	return "playlist/" + fmt.Sprint(playlistId)
+	return "playlist_" + fmt.Sprint(playlistId)
 }
 
 func (svc *subsonicInternalService) Scrobble(rawId string, time_ time.Time, submission bool) error {
@@ -337,15 +337,15 @@ func (svc *subsonicInternalService) Scrobble(rawId string, time_ time.Time, subm
 
 func (svc *subsonicInternalService) GetCoverArt(rawId string) (mime string, reader io.ReadCloser, err error) {
 	var cover storage.CoverDescriptor
-	if strings.HasPrefix(rawId, "playlist/") {
-		id, e := uuid.Parse(strings.TrimPrefix(rawId, "playlist/"))
+	if strings.HasPrefix(rawId, "playlist_") {
+		id, e := uuid.Parse(strings.TrimPrefix(rawId, "playlist_"))
 		if e != nil {
 			err = e
 		} else {
 			cover, err = svc.media.GetPlaylistCover(id)
 		}
-	} else if strings.HasPrefix(rawId, "album/") {
-		id, e := uuid.Parse(strings.TrimPrefix(rawId, "album/"))
+	} else if strings.HasPrefix(rawId, "album_") {
+		id, e := uuid.Parse(strings.TrimPrefix(rawId, "album_"))
 		if e != nil {
 			err = e
 		} else {
