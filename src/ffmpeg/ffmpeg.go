@@ -56,7 +56,7 @@ func (f *Ffmpeg) Stream(ctx context.Context, offsetMs int, durationMs int, reade
 
 		var exitError *exec.ExitError
 		if errors.As(err, &exitError) && ctx.Err() == context.Canceled {
-			slog.Debug(fmt.Sprintf("Stopped streaming `%s` because context was cancelled", reader.SourceInfo))
+			slog.Debug(fmt.Sprintf("Stopped streaming `%s` because context was cancelled: %s", reader.SourceInfo, err.Error()))
 			return nil
 		} else if err != nil {
 			slog.Error(fmt.Sprintf("Error while streaming `%s`: %s", reader.SourceInfo, err.Error()))
