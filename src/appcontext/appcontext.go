@@ -35,7 +35,8 @@ type Context struct {
 	Ytdlp  *ytdlp.Ytdlp
 	Ffmpeg *ffmpeg.Ffmpeg
 
-	SubsonicService logic.SubsonicService
+	SubsonicProviders []logic.SubsonicService
+	SubsonicService   logic.SubsonicService
 }
 
 func NewContext(config *config.TapesonicConfig) (*Context, error) {
@@ -109,22 +110,33 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 	)
 	context.SubsonicService = subsonicMux
 
-	subsonicMux.AddService("tapesonic", logic.NewSubsonicInternalService(
-		context.TrackStorage,
-		context.AlbumStorage,
-		context.PlaylistStorage,
-		context.TapeTrackListensStorage,
-		context.MediaStorage,
-		context.Ffmpeg,
-	))
+	internalSubsonic := logic.NewSubsonicNamedService(
+		"tapesonic",
+		logic.NewSubsonicInternalService(
+			context.TrackStorage,
+			context.AlbumStorage,
+			context.PlaylistStorage,
+			context.TapeTrackListensStorage,
+			context.MediaStorage,
+			context.Ffmpeg,
+		),
+	)
+	context.SubsonicProviders = append(context.SubsonicProviders, internalSubsonic)
+	subsonicMux.AddService(internalSubsonic)
+
 	if config.SubsonicProxyUrl != "" {
-		subsonicMux.AddService("proxy", logic.NewSubsonicExternalService(
-			client.NewSubsonicClient(
-				config.SubsonicProxyUrl,
-				config.SubsonicProxyUsername,
-				config.SubsonicProxyPassword,
+		externalSubsonic := logic.NewSubsonicNamedService(
+			"proxy",
+			logic.NewSubsonicExternalService(
+				client.NewSubsonicClient(
+					config.SubsonicProxyUrl,
+					config.SubsonicProxyUsername,
+					config.SubsonicProxyPassword,
+				),
 			),
-		))
+		)
+		context.SubsonicProviders = append(context.SubsonicProviders, externalSubsonic)
+		subsonicMux.AddService(externalSubsonic)
 	}
 
 	if err = registerBackgroundTasks(&context); err != nil {
