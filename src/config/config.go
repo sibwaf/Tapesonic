@@ -20,6 +20,7 @@ type TapesonicConfig struct {
 	FfmpegPath string
 
 	TasksImportQueueImport BackgroundTaskConfig
+	TasksLibrarySync       BackgroundTaskConfig
 
 	SubsonicProxyUrl      string
 	SubsonicProxyUsername string
@@ -51,6 +52,7 @@ func NewConfig() (*TapesonicConfig, error) {
 		MediaStorageDir: getEnvOrDefault("TAPESONIC_MEDIA_STORAGE_DIR", "media"),
 
 		TasksImportQueueImport: getBackgroundTaskConfig("IMPORT_QUEUE_IMPORT", "0 * * * * *", 15*time.Minute),
+		TasksLibrarySync:       getBackgroundTaskConfig("LIBRARY_SYNC", "15 * * * * *", 15*time.Minute),
 
 		SubsonicProxyUrl:      os.Getenv("TAPESONIC_SUBSONIC_PROXY_URL"),
 		SubsonicProxyUsername: os.Getenv("TAPESONIC_SUBSONIC_PROXY_USERNAME"),

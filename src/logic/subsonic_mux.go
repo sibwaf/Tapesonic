@@ -21,7 +21,7 @@ const (
 )
 
 type SubsonicMuxService struct {
-	services []*subsonicNamedService
+	services []*SubsonicNamedService
 
 	cachedMuxSong    *storage.CachedMuxSongStorage
 	muxedSongListens *storage.MuxedSongListensStorage
@@ -32,13 +32,13 @@ func NewSubsonicMuxService(
 	muxedSongListens *storage.MuxedSongListensStorage,
 ) *SubsonicMuxService {
 	return &SubsonicMuxService{
-		services:         []*subsonicNamedService{},
+		services:         []*SubsonicNamedService{},
 		cachedMuxSong:    cachedMuxSong,
 		muxedSongListens: muxedSongListens,
 	}
 }
 
-func (svc *SubsonicMuxService) AddService(service *subsonicNamedService) {
+func (svc *SubsonicMuxService) AddService(service *SubsonicNamedService) {
 	svc.services = append(svc.services, service)
 }
 
@@ -104,18 +104,7 @@ func (svc *SubsonicMuxService) GetSong(id string) (*responses.SubsonicChild, err
 		return nil, err
 	}
 
-	song, err := service.GetSong(id)
-	if err != nil {
-		return nil, err
-	}
-
-	rawSong := service.GetRawSong(*song)
-	_, cacheWriteErr := svc.cachedMuxSong.Save(service.Name(), rawSong.Id, rawSong.AlbumId, song.Duration)
-	if cacheWriteErr != nil {
-		slog.Error(fmt.Sprintf("Failed to cache song info when proxying getSong: %s", cacheWriteErr.Error()))
-	}
-
-	return song, nil
+	return service.GetSong(id)
 }
 
 func (svc *SubsonicMuxService) GetRandomSongs(size int, genre string, fromYear *int, toYear *int) (*responses.RandomSongs, error) {
@@ -309,7 +298,17 @@ func (svc *SubsonicMuxService) Scrobble(id string, time_ time.Time, submission b
 	song, cacheWriteErr := service.GetSong(id)
 	if cacheWriteErr == nil {
 		rawSong := service.GetRawSong(*song)
-		_, cacheWriteErr = svc.cachedMuxSong.Save(service.Name(), rawSong.Id, rawSong.AlbumId, song.Duration)
+		_, cacheWriteErr = svc.cachedMuxSong.Save(
+			storage.CachedMuxSong{
+				ServiceName: service.Name(),
+				SongId:      rawSong.Id,
+				AlbumId:     rawSong.AlbumId,
+				Artist:      rawSong.Artist,
+				Title:       rawSong.Title,
+				DurationSec: rawSong.Duration,
+				CachedAt:    time.Now(),
+			},
+		)
 	}
 	if cacheWriteErr != nil {
 		slog.Error(fmt.Sprintf("Failed to cache song info when scrobbling: %s", cacheWriteErr.Error()))
@@ -349,7 +348,7 @@ func (svc *SubsonicMuxService) findServiceByName(name string) (SubsonicService, 
 	return nil, fmt.Errorf("unknown subsonic service `%s`", name)
 }
 
-func (svc *SubsonicMuxService) findServiceByEntityId(id string) (*subsonicNamedService, error) {
+func (svc *SubsonicMuxService) findServiceByEntityId(id string) (*SubsonicNamedService, error) {
 	for _, service := range svc.services {
 		if service.Matches(id) {
 			return service, nil

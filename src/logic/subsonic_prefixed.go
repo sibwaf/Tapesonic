@@ -9,19 +9,19 @@ import (
 	"time"
 )
 
-type subsonicNamedService struct {
+type SubsonicNamedService struct {
 	name     string
 	delegate SubsonicService
 }
 
-func NewSubsonicNamedService(name string, delegate SubsonicService) *subsonicNamedService {
-	return &subsonicNamedService{
+func NewSubsonicNamedService(name string, delegate SubsonicService) *SubsonicNamedService {
+	return &SubsonicNamedService{
 		name:     name,
 		delegate: delegate,
 	}
 }
 
-func (svc *subsonicNamedService) Search3(query string, artistCount int, artistOffset int, albumCount int, albumOffset int, songCount int, songOffset int) (*responses.SearchResult3, error) {
+func (svc *SubsonicNamedService) Search3(query string, artistCount int, artistOffset int, albumCount int, albumOffset int, songCount int, songOffset int) (*responses.SearchResult3, error) {
 	search, err := svc.delegate.Search3(query, artistCount, artistOffset, albumCount, albumOffset, songCount, songOffset)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func (svc *subsonicNamedService) Search3(query string, artistCount int, artistOf
 	return search, nil
 }
 
-func (svc *subsonicNamedService) GetSong(id string) (*responses.SubsonicChild, error) {
+func (svc *SubsonicNamedService) GetSong(id string) (*responses.SubsonicChild, error) {
 	song, err := svc.delegate.GetSong(svc.RemovePrefix(id))
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (svc *subsonicNamedService) GetSong(id string) (*responses.SubsonicChild, e
 	return &rewrittenSong, nil
 }
 
-func (svc *subsonicNamedService) GetRandomSongs(size int, genre string, fromYear *int, toYear *int) (*responses.RandomSongs, error) {
+func (svc *SubsonicNamedService) GetRandomSongs(size int, genre string, fromYear *int, toYear *int) (*responses.RandomSongs, error) {
 	songs, err := svc.delegate.GetRandomSongs(size, genre, fromYear, toYear)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (svc *subsonicNamedService) GetRandomSongs(size int, genre string, fromYear
 	return songs, nil
 }
 
-func (svc *subsonicNamedService) GetAlbum(id string) (*responses.AlbumId3, error) {
+func (svc *SubsonicNamedService) GetAlbum(id string) (*responses.AlbumId3, error) {
 	album, err := svc.delegate.GetAlbum(svc.RemovePrefix(id))
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (svc *subsonicNamedService) GetAlbum(id string) (*responses.AlbumId3, error
 	return &rewrittenAlbum, nil
 }
 
-func (svc *subsonicNamedService) GetAlbumList2(type_ string, size int, offset int, fromYear *int, toYear *int) (*responses.AlbumList2, error) {
+func (svc *SubsonicNamedService) GetAlbumList2(type_ string, size int, offset int, fromYear *int, toYear *int) (*responses.AlbumList2, error) {
 	albumList, err := svc.delegate.GetAlbumList2(type_, size, offset, fromYear, toYear)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (svc *subsonicNamedService) GetAlbumList2(type_ string, size int, offset in
 	return albumList, nil
 }
 
-func (svc *subsonicNamedService) GetPlaylist(id string) (*responses.SubsonicPlaylist, error) {
+func (svc *SubsonicNamedService) GetPlaylist(id string) (*responses.SubsonicPlaylist, error) {
 	playlist, err := svc.delegate.GetPlaylist(svc.RemovePrefix(id))
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func (svc *subsonicNamedService) GetPlaylist(id string) (*responses.SubsonicPlay
 	return &rewrittenPlaylist, nil
 }
 
-func (svc *subsonicNamedService) GetPlaylists() (*responses.SubsonicPlaylists, error) {
+func (svc *SubsonicNamedService) GetPlaylists() (*responses.SubsonicPlaylists, error) {
 	playlists, err := svc.delegate.GetPlaylists()
 	if err != nil {
 		return nil, err
@@ -109,19 +109,19 @@ func (svc *subsonicNamedService) GetPlaylists() (*responses.SubsonicPlaylists, e
 	return playlists, nil
 }
 
-func (svc *subsonicNamedService) Scrobble(id string, time_ time.Time, submission bool) error {
+func (svc *SubsonicNamedService) Scrobble(id string, time_ time.Time, submission bool) error {
 	return svc.delegate.Scrobble(svc.RemovePrefix(id), time_, submission)
 }
 
-func (svc *subsonicNamedService) GetCoverArt(id string) (mime string, reader io.ReadCloser, err error) {
+func (svc *SubsonicNamedService) GetCoverArt(id string) (mime string, reader io.ReadCloser, err error) {
 	return svc.delegate.GetCoverArt(svc.RemovePrefix(id))
 }
 
-func (svc *subsonicNamedService) Stream(ctx context.Context, id string) (mime string, reader io.ReadCloser, err error) {
+func (svc *SubsonicNamedService) Stream(ctx context.Context, id string) (mime string, reader io.ReadCloser, err error) {
 	return svc.delegate.Stream(ctx, svc.RemovePrefix(id))
 }
 
-func (svc *subsonicNamedService) rewriteAlbumInfo(album responses.AlbumId3) responses.AlbumId3 {
+func (svc *SubsonicNamedService) rewriteAlbumInfo(album responses.AlbumId3) responses.AlbumId3 {
 	album.Id = svc.addPrefix(album.Id)
 	album.CoverArt = svc.addPrefix(album.CoverArt)
 
@@ -132,7 +132,7 @@ func (svc *subsonicNamedService) rewriteAlbumInfo(album responses.AlbumId3) resp
 	return album
 }
 
-func (svc *subsonicNamedService) GetRawAlbum(album responses.AlbumId3) responses.AlbumId3 {
+func (svc *SubsonicNamedService) GetRawAlbum(album responses.AlbumId3) responses.AlbumId3 {
 	album.Id = svc.RemovePrefix(album.Id)
 	album.CoverArt = svc.RemovePrefix(album.CoverArt)
 
@@ -143,7 +143,7 @@ func (svc *subsonicNamedService) GetRawAlbum(album responses.AlbumId3) responses
 	return album
 }
 
-func (svc *subsonicNamedService) rewritePlaylistInfo(playlist responses.SubsonicPlaylist) responses.SubsonicPlaylist {
+func (svc *SubsonicNamedService) rewritePlaylistInfo(playlist responses.SubsonicPlaylist) responses.SubsonicPlaylist {
 	playlist.Id = svc.addPrefix(playlist.Id)
 	playlist.CoverArt = svc.addPrefix(playlist.CoverArt)
 
@@ -154,7 +154,7 @@ func (svc *subsonicNamedService) rewritePlaylistInfo(playlist responses.Subsonic
 	return playlist
 }
 
-func (svc *subsonicNamedService) GetRawPlaylist(playlist responses.SubsonicPlaylist) responses.SubsonicPlaylist {
+func (svc *SubsonicNamedService) GetRawPlaylist(playlist responses.SubsonicPlaylist) responses.SubsonicPlaylist {
 	playlist.Id = svc.RemovePrefix(playlist.Id)
 	playlist.CoverArt = svc.RemovePrefix(playlist.CoverArt)
 
@@ -165,41 +165,41 @@ func (svc *subsonicNamedService) GetRawPlaylist(playlist responses.SubsonicPlayl
 	return playlist
 }
 
-func (svc *subsonicNamedService) rewriteSongInfo(song responses.SubsonicChild) responses.SubsonicChild {
+func (svc *SubsonicNamedService) rewriteSongInfo(song responses.SubsonicChild) responses.SubsonicChild {
 	song.Id = svc.addPrefix(song.Id)
 	song.CoverArt = svc.addPrefix(song.CoverArt)
 	song.AlbumId = svc.addPrefix(song.AlbumId)
 	return song
 }
 
-func (svc *subsonicNamedService) GetRawSong(song responses.SubsonicChild) responses.SubsonicChild {
+func (svc *SubsonicNamedService) GetRawSong(song responses.SubsonicChild) responses.SubsonicChild {
 	song.Id = svc.RemovePrefix(song.Id)
 	song.CoverArt = svc.RemovePrefix(song.CoverArt)
 	song.AlbumId = svc.RemovePrefix(song.AlbumId)
 	return song
 }
 
-func (svc *subsonicNamedService) rewriteArtistInfo(artist responses.ArtistId3) responses.ArtistId3 {
+func (svc *SubsonicNamedService) rewriteArtistInfo(artist responses.ArtistId3) responses.ArtistId3 {
 	artist.Id = svc.addPrefix(artist.Id)
 	artist.CoverArt = svc.addPrefix(artist.CoverArt)
 	return artist
 }
 
-func (svc *subsonicNamedService) GetRawArtist(artist responses.ArtistId3) responses.ArtistId3 {
+func (svc *SubsonicNamedService) GetRawArtist(artist responses.ArtistId3) responses.ArtistId3 {
 	artist.Id = svc.RemovePrefix(artist.Id)
 	artist.CoverArt = svc.RemovePrefix(artist.CoverArt)
 	return artist
 }
 
-func (svc *subsonicNamedService) Name() string {
+func (svc *SubsonicNamedService) Name() string {
 	return svc.name
 }
 
-func (svc *subsonicNamedService) Matches(id string) bool {
+func (svc *SubsonicNamedService) Matches(id string) bool {
 	return strings.HasPrefix(id, svc.generatePrefix())
 }
 
-func (svc *subsonicNamedService) addPrefix(id string) string {
+func (svc *SubsonicNamedService) addPrefix(id string) string {
 	if id == "" {
 		return ""
 	}
@@ -207,10 +207,10 @@ func (svc *subsonicNamedService) addPrefix(id string) string {
 	return fmt.Sprintf("%s%s", svc.generatePrefix(), id)
 }
 
-func (svc *subsonicNamedService) RemovePrefix(id string) string {
+func (svc *SubsonicNamedService) RemovePrefix(id string) string {
 	return strings.TrimPrefix(id, svc.generatePrefix())
 }
 
-func (svc *subsonicNamedService) generatePrefix() string {
+func (svc *SubsonicNamedService) generatePrefix() string {
 	return fmt.Sprintf("%s_", svc.name)
 }

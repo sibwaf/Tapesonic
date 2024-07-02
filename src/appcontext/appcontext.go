@@ -28,6 +28,8 @@ type Context struct {
 	ImportQueueStorage      *storage.ImportQueueStorage
 	TapeTrackListensStorage *storage.TapeTrackListensStorage
 	CachedMuxSongStorage    *storage.CachedMuxSongStorage
+	CachedMuxAlbumStorage   *storage.CachedMuxAlbumStorage
+	CachedMuxArtistStorage  *storage.CachedMuxArtistStorage
 	MuxedSongListensStorage *storage.MuxedSongListensStorage
 	MediaStorage            *storage.MediaStorage
 	Importer                *storage.Importer
@@ -35,7 +37,7 @@ type Context struct {
 	Ytdlp  *ytdlp.Ytdlp
 	Ffmpeg *ffmpeg.Ffmpeg
 
-	SubsonicProviders []logic.SubsonicService
+	SubsonicProviders []*logic.SubsonicNamedService
 	SubsonicService   logic.SubsonicService
 }
 
@@ -85,6 +87,12 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 		return nil, err
 	}
 	if context.CachedMuxSongStorage, err = storage.NewCachedMuxSongStorage(db); err != nil {
+		return nil, err
+	}
+	if context.CachedMuxAlbumStorage, err = storage.NewCachedMuxAlbumStorage(db); err != nil {
+		return nil, err
+	}
+	if context.CachedMuxArtistStorage, err = storage.NewCachedMuxArtistStorage(db); err != nil {
 		return nil, err
 	}
 	if context.MuxedSongListensStorage, err = storage.NewMuxedSongListensStorage(db); err != nil {
@@ -158,6 +166,16 @@ func registerBackgroundTasks(context *Context) error {
 		context.ImportQueueStorage,
 		context.Importer,
 		context.Config.TasksImportQueueImport,
+	).RegisterSchedules(cron); err != nil {
+		return err
+	}
+
+	if err = tasks.NewSyncLibraryHandler(
+		context.SubsonicProviders,
+		context.CachedMuxSongStorage,
+		context.CachedMuxAlbumStorage,
+		context.CachedMuxArtistStorage,
+		context.Config.TasksLibrarySync,
 	).RegisterSchedules(cron); err != nil {
 		return err
 	}
