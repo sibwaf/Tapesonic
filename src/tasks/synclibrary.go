@@ -71,7 +71,7 @@ func (h *SyncLibraryHandler) onSchedule() {
 			cachedAt := time.Now()
 
 			for _, artist := range search.Artist {
-				artist = subsonicProvider.GetRawArtist(artist)
+				artist = subsonicProvider.GetRawArtistId3(artist)
 				thisArtists = append(
 					thisArtists,
 					storage.CachedMuxArtist{

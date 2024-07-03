@@ -289,6 +289,15 @@ func (svc *SubsonicMuxService) GetPlaylists() (*responses.SubsonicPlaylists, err
 	return responses.NewSubsonicPlaylists(playlists), nil
 }
 
+func (svc *SubsonicMuxService) GetArtist(id string) (*responses.Artist, error) {
+	service, err := svc.findServiceByEntityId(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return service.GetArtist(id)
+}
+
 func (svc *SubsonicMuxService) Scrobble(id string, time_ time.Time, submission bool) error {
 	service, err := svc.findServiceByEntityId(id)
 	if err != nil {

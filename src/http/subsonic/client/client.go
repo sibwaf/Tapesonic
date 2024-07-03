@@ -141,6 +141,15 @@ func (c *SubsonicClient) GetPlaylists() (*responses.SubsonicPlaylists, error) {
 	return res.Playlists, nil
 }
 
+func (c *SubsonicClient) GetArtist(id string) (*responses.Artist, error) {
+	res, err := c.doParsedQuery("/rest/getArtist", map[string]string{"id": id})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Artist, nil
+}
+
 func (c *SubsonicClient) Scrobble(id string, time_ time.Time, submission bool) error {
 	_, err := c.doParsedQuery("/rest/scrobble", map[string]string{
 		"id":         id,

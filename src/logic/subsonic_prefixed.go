@@ -28,7 +28,7 @@ func (svc *SubsonicNamedService) Search3(query string, artistCount int, artistOf
 	}
 
 	for i := range search.Artist {
-		search.Artist[i] = svc.rewriteArtistInfo(search.Artist[i])
+		search.Artist[i] = svc.rewriteArtistId3Info(search.Artist[i])
 	}
 	for i := range search.Album {
 		search.Album[i] = svc.rewriteAlbumInfo(search.Album[i])
@@ -109,6 +109,16 @@ func (svc *SubsonicNamedService) GetPlaylists() (*responses.SubsonicPlaylists, e
 	return playlists, nil
 }
 
+func (svc *SubsonicNamedService) GetArtist(id string) (*responses.Artist, error) {
+	artist, err := svc.delegate.GetArtist(svc.RemovePrefix(id))
+	if err != nil {
+		return nil, err
+	}
+
+	rewrittenArtist := svc.rewriteArtistInfo(*artist)
+	return &rewrittenArtist, nil
+}
+
 func (svc *SubsonicNamedService) Scrobble(id string, time_ time.Time, submission bool) error {
 	return svc.delegate.Scrobble(svc.RemovePrefix(id), time_, submission)
 }
@@ -179,15 +189,35 @@ func (svc *SubsonicNamedService) GetRawSong(song responses.SubsonicChild) respon
 	return song
 }
 
-func (svc *SubsonicNamedService) rewriteArtistInfo(artist responses.ArtistId3) responses.ArtistId3 {
+func (svc *SubsonicNamedService) rewriteArtistId3Info(artist responses.ArtistId3) responses.ArtistId3 {
 	artist.Id = svc.addPrefix(artist.Id)
 	artist.CoverArt = svc.addPrefix(artist.CoverArt)
 	return artist
 }
 
-func (svc *SubsonicNamedService) GetRawArtist(artist responses.ArtistId3) responses.ArtistId3 {
+func (svc *SubsonicNamedService) GetRawArtistId3(artist responses.ArtistId3) responses.ArtistId3 {
 	artist.Id = svc.RemovePrefix(artist.Id)
 	artist.CoverArt = svc.RemovePrefix(artist.CoverArt)
+	return artist
+}
+
+func (svc *SubsonicNamedService) rewriteArtistInfo(artist responses.Artist) responses.Artist {
+	artist.Id = svc.addPrefix(artist.Id)
+
+	for i := range artist.Album {
+		artist.Album[i] = svc.rewriteAlbumInfo(artist.Album[i])
+	}
+
+	return artist
+}
+
+func (svc *SubsonicNamedService) GetRawArtist(artist responses.Artist) responses.Artist {
+	artist.Id = svc.RemovePrefix(artist.Id)
+
+	for i := range artist.Album {
+		artist.Album[i] = svc.GetRawAlbum(artist.Album[i])
+	}
+
 	return artist
 }
 

@@ -256,6 +256,11 @@ func (svc *subsonicInternalService) GetPlaylists() (*responses.SubsonicPlaylists
 	return responses.NewSubsonicPlaylists(playlistsResponse), nil
 }
 
+func (svc *subsonicInternalService) GetArtist(id string) (*responses.Artist, error) {
+	// todo
+	return nil, fmt.Errorf("not supported yet")
+}
+
 func toAlbumId3(album storage.SubsonicAlbumItem) responses.AlbumId3 {
 	albumResponse := responses.NewAlbumId3(
 		encodeId(album.Id),

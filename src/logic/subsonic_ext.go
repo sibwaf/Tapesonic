@@ -62,6 +62,10 @@ func (svc *subsonicExternalService) GetPlaylists() (*responses.SubsonicPlaylists
 	return svc.client.GetPlaylists()
 }
 
+func (svc *subsonicExternalService) GetArtist(id string) (*responses.Artist, error) {
+	return svc.client.GetArtist(id)
+}
+
 func (svc *subsonicExternalService) Scrobble(id string, time_ time.Time, submission bool) error {
 	return svc.client.Scrobble(id, time_, submission)
 }

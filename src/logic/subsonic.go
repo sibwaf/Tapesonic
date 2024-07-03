@@ -36,6 +36,8 @@ type SubsonicService interface {
 
 	GetPlaylists() (*responses.SubsonicPlaylists, error)
 
+	GetArtist(id string) (*responses.Artist, error)
+
 	Scrobble(id string, time_ time.Time, submission bool) error
 
 	GetCoverArt(id string) (mime string, reader io.ReadCloser, err error)

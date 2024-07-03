@@ -35,6 +35,7 @@ type SubsonicResponse struct {
 	AlbumList2            *AlbumList2            `json:"albumList2,omitempty" xml:"albumList2"`
 	Album                 *AlbumId3              `json:"album,omitempty" xml:"album"`
 	Artists               *Artists               `json:"artists,omitempty" xml:"artists"`
+	Artist                *Artist                `json:"artist,omitempty" xml:"artist"`
 	Genres                *Genres                `json:"genres,omitempty" xml:"genres"`
 	InternetRadioStations *InternetRadioStations `json:"internetRadioStations,omitempty" xml:"internetRadioStations"`
 	MusicFolders          *MusicFolders          `json:"musicFolders,omitempty" xml:"musicFolders"`
