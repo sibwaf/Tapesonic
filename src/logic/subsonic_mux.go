@@ -167,7 +167,7 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 				return responses.AlbumId3{}, err
 			}
 
-			album, err := service.GetAlbum(item.Id)
+			album, err := service.GetAlbumByRawId(item.Id)
 			if err != nil {
 				return responses.AlbumId3{}, err
 			}
@@ -347,7 +347,7 @@ func (svc *SubsonicMuxService) Stream(ctx context.Context, id string) (mime stri
 	return service.Stream(ctx, id)
 }
 
-func (svc *SubsonicMuxService) findServiceByName(name string) (SubsonicService, error) {
+func (svc *SubsonicMuxService) findServiceByName(name string) (*SubsonicNamedService, error) {
 	for _, service := range svc.services {
 		if service.Name() == name {
 			return service, nil
