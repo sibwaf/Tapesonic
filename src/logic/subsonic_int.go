@@ -69,17 +69,10 @@ func (svc *subsonicInternalService) Search3(
 			return nil, err
 		}
 	} else {
-		terms := []string{}
-		for _, term := range strings.Split(query, " ") {
-			if term != "" {
-				terms = append(terms, term)
-			}
-		}
-
-		if albums, err = svc.albums.SearchSubsonicAlbums(albumCount, albumOffset, terms); err != nil {
+		if albums, err = svc.albums.SearchSubsonicAlbums(albumCount, albumOffset, query); err != nil {
 			return nil, err
 		}
-		if songs, err = svc.tracks.SearchSubsonicTracks(songCount, songOffset, terms); err != nil {
+		if songs, err = svc.tracks.SearchSubsonicTracks(songCount, songOffset, query); err != nil {
 			return nil, err
 		}
 	}

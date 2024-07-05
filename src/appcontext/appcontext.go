@@ -38,6 +38,7 @@ type Context struct {
 	Ffmpeg *ffmpeg.Ffmpeg
 
 	SubsonicProviders []*logic.SubsonicNamedService
+	SubsonicMuxer     logic.SubsonicService
 	SubsonicService   logic.SubsonicService
 }
 
@@ -116,7 +117,7 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 		context.CachedMuxSongStorage,
 		context.MuxedSongListensStorage,
 	)
-	context.SubsonicService = subsonicMux
+	context.SubsonicMuxer = subsonicMux
 
 	internalSubsonic := logic.NewSubsonicNamedService(
 		"tapesonic",
@@ -146,6 +147,14 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 		context.SubsonicProviders = append(context.SubsonicProviders, externalSubsonic)
 		subsonicMux.AddService(externalSubsonic)
 	}
+
+	context.SubsonicService = logic.NewSubsonicMainService(
+		subsonicMux,
+		context.SubsonicProviders,
+		context.CachedMuxSongStorage,
+		context.CachedMuxAlbumStorage,
+		context.CachedMuxArtistStorage,
+	)
 
 	if err = registerBackgroundTasks(&context); err != nil {
 		return nil, err

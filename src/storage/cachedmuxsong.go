@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -18,11 +20,23 @@ type CachedMuxSong struct {
 	AlbumId string
 
 	Artist string
+	Album  string
 	Title  string
 
 	DurationSec int
 
+	SearchArtist string
+	SearchAlbum  string
+	SearchTitle  string
+
 	CachedAt time.Time
+}
+
+func (song *CachedMuxSong) BeforeSave(tx *gorm.DB) (err error) {
+	song.SearchArtist = strings.Join(ExtractSearchTerms(song.Artist), " ")
+	song.SearchAlbum = strings.Join(ExtractSearchTerms(song.Album), " ")
+	song.SearchTitle = strings.Join(ExtractSearchTerms(song.Title), " ")
+	return nil
 }
 
 func NewCachedMuxSongStorage(db *gorm.DB) (*CachedMuxSongStorage, error) {
@@ -48,4 +62,30 @@ func (storage *CachedMuxSongStorage) Replace(items []CachedMuxSong) error {
 
 		return nil
 	})
+}
+
+func (storage *CachedMuxSongStorage) Search(query string, count int, offset int) ([]CachedSongId, error) {
+	result := []CachedSongId{}
+
+	filter := MakeTextSearchCondition([]string{"search_artist", "search_album", "search_title"}, query)
+	if filter == "" {
+		return result, nil
+	}
+
+	sql := fmt.Sprintf(
+		`
+			SELECT
+				service_name AS service_name,
+				song_id AS id
+			FROM cached_mux_songs
+			WHERE %s
+			ORDER BY id
+			LIMIT %d OFFSET %d
+		`,
+		filter,
+		count,
+		offset,
+	)
+
+	return result, storage.db.Raw(sql).Find(&result).Error
 }

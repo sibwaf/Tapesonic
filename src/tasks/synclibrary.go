@@ -106,6 +106,7 @@ func (h *SyncLibraryHandler) onSchedule() {
 						SongId:      song.Id,
 						AlbumId:     song.AlbumId,
 						Artist:      song.Artist,
+						Album:       song.Album,
 						Title:       song.Title,
 						DurationSec: song.Duration,
 						CachedAt:    cachedAt,

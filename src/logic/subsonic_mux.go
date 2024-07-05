@@ -150,7 +150,7 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 	}
 
 	if type_ == LIST_RECENT || type_ == LIST_FREQUENT {
-		var albumListenStats []storage.MuxedAlbumListenStats
+		var albumListenStats []storage.CachedAlbumId
 		var err error
 		if type_ == LIST_RECENT {
 			albumListenStats, err = svc.muxedSongListens.GetRecentAlbumListenStats(size, offset)
@@ -161,7 +161,7 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 			return nil, err
 		}
 
-		albums, err := util.ParallelMap(albumListenStats, func(item storage.MuxedAlbumListenStats) (responses.AlbumId3, error) {
+		albums, err := util.ParallelMap(albumListenStats, func(item storage.CachedAlbumId) (responses.AlbumId3, error) {
 			service, err := svc.findServiceByName(item.ServiceName)
 			if err != nil {
 				return responses.AlbumId3{}, err
@@ -313,6 +313,7 @@ func (svc *SubsonicMuxService) Scrobble(id string, time_ time.Time, submission b
 				SongId:      rawSong.Id,
 				AlbumId:     rawSong.AlbumId,
 				Artist:      rawSong.Artist,
+				Album:       rawSong.Album,
 				Title:       rawSong.Title,
 				DurationSec: rawSong.Duration,
 				CachedAt:    time.Now(),

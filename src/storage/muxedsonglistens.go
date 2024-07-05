@@ -47,15 +47,15 @@ func (storage *MuxedSongListensStorage) Record(serviceName string, songId string
 	})
 }
 
-func (storage *MuxedSongListensStorage) GetRecentAlbumListenStats(count int, offset int) ([]MuxedAlbumListenStats, error) {
+func (storage *MuxedSongListensStorage) GetRecentAlbumListenStats(count int, offset int) ([]CachedAlbumId, error) {
 	return storage.getAlbumListenStats(count, offset, "album_info.last_listened_at IS NOT NULL", "album_info.last_listened_at DESC")
 }
 
-func (storage *MuxedSongListensStorage) GetFrequentAlbumListenStats(count int, offset int) ([]MuxedAlbumListenStats, error) {
+func (storage *MuxedSongListensStorage) GetFrequentAlbumListenStats(count int, offset int) ([]CachedAlbumId, error) {
 	return storage.getAlbumListenStats(count, offset, "album_info.total_play_time > 0", "album_info.total_play_time DESC")
 }
 
-func (storage *MuxedSongListensStorage) getAlbumListenStats(count int, offset int, filter string, order string) ([]MuxedAlbumListenStats, error) {
+func (storage *MuxedSongListensStorage) getAlbumListenStats(count int, offset int, filter string, order string) ([]CachedAlbumId, error) {
 	query := `
 		WITH album_info AS (
 			SELECT
@@ -81,6 +81,6 @@ func (storage *MuxedSongListensStorage) getAlbumListenStats(count int, offset in
 	query += fmt.Sprintf(" ORDER BY %s", order)
 	query += fmt.Sprintf(" LIMIT %d OFFSET %d", count, offset)
 
-	result := []MuxedAlbumListenStats{}
+	result := []CachedAlbumId{}
 	return result, storage.db.Raw(query).Find(&result).Error
 }

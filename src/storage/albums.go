@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -124,14 +123,13 @@ func (storage *AlbumStorage) GetSubsonicAlbum(id uuid.UUID) (*SubsonicAlbumItem,
 	return &albums[0], nil
 }
 
-func (storage *AlbumStorage) SearchSubsonicAlbums(count int, offset int, query []string) ([]SubsonicAlbumItem, error) {
-	filter := []string{}
-	for _, term := range query {
-		searchField := "' ' || albums.artist || ' ' || albums.name"
-		filter = append(filter, fmt.Sprintf("%s LIKE '%% %s%%' ESCAPE '%s'", searchField, EscapeTextLiteralForLike(term, "\\"), "\\"))
+func (storage *AlbumStorage) SearchSubsonicAlbums(count int, offset int, query string) ([]SubsonicAlbumItem, error) {
+	filter := MakeTextSearchCondition([]string{"albums.artist", "albums.name"}, query)
+	if filter == "" {
+		return []SubsonicAlbumItem{}, nil
 	}
 
-	return storage.getSubsonicAlbums(count, offset, strings.Join(filter, " AND "), "albums.id")
+	return storage.getSubsonicAlbums(count, offset, filter, "albums.id")
 }
 
 func (storage *AlbumStorage) GetSubsonicAlbumsSortId(count int, offset int) ([]SubsonicAlbumItem, error) {

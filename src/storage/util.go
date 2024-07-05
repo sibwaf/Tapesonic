@@ -2,13 +2,18 @@ package storage
 
 import (
 	"errors"
+	"fmt"
+	"regexp"
 	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-var voidLog = logger.Default.LogMode(logger.Silent)
+var (
+	voidLog   = logger.Default.LogMode(logger.Silent)
+	wordRegex = regexp.MustCompile(`[\p{Lo}\p{Ll}\p{Lu}\p{Nd}\p{Nl}\p{No}]+`)
+)
 
 type DbHelper struct {
 	*gorm.DB
@@ -39,8 +44,32 @@ func (db *DbHelper) ExclusiveTransaction(tx func(*gorm.DB) error) error {
 	})
 }
 
-func EscapeTextLiteral(str string) string {
-	return strings.ReplaceAll(str, "'", "''")
+func MakeTextSearchCondition(fields []string, query string) string {
+	terms := ExtractSearchTerms(query)
+	if len(terms) == 0 {
+		return ""
+	}
+
+	searchField := "''"
+	for _, field := range fields {
+		searchField = fmt.Sprintf("%s || ' ' || coalesce(%s, '')", searchField, field)
+	}
+
+	filter := []string{}
+	for _, term := range terms {
+		term = EscapeTextLiteralForLike(term, "\\")
+		filter = append(filter, fmt.Sprintf("%s LIKE '%% %s%%' ESCAPE '%s'", searchField, term, "\\"))
+	}
+
+	return strings.Join(filter, " AND ")
+}
+
+func ExtractSearchTerms(query string) []string {
+	terms := wordRegex.FindAllString(query, 99)
+	if terms == nil {
+		terms = []string{}
+	}
+	return terms
 }
 
 func EscapeTextLiteralForLike(str string, escape string) string {
@@ -49,4 +78,8 @@ func EscapeTextLiteralForLike(str string, escape string) string {
 	str = strings.ReplaceAll(str, "_", escape+"_")
 	str = strings.ReplaceAll(str, "%", escape+"%")
 	return str
+}
+
+func EscapeTextLiteral(str string) string {
+	return strings.ReplaceAll(str, "'", "''")
 }

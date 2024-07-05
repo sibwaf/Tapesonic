@@ -32,14 +32,13 @@ func (storage *TrackStorage) GetSubsonicTrack(id uuid.UUID) (*SubsonicTrackItem,
 	return &tracks[0], nil
 }
 
-func (storage *TrackStorage) SearchSubsonicTracks(count int, offset int, query []string) ([]SubsonicTrackItem, error) {
-	filter := []string{}
-	for _, term := range query {
-		searchField := "' ' || tape_tracks.artist || ' ' || coalesce(albums.name, '') || ' ' || tape_tracks.title"
-		filter = append(filter, fmt.Sprintf("%s LIKE '%% %s%%' ESCAPE '%s'", searchField, EscapeTextLiteralForLike(term, "\\"), "\\"))
+func (storage *TrackStorage) SearchSubsonicTracks(count int, offset int, query string) ([]SubsonicTrackItem, error) {
+	filter := MakeTextSearchCondition([]string{"tape_tracks.artist", "albums.name", "tape_tracks.title"}, query)
+	if filter == "" {
+		return []SubsonicTrackItem{}, nil
 	}
 
-	return storage.getSubsonicTracks(count, offset, strings.Join(filter, " AND "), "", "tape_tracks.id")
+	return storage.getSubsonicTracks(count, offset, filter, "", "tape_tracks.id")
 }
 
 func (storage *TrackStorage) GetSubsonicTracksSortId(count int, offset int) ([]SubsonicTrackItem, error) {

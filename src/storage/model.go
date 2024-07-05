@@ -60,7 +60,17 @@ type SubsonicTrackItem struct {
 	PlayCount   int
 }
 
-type MuxedAlbumListenStats struct {
+type CachedArtistId struct {
+	ServiceName string
+	Id          string
+}
+
+type CachedAlbumId struct {
+	ServiceName string
+	Id          string
+}
+
+type CachedSongId struct {
 	ServiceName string
 	Id          string
 }
