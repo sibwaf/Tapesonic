@@ -5,14 +5,20 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 
+	"golang.org/x/text/runes"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 var (
-	voidLog   = logger.Default.LogMode(logger.Silent)
-	wordRegex = regexp.MustCompile(`[\p{Lo}\p{Ll}\p{Lu}\p{Nd}\p{Nl}\p{No}]+`)
+	voidLog = logger.Default.LogMode(logger.Silent)
+
+	wordRegex              = regexp.MustCompile(`[\p{Lo}\p{Ll}\p{Lu}\p{Nd}\p{Nl}\p{No}]+`)
+	normalizationTransform = transform.Chain(norm.NFKD, runes.Remove(runes.In(unicode.Mn)), norm.NFKC)
 )
 
 type DbHelper struct {
@@ -65,6 +71,11 @@ func MakeTextSearchCondition(fields []string, query string) string {
 }
 
 func ExtractSearchTerms(query string) []string {
+	query, _, err := transform.String(normalizationTransform, query)
+	if err != nil {
+		return []string{}
+	}
+
 	terms := wordRegex.FindAllString(query, 99)
 	if terms == nil {
 		terms = []string{}
