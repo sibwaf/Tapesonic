@@ -21,8 +21,14 @@ var logo = []string{
 }
 
 func main() {
+	config, err := config.NewConfig()
+	if err != nil {
+		fmt.Printf("Failed to parse config: %s\n", err.Error())
+		os.Exit(3)
+	}
+
 	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
+		Level: config.LogLevel,
 	})
 	slog.SetDefault(slog.New(logHandler))
 
@@ -31,12 +37,6 @@ func main() {
 	}
 
 	slog.Info(fmt.Sprintf("Starting Tapesonic %s", build.TAPESONIC_VERSION))
-
-	config, err := config.NewConfig()
-	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to parse config: %s", err.Error()))
-		os.Exit(3)
-	}
 
 	appCtx, err := appcontext.NewContext(config)
 	if err != nil {

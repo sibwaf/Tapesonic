@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -9,7 +10,11 @@ import (
 	"time"
 )
 
+const LevelTrace = slog.LevelDebug * 2
+
 type TapesonicConfig struct {
+	LogLevel slog.Level
+
 	ServerPort int
 	Username   string
 	Password   string
@@ -39,6 +44,20 @@ type BackgroundTaskConfig struct {
 }
 
 func NewConfig() (*TapesonicConfig, error) {
+	logLevel := slog.LevelInfo
+	switch strings.ToUpper(getEnvOrDefault("TAPESONIC_LOG_LEVEL", "INFO")) {
+	case "TRACE":
+		logLevel = LevelTrace
+	case "DEBUG":
+		logLevel = slog.LevelDebug
+	case "INFO":
+		logLevel = slog.LevelInfo
+	case "WARN":
+		logLevel = slog.LevelWarn
+	case "ERROR":
+		logLevel = slog.LevelError
+	}
+
 	portText := getEnvOrDefault("TAPESONIC_PORT", "8080")
 	port, err := strconv.Atoi(portText)
 	if err != nil {
@@ -46,6 +65,8 @@ func NewConfig() (*TapesonicConfig, error) {
 	}
 
 	config := &TapesonicConfig{
+		LogLevel: logLevel,
+
 		ServerPort: port,
 		Username:   os.Getenv("TAPESONIC_USERNAME"),
 		Password:   os.Getenv("TAPESONIC_PASSWORD"),

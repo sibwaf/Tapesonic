@@ -1,10 +1,9 @@
 package appcontext
 
 import (
-	"log/slog"
 	"os"
 	"path"
-	"tapesonic/config"
+	configPkg "tapesonic/config"
 	"tapesonic/ffmpeg"
 	"tapesonic/http/subsonic/client"
 	"tapesonic/logic"
@@ -19,7 +18,7 @@ import (
 )
 
 type Context struct {
-	Config *config.TapesonicConfig
+	Config *configPkg.TapesonicConfig
 
 	TapeStorage             *storage.TapeStorage
 	TrackStorage            *storage.TrackStorage
@@ -45,7 +44,7 @@ type Context struct {
 	StreamService *logic.StreamService
 }
 
-func NewContext(config *config.TapesonicConfig) (*Context, error) {
+func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	var err error
 	context := Context{
 		Config: config,
@@ -61,7 +60,7 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 		sqlite.Open(path.Join(config.DataStorageDir, "data.sqlite?_foreign_keys=on")),
 		&gorm.Config{
 			Logger: slogGorm.New(
-				slogGorm.SetLogLevel(slogGorm.DefaultLogType, slog.LevelDebug),
+				slogGorm.SetLogLevel(slogGorm.DefaultLogType, configPkg.LevelTrace),
 				slogGorm.WithTraceAll(),
 			),
 		},
