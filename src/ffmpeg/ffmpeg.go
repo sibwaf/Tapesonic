@@ -51,7 +51,7 @@ func (f *Ffmpeg) Stream(ctx context.Context, offsetMs int, durationMs int, reade
 
 	slog.Debug(fmt.Sprintf("Streaming `%s` via `%s`", reader.SourceInfo, cmd.String()))
 
-	return util.NewCustomReadCloser(stdout, func() error {
+	return util.NewCustomCloseReadCloser(stdout, func() error {
 		err = cmd.Wait()
 
 		var exitError *exec.ExitError

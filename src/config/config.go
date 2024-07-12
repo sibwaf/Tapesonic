@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
+	"tapesonic/util"
 	"time"
 )
 
@@ -15,6 +17,7 @@ type TapesonicConfig struct {
 	WebappDir       string
 	DataStorageDir  string
 	MediaStorageDir string
+	CacheDir        string
 
 	YtdlpPath  string
 	FfmpegPath string
@@ -25,6 +28,9 @@ type TapesonicConfig struct {
 	SubsonicProxyUrl      string
 	SubsonicProxyUsername string
 	SubsonicProxyPassword string
+
+	StreamCacheSize        int64
+	StreamCacheMinLifetime time.Duration
 }
 
 type BackgroundTaskConfig struct {
@@ -50,6 +56,7 @@ func NewConfig() (*TapesonicConfig, error) {
 		WebappDir:       getEnvOrDefault("TAPESONIC_WEBAPP_DIR", "webapp"),
 		DataStorageDir:  getEnvOrDefault("TAPESONIC_DATA_STORAGE_DIR", "data"),
 		MediaStorageDir: getEnvOrDefault("TAPESONIC_MEDIA_STORAGE_DIR", "media"),
+		CacheDir:        getEnvOrDefault("TAPESONIC_CACHE_DIR", "cache"),
 
 		TasksImportQueueImport: getBackgroundTaskConfig("IMPORT_QUEUE_IMPORT", "0 * * * * *", 15*time.Minute),
 		TasksLibrarySync:       getBackgroundTaskConfig("LIBRARY_SYNC", "15 * * * * *", 15*time.Minute),
@@ -57,6 +64,9 @@ func NewConfig() (*TapesonicConfig, error) {
 		SubsonicProxyUrl:      os.Getenv("TAPESONIC_SUBSONIC_PROXY_URL"),
 		SubsonicProxyUsername: os.Getenv("TAPESONIC_SUBSONIC_PROXY_USERNAME"),
 		SubsonicProxyPassword: os.Getenv("TAPESONIC_SUBSONIC_PROXY_PASSWORD"),
+
+		StreamCacheSize:        getEnvSizeOrDefault("TAPESONIC_STREAM_CACHE_SIZE", 512*1024*1024), // 512 MB
+		StreamCacheMinLifetime: getEnvDurationOrDefault("TAPESONIC_STREAM_CACHE_MIN_LIFETIME", 1*time.Hour),
 	}
 
 	return config, nil
@@ -80,6 +90,33 @@ func getEnvOrDefault(name string, defaultValue string) string {
 	} else {
 		return defaultValue
 	}
+}
+
+func getEnvSizeOrDefault(name string, defaultValue int64) int64 {
+	value := strings.ToLower(os.Getenv(name))
+
+	multiplier := int64(1)
+	switch {
+	case strings.HasSuffix(value, "b"):
+		multiplier = 1
+		value = strings.TrimSuffix(value, "b")
+	case strings.HasSuffix(value, "k"):
+		multiplier = 1024
+		value = strings.TrimSuffix(value, "k")
+	case strings.HasSuffix(value, "m"):
+		multiplier = 1024 * 1024
+		value = strings.TrimSuffix(value, "m")
+	case strings.HasSuffix(value, "g"):
+		multiplier = 1024 * 1024 * 1024
+		value = strings.TrimSuffix(value, "g")
+	}
+
+	size := util.StringToInt64OrNull(value)
+	if size == nil {
+		return defaultValue
+	}
+
+	return (*size) * multiplier
 }
 
 func getEnvDurationOrDefault(name string, defaultValue time.Duration) time.Duration {

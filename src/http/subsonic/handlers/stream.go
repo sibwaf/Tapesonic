@@ -1,23 +1,22 @@
 package handlers
 
 import (
-	"errors"
-	"io"
 	"net/http"
+	"time"
 
 	"tapesonic/http/subsonic/responses"
 	"tapesonic/logic"
 )
 
 type streamHandler struct {
-	subsonic logic.SubsonicService
+	streamService *logic.StreamService
 }
 
 func NewStreamHandler(
-	subsonic logic.SubsonicService,
+	streamService *logic.StreamService,
 ) *streamHandler {
 	return &streamHandler{
-		subsonic: subsonic,
+		streamService: streamService,
 	}
 }
 
@@ -27,15 +26,17 @@ func (h *streamHandler) Handle(w http.ResponseWriter, r *http.Request) (*respons
 		return responses.NewParameterMissingResponse("id"), nil
 	}
 
-	mimeType, reader, err := h.subsonic.Stream(r.Context(), id)
+	mediaType, reader, err := h.streamService.Stream(r.Context(), id)
 	if err != nil {
 		return nil, err
 	}
+	defer reader.Close()
 
-	w.Header().Add("Content-Type", mimeType)
-	_, err = io.Copy(w, reader)
-	return nil, errors.Join(
-		err,
-		reader.Close(),
-	)
+	if mediaType != "" {
+		w.Header().Add("Content-Type", mediaType)
+	}
+
+	http.ServeContent(w, r, id, time.Time{}, reader)
+
+	return nil, nil
 }

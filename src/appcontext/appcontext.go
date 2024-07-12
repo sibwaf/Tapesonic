@@ -32,6 +32,7 @@ type Context struct {
 	CachedMuxArtistStorage  *storage.CachedMuxArtistStorage
 	MuxedSongListensStorage *storage.MuxedSongListensStorage
 	MediaStorage            *storage.MediaStorage
+	StreamCacheStorage      *storage.StreamCacheStorage
 	Importer                *storage.Importer
 
 	Ytdlp  *ytdlp.Ytdlp
@@ -40,6 +41,8 @@ type Context struct {
 	SubsonicProviders []*logic.SubsonicNamedService
 	SubsonicMuxer     logic.SubsonicService
 	SubsonicService   logic.SubsonicService
+
+	StreamService *logic.StreamService
 }
 
 func NewContext(config *config.TapesonicConfig) (*Context, error) {
@@ -107,6 +110,10 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 		context.AlbumStorage,
 	)
 
+	if context.StreamCacheStorage, err = storage.NewStreamCacheStorage(path.Join(config.CacheDir, "stream"), db); err != nil {
+		return nil, err
+	}
+
 	context.Importer = storage.NewImporter(
 		context.Config.MediaStorageDir,
 		context.Ytdlp,
@@ -154,6 +161,13 @@ func NewContext(config *config.TapesonicConfig) (*Context, error) {
 		context.CachedMuxSongStorage,
 		context.CachedMuxAlbumStorage,
 		context.CachedMuxArtistStorage,
+	)
+
+	context.StreamService = logic.NewStreamService(
+		context.SubsonicService,
+		context.StreamCacheStorage,
+		config.StreamCacheSize,
+		config.StreamCacheMinLifetime,
 	)
 
 	if err = registerBackgroundTasks(&context); err != nil {

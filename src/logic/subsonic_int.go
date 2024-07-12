@@ -394,7 +394,7 @@ func (svc *subsonicInternalService) Stream(ctx context.Context, rawId string) (m
 		return
 	}
 
-	return mime, commonUtil.NewCustomReadCloser(streamReader, func() error {
+	return mime, commonUtil.NewCustomCloseReadCloser(streamReader, func() error {
 		return errors.Join(
 			streamReader.Close(),
 			sourceReader.Close(),
