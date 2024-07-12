@@ -59,7 +59,7 @@ func NewConfig() (*TapesonicConfig, error) {
 		CacheDir:        getEnvOrDefault("TAPESONIC_CACHE_DIR", "cache"),
 
 		TasksImportQueueImport: getBackgroundTaskConfig("IMPORT_QUEUE_IMPORT", "0 * * * * *", 15*time.Minute),
-		TasksLibrarySync:       getBackgroundTaskConfig("LIBRARY_SYNC", "15 * * * * *", 15*time.Minute),
+		TasksLibrarySync:       getBackgroundTaskConfig("LIBRARY_SYNC", "0 */15 * * * *", 15*time.Minute),
 
 		SubsonicProxyUrl:      os.Getenv("TAPESONIC_SUBSONIC_PROXY_URL"),
 		SubsonicProxyUsername: os.Getenv("TAPESONIC_SUBSONIC_PROXY_USERNAME"),
