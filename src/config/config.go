@@ -10,7 +10,13 @@ import (
 	"time"
 )
 
-const LevelTrace = slog.LevelDebug * 2
+const (
+	LevelTrace = slog.LevelDebug * 2
+
+	ScrobbleNone      = 0
+	ScrobbleTapesonic = 1
+	ScrobbleAll       = 2
+)
 
 type TapesonicConfig struct {
 	LogLevel slog.Level
@@ -30,12 +36,16 @@ type TapesonicConfig struct {
 	TasksImportQueueImport BackgroundTaskConfig
 	TasksLibrarySync       BackgroundTaskConfig
 
+	ScrobbleMode int
+
 	SubsonicProxyUrl      string
 	SubsonicProxyUsername string
 	SubsonicProxyPassword string
 
 	StreamCacheSize        int64
 	StreamCacheMinLifetime time.Duration
+
+	ListenBrainzToken string
 }
 
 type BackgroundTaskConfig struct {
@@ -64,6 +74,16 @@ func NewConfig() (*TapesonicConfig, error) {
 		return nil, fmt.Errorf("TAPESONIC_PORT is not a number: %s", portText)
 	}
 
+	scrobbleMode := ScrobbleNone
+	switch strings.ToLower(getEnvOrDefault("TAPESONIC_SCROBBLE_MODE", "none")) {
+	case "none":
+		scrobbleMode = ScrobbleNone
+	case "tapesonic":
+		scrobbleMode = ScrobbleTapesonic
+	case "all":
+		scrobbleMode = ScrobbleAll
+	}
+
 	config := &TapesonicConfig{
 		LogLevel: logLevel,
 
@@ -82,12 +102,16 @@ func NewConfig() (*TapesonicConfig, error) {
 		TasksImportQueueImport: getBackgroundTaskConfig("IMPORT_QUEUE_IMPORT", "0 * * * * *", 15*time.Minute),
 		TasksLibrarySync:       getBackgroundTaskConfig("LIBRARY_SYNC", "0 */15 * * * *", 15*time.Minute),
 
+		ScrobbleMode: scrobbleMode,
+
 		SubsonicProxyUrl:      os.Getenv("TAPESONIC_SUBSONIC_PROXY_URL"),
 		SubsonicProxyUsername: os.Getenv("TAPESONIC_SUBSONIC_PROXY_USERNAME"),
 		SubsonicProxyPassword: os.Getenv("TAPESONIC_SUBSONIC_PROXY_PASSWORD"),
 
 		StreamCacheSize:        getEnvSizeOrDefault("TAPESONIC_STREAM_CACHE_SIZE", 512*1024*1024), // 512 MB
 		StreamCacheMinLifetime: getEnvDurationOrDefault("TAPESONIC_STREAM_CACHE_MIN_LIFETIME", 1*time.Hour),
+
+		ListenBrainzToken: os.Getenv("TAPESONIC_LISTENBRAINZ_TOKEN"),
 	}
 
 	return config, nil

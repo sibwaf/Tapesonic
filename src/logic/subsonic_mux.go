@@ -25,16 +25,20 @@ type SubsonicMuxService struct {
 
 	cachedMuxSong    *storage.CachedMuxSongStorage
 	muxedSongListens *storage.MuxedSongListensStorage
+
+	scrobbler *ScrobbleService
 }
 
 func NewSubsonicMuxService(
 	cachedMuxSong *storage.CachedMuxSongStorage,
 	muxedSongListens *storage.MuxedSongListensStorage,
+	scrobbler *ScrobbleService,
 ) *SubsonicMuxService {
 	return &SubsonicMuxService{
 		services:         []*SubsonicNamedService{},
 		cachedMuxSong:    cachedMuxSong,
 		muxedSongListens: muxedSongListens,
+		scrobbler:        scrobbler,
 	}
 }
 
@@ -326,8 +330,26 @@ func (svc *SubsonicMuxService) Scrobble(id string, time_ time.Time, submission b
 
 	selfErr := svc.muxedSongListens.Record(service.Name(), service.RemovePrefix(id), time_, submission)
 	serviceErr := service.Scrobble(id, time_, submission)
+	scrobblerErr := svc.scrobbleWithScrobbler(service.Name(), service.RemovePrefix(id), time_, submission)
 
-	return errors.Join(selfErr, serviceErr)
+	return errors.Join(selfErr, serviceErr, scrobblerErr)
+}
+
+func (svc *SubsonicMuxService) scrobbleWithScrobbler(serviceName string, id string, time_ time.Time, submission bool) error {
+	if svc.scrobbler == nil {
+		return nil
+	}
+
+	song, err := svc.cachedMuxSong.GetById(serviceName, id)
+	if err != nil {
+		return err
+	}
+
+	if submission {
+		return svc.scrobbler.ScrobbleCompleted(time_, song.Artist, song.Album, song.Title)
+	} else {
+		return svc.scrobbler.ScrobblePlaying(song.Artist, song.Album, song.Title)
+	}
 }
 
 func (svc *SubsonicMuxService) GetCoverArt(id string) (mime string, reader io.ReadCloser, err error) {

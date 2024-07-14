@@ -64,6 +64,14 @@ func (storage *CachedMuxSongStorage) Replace(items []CachedMuxSong) error {
 	})
 }
 
+func (storage *CachedMuxSongStorage) GetById(serviceName string, songId string) (*CachedMuxSong, error) {
+	result := CachedMuxSong{
+		ServiceName: serviceName,
+		SongId:      songId,
+	}
+	return &result, storage.db.First(&result).Error
+}
+
 func (storage *CachedMuxSongStorage) Search(query string, count int, offset int) ([]CachedSongId, error) {
 	result := []CachedSongId{}
 

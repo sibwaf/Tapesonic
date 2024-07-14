@@ -5,10 +5,12 @@ import (
 	"path"
 	configPkg "tapesonic/config"
 	"tapesonic/ffmpeg"
+	"tapesonic/http/listenbrainz"
 	"tapesonic/http/subsonic/client"
 	"tapesonic/logic"
 	"tapesonic/storage"
 	"tapesonic/tasks"
+	"tapesonic/util"
 	"tapesonic/ytdlp"
 
 	slogGorm "github.com/orandin/slog-gorm"
@@ -37,11 +39,14 @@ type Context struct {
 	Ytdlp  *ytdlp.Ytdlp
 	Ffmpeg *ffmpeg.Ffmpeg
 
+	ListenBrainzClient *listenbrainz.ListenBrainzClient
+
 	SubsonicProviders []*logic.SubsonicNamedService
 	SubsonicMuxer     logic.SubsonicService
 	SubsonicService   logic.SubsonicService
 
-	StreamService *logic.StreamService
+	StreamService   *logic.StreamService
+	ScrobbleService *logic.ScrobbleService
 }
 
 func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
@@ -119,9 +124,18 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		context.TapeStorage,
 	)
 
+	if config.ListenBrainzToken != "" {
+		context.ListenBrainzClient = listenbrainz.NewListenBrainzClient(config.ListenBrainzToken)
+	}
+
+	if context.ListenBrainzClient != nil {
+		context.ScrobbleService = logic.NewScrobbleService(*context.ListenBrainzClient)
+	}
+
 	subsonicMux := logic.NewSubsonicMuxService(
 		context.CachedMuxSongStorage,
 		context.MuxedSongListensStorage,
+		util.TakeIf(context.ScrobbleService, config.ScrobbleMode == configPkg.ScrobbleAll),
 	)
 	context.SubsonicMuxer = subsonicMux
 
@@ -134,6 +148,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 			context.TapeTrackListensStorage,
 			context.MediaStorage,
 			context.Ffmpeg,
+			util.TakeIf(context.ScrobbleService, config.ScrobbleMode == configPkg.ScrobbleTapesonic),
 		),
 	)
 	context.SubsonicProviders = append(context.SubsonicProviders, internalSubsonic)

@@ -23,6 +23,14 @@ func Coalesce[T comparable](items ...T) T {
 	return result
 }
 
+func TakeIf[T any](value *T, condition bool) *T {
+	if condition {
+		return value
+	} else {
+		return nil
+	}
+}
+
 func StringToIntOrDefault(text string, dflt int) int {
 	result, err := strconv.Atoi(text)
 	if err != nil {
@@ -107,5 +115,5 @@ func FormatBytesWithMagnitude(size int64, magnitude int64) string {
 		suffix = "GiB"
 	}
 
-	return fmt.Sprintf("%.2f %s", result * sign, suffix)
+	return fmt.Sprintf("%.2f %s", result*sign, suffix)
 }

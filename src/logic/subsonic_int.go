@@ -26,6 +26,8 @@ type subsonicInternalService struct {
 	media     *storage.MediaStorage
 
 	ffmpeg *ffmpeg.Ffmpeg
+
+	scrobbler *ScrobbleService
 }
 
 func NewSubsonicInternalService(
@@ -35,6 +37,7 @@ func NewSubsonicInternalService(
 	listens *storage.TapeTrackListensStorage,
 	media *storage.MediaStorage,
 	ffmpeg *ffmpeg.Ffmpeg,
+	scrobbler *ScrobbleService,
 ) SubsonicService {
 	return &subsonicInternalService{
 		tracks:    tracks,
@@ -43,6 +46,7 @@ func NewSubsonicInternalService(
 		listens:   listens,
 		media:     media,
 		ffmpeg:    ffmpeg,
+		scrobbler: scrobbler,
 	}
 }
 
@@ -330,7 +334,27 @@ func (svc *subsonicInternalService) Scrobble(rawId string, time_ time.Time, subm
 		return err
 	}
 
-	return svc.listens.Record(id, time_, submission)
+	selfErr := svc.listens.Record(id, time_, submission)
+	scrobblerError := svc.scrobbleWithScrobbler(rawId, time_, submission)
+
+	return errors.Join(selfErr, scrobblerError)
+}
+
+func (svc *subsonicInternalService) scrobbleWithScrobbler(rawId string, time_ time.Time, submission bool) error {
+	if svc.scrobbler == nil {
+		return nil
+	}
+
+	song, err := svc.GetSong(rawId)
+	if err != nil {
+		return err
+	}
+
+	if submission {
+		return svc.scrobbler.ScrobbleCompleted(time_, song.Artist, song.Album, song.Title)
+	} else {
+		return svc.scrobbler.ScrobblePlaying(song.Artist, song.Album, song.Title)
+	}
 }
 
 func (svc *subsonicInternalService) GetCoverArt(rawId string) (mime string, reader io.ReadCloser, err error) {
