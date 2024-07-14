@@ -1,7 +1,5 @@
 package listenbrainz
 
-import "time"
-
 const (
 	ListenTypeSingle     = "single"
 	ListenTypePlayingNow = "playing_now"
