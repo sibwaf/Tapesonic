@@ -5,8 +5,9 @@ import "time"
 type AlbumId3 struct {
 	Id string `json:"id" xml:"id,attr"`
 
-	Name   string `json:"name" xml:"name,attr"`
-	Artist string `json:"artist" xml:"artist,attr"`
+	Name     string `json:"name" xml:"name,attr"`
+	Artist   string `json:"artist" xml:"artist,attr"`
+	ArtistId string `json:"artistId" xml:"artistId,attr"`
 
 	CoverArt string `json:"coverArt" xml:"coverArt,attr"`
 

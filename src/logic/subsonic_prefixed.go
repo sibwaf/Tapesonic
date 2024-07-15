@@ -161,6 +161,7 @@ func (svc *SubsonicNamedService) StreamByRawId(ctx context.Context, id string) (
 
 func (svc *SubsonicNamedService) rewriteAlbumInfo(album responses.AlbumId3) responses.AlbumId3 {
 	album.Id = svc.addPrefix(album.Id)
+	album.ArtistId = svc.addPrefix(album.ArtistId)
 	album.CoverArt = svc.addPrefix(album.CoverArt)
 
 	for i := range album.Song {
@@ -172,6 +173,7 @@ func (svc *SubsonicNamedService) rewriteAlbumInfo(album responses.AlbumId3) resp
 
 func (svc *SubsonicNamedService) GetRawAlbum(album responses.AlbumId3) responses.AlbumId3 {
 	album.Id = svc.RemovePrefix(album.Id)
+	album.ArtistId = svc.RemovePrefix(album.ArtistId)
 	album.CoverArt = svc.RemovePrefix(album.CoverArt)
 
 	for i := range album.Song {
@@ -207,6 +209,7 @@ func (svc *SubsonicNamedService) rewriteSongInfo(song responses.SubsonicChild) r
 	song.Id = svc.addPrefix(song.Id)
 	song.CoverArt = svc.addPrefix(song.CoverArt)
 	song.AlbumId = svc.addPrefix(song.AlbumId)
+	song.ArtistId = svc.addPrefix(song.ArtistId)
 	return song
 }
 
@@ -214,6 +217,7 @@ func (svc *SubsonicNamedService) GetRawSong(song responses.SubsonicChild) respon
 	song.Id = svc.RemovePrefix(song.Id)
 	song.CoverArt = svc.RemovePrefix(song.CoverArt)
 	song.AlbumId = svc.RemovePrefix(song.AlbumId)
+	song.ArtistId = svc.RemovePrefix(song.ArtistId)
 	return song
 }
 
