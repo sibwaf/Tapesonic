@@ -36,10 +36,10 @@ func NewStreamService(
 	}
 }
 
-func (svc *StreamService) Stream(ctx context.Context, id string) (mediaType string, reader io.ReadSeekCloser, err error) {
+func (svc *StreamService) Stream(id string) (mediaType string, reader io.ReadSeekCloser, err error) {
 	info, reader, err := svc.cache.GetOrSave(id, func() (contentType string, reader io.ReadCloser, err error) {
 		slog.Debug(fmt.Sprintf("Populating stream data cache for item id=`%s`", id))
-		return svc.subsonic.Stream(ctx, id)
+		return svc.subsonic.Stream(context.Background(), id)
 	})
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to stream item id=`%s`: %s", id, err.Error()))

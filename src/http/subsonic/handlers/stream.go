@@ -26,7 +26,7 @@ func (h *streamHandler) Handle(w http.ResponseWriter, r *http.Request) (*respons
 		return responses.NewParameterMissingResponse("id"), nil
 	}
 
-	mediaType, reader, err := h.streamService.Stream(r.Context(), id)
+	mediaType, reader, err := h.streamService.Stream(id)
 	if err != nil {
 		return nil, err
 	}
