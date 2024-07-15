@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"os"
 	"strings"
@@ -397,6 +398,7 @@ func (svc *subsonicInternalService) Stream(ctx context.Context, rawId string) (m
 		return
 	}
 
+	// todo: we always stream in opus for now, so this is wrong
 	mime = httpUtil.FormatToMediaType(track.Format)
 
 	sourceReader, err := os.Open(track.Path)
@@ -404,14 +406,21 @@ func (svc *subsonicInternalService) Stream(ctx context.Context, rawId string) (m
 		return
 	}
 
+	slog.Debug(
+		fmt.Sprintf(
+			"Streaming track id=`%s` (%s) via ffmpeg, start=%d, end=%d",
+			id,
+			track.Path,
+			track.StartOffsetMs,
+			track.EndOffsetMs,
+		),
+	)
+
 	streamReader, err := svc.ffmpeg.Stream(
 		ctx,
 		track.StartOffsetMs,
 		track.EndOffsetMs-track.StartOffsetMs,
-		ffmpeg.NewReaderWithMeta(
-			"file://"+track.Path,
-			sourceReader,
-		),
+		sourceReader,
 	)
 	if err != nil {
 		sourceReader.Close()

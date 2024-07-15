@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os/exec"
-	"tapesonic/util"
 )
 
 type Ffmpeg struct {
@@ -20,7 +18,9 @@ func NewFfmpeg(path string) *Ffmpeg {
 	}
 }
 
-func (f *Ffmpeg) Stream(ctx context.Context, offsetMs int, durationMs int, reader *ReaderWithMeta) (io.ReadCloser, error) {
+func (f *Ffmpeg) Stream(ctx context.Context, offsetMs int, durationMs int, reader io.Reader) (io.ReadCloser, error) {
+	ctx, cancel := context.WithCancel(ctx)
+
 	cmd := exec.CommandContext(
 		ctx,
 		f.path,
@@ -36,37 +36,57 @@ func (f *Ffmpeg) Stream(ctx context.Context, offsetMs int, durationMs int, reade
 
 		"-",
 	)
-	cmd.Stdin = reader.Reader
+	cmd.Stdin = reader
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to start streaming `%s`: %s", reader.SourceInfo, err.Error()))
-		return nil, err
+		cancel()
+		return nil, fmt.Errorf("failed to start streaming via `%s`: %s", cmd.String(), err.Error())
 	}
 
 	err = cmd.Start()
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to start streaming `%s`: %s", reader.SourceInfo, err.Error()))
-		return nil, err
+		cancel()
+		return nil, fmt.Errorf("failed to start streaming via `%s`: %s", cmd.String(), err.Error())
 	}
 
-	slog.Debug(fmt.Sprintf("Streaming `%s` via `%s`", reader.SourceInfo, cmd.String()))
+	return &ffmpegReader{cancel: cancel, cmd: cmd, stdout: stdout}, nil
+}
 
-	return util.NewCustomCloseReadCloser(stdout, func() error {
-		err = cmd.Wait()
+type ffmpegReader struct {
+	cancel context.CancelFunc
+	cmd    *exec.Cmd
+	stdout io.Reader
+}
+
+func (reader *ffmpegReader) Read(p []byte) (n int, err error) {
+	n, err = reader.stdout.Read(p)
+
+	if err == io.EOF {
+		err = reader.cmd.Wait()
+		if err == nil {
+			return n, io.EOF
+		}
 
 		var exitError *exec.ExitError
-		if errors.As(err, &exitError) && ctx.Err() == context.Canceled {
-			slog.Debug(fmt.Sprintf("Stopped streaming `%s` because context was cancelled: %s", reader.SourceInfo, err.Error()))
-			return nil
-		} else if err != nil {
-			slog.Error(fmt.Sprintf("Error while streaming `%s`: %s", reader.SourceInfo, err.Error()))
-			if exitError != nil && len(exitError.Stderr) > 0 {
-				slog.Error(string(exitError.Stderr))
+		if errors.As(err, &exitError) {
+			errorMsg := fmt.Sprintf("error while streaming via `%s`: %s", reader.cmd.String(), err.Error())
+			if len(exitError.Stderr) > 0 {
+				err = fmt.Errorf("%s (%s)", errorMsg, string(exitError.Stderr))
+			} else {
+				err = errors.New(errorMsg)
 			}
-			return err
 		} else {
-			slog.Debug(fmt.Sprintf("Successfully finished streaming `%s`", reader.SourceInfo))
-			return nil
+			err = fmt.Errorf("error while streaming via `%s`: %s", reader.cmd.String(), err.Error())
 		}
-	}), nil
+
+		return n, err
+	}
+
+	return n, err
+}
+
+func (reader *ffmpegReader) Close() error {
+	reader.cancel()
+	return reader.cmd.Wait()
 }
