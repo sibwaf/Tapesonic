@@ -20,6 +20,7 @@ const (
 
 type TapesonicConfig struct {
 	LogLevel slog.Level
+	DevMode  bool
 
 	ServerPort int
 	Username   string
@@ -86,6 +87,7 @@ func NewConfig() (*TapesonicConfig, error) {
 
 	config := &TapesonicConfig{
 		LogLevel: logLevel,
+		DevMode:  getEnvBoolOrDefault("TAPESONIC_DEV_MODE", false),
 
 		ServerPort: port,
 		Username:   os.Getenv("TAPESONIC_USERNAME"),
@@ -133,6 +135,17 @@ func getEnvOrDefault(name string, defaultValue string) string {
 	if value != "" {
 		return value
 	} else {
+		return defaultValue
+	}
+}
+
+func getEnvBoolOrDefault(name string, defaultValue bool) bool {
+	switch strings.ToLower(os.Getenv(name)) {
+	case "true", "yes", "1":
+		return true
+	case "false", "no", "0":
+		return false
+	default:
 		return defaultValue
 	}
 }
