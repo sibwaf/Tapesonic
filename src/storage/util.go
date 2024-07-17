@@ -17,8 +17,7 @@ import (
 var (
 	voidLog = logger.Default.LogMode(logger.Silent)
 
-	wordRegex              = regexp.MustCompile(`[\p{Lo}\p{Ll}\p{Lu}\p{Nd}\p{Nl}\p{No}]+`)
-	normalizationTransform = transform.Chain(norm.NFKD, runes.Remove(runes.In(unicode.Mn)), norm.NFKC)
+	wordRegex = regexp.MustCompile(`[\p{Lo}\p{Ll}\p{Lu}\p{Nd}\p{Nl}\p{No}]+`)
 )
 
 type DbHelper struct {
@@ -71,7 +70,8 @@ func MakeTextSearchCondition(fields []string, query string) string {
 }
 
 func ExtractSearchTerms(query string) []string {
-	query, _, err := transform.String(normalizationTransform, query)
+	normalize := transform.Chain(norm.NFKD, runes.Remove(runes.In(unicode.Mn)), norm.NFKC)
+	query, _, err := transform.String(normalize, query)
 	if err != nil {
 		return []string{}
 	}
