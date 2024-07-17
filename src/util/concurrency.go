@@ -33,6 +33,10 @@ type StripedRwMutex struct {
 	itemLocks map[string]*sync.RWMutex
 }
 
+type StripedRwMutexToken struct {
+	lock *sync.RWMutex
+}
+
 func NewStripedRwMutex() *StripedRwMutex {
 	return &StripedRwMutex{
 		lock:      &sync.Mutex{},
@@ -40,71 +44,71 @@ func NewStripedRwMutex() *StripedRwMutex {
 	}
 }
 
-func (l *StripedRwMutex) LockForReading(id string) *sync.RWMutex {
+func (l *StripedRwMutex) LockForReading(id string) *StripedRwMutexToken {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
 	itemLock := l.getOrCreateLock(id)
-	itemLock.RLock()
+	itemLock.lock.RLock()
 	return itemLock
 }
 
-func (l *StripedRwMutex) UnlockReader(id string, itemLock *sync.RWMutex) {
+func (l *StripedRwMutex) UnlockReader(id string, itemLock *StripedRwMutexToken) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
-	itemLock.RUnlock()
+	itemLock.lock.RUnlock()
 
 	// no one else can change item lock's state right now so if we're able to
 	// write-lock it we can safely delete it because it's not used by anyone;
 	// if we failed to get a lock, the current lock's user will deal with it
 
-	if itemLock.TryLock() {
-		itemLock.Unlock()
+	if itemLock.lock.TryLock() {
+		itemLock.lock.Unlock()
 		delete(l.itemLocks, id)
 	}
 }
 
-func (l *StripedRwMutex) LockForWriting(id string) *sync.RWMutex {
+func (l *StripedRwMutex) LockForWriting(id string) *StripedRwMutexToken {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
 	itemLock := l.getOrCreateLock(id)
-	itemLock.Lock()
+	itemLock.lock.Lock()
 	return itemLock
 }
 
-func (l *StripedRwMutex) TryLockForWriting(id string) *sync.RWMutex {
+func (l *StripedRwMutex) TryLockForWriting(id string) *StripedRwMutexToken {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
 	itemLock := l.getOrCreateLock(id)
-	if !itemLock.TryLock() {
+	if !itemLock.lock.TryLock() {
 		return nil
 	}
 	return itemLock
 }
 
-func (l *StripedRwMutex) UnlockWriter(id string, itemLock *sync.RWMutex) {
+func (l *StripedRwMutex) UnlockWriter(id string, itemLock *StripedRwMutexToken) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
-	itemLock.Unlock()
+	itemLock.lock.Unlock()
 
 	// see UnlockReader
 
-	if itemLock.TryLock() {
-		itemLock.Unlock()
+	if itemLock.lock.TryLock() {
+		itemLock.lock.Unlock()
 		delete(l.itemLocks, id)
 	}
 }
 
-func (l *StripedRwMutex) getOrCreateLock(id string) *sync.RWMutex {
+func (l *StripedRwMutex) getOrCreateLock(id string) *StripedRwMutexToken {
 	itemLock := l.itemLocks[id]
 	if itemLock == nil {
 		itemLock = &sync.RWMutex{}
 		l.itemLocks[id] = itemLock
 	}
 
-	return itemLock
+	return &StripedRwMutexToken{lock: itemLock}
 }

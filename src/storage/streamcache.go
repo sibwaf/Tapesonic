@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"sync"
 	"tapesonic/util"
 	"time"
 
@@ -58,7 +57,7 @@ func (storage *StreamCacheStorage) GetOrSave(
 	id string,
 	provider func() (contentType string, reader io.ReadCloser, err error),
 ) (StreamCacheItem, io.ReadSeekCloser, error) {
-	var itemLock *sync.RWMutex
+	var itemLock *util.StripedRwMutexToken
 
 	for {
 		itemLock = storage.lock.LockForReading(id)
