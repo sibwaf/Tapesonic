@@ -27,7 +27,7 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 	}
 
 	if appCtx.Config.DevMode {
-		handlers["/debug/pprof"] = pprof.Index
+		handlers["/debug/pprof/"] = pprof.Index
 		handlers["/debug/pprof/cmdline"] = pprof.Cmdline
 		handlers["/debug/pprof/profile"] = pprof.Profile
 		handlers["/debug/pprof/symbol"] = pprof.Symbol
