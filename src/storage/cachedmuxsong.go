@@ -97,3 +97,38 @@ func (storage *CachedMuxSongStorage) Search(query string, count int, offset int)
 
 	return result, storage.db.Raw(sql).Find(&result).Error
 }
+
+func (storage *CachedMuxSongStorage) SearchByFields(artist string, album string, title string, count int) ([]CachedSongId, error) {
+	result := []CachedSongId{}
+
+	filterParts := []string{}
+	if artistFilter := MakeTextSearchCondition([]string{"search_artist"}, artist); artistFilter != "" {
+		filterParts = append(filterParts, artistFilter)
+	}
+	if albumFilter := MakeTextSearchCondition([]string{"search_album"}, album); albumFilter != "" {
+		filterParts = append(filterParts, albumFilter)
+	}
+	if titleFilter := MakeTextSearchCondition([]string{"search_title"}, title); titleFilter != "" {
+		filterParts = append(filterParts, titleFilter)
+	}
+
+	if len(filterParts) == 0 {
+		return result, nil
+	}
+
+	sql := fmt.Sprintf(
+		`
+			SELECT
+				service_name AS service_name,
+				song_id AS id
+			FROM cached_mux_songs
+			WHERE %s
+			ORDER BY id
+			LIMIT %d
+		`,
+		strings.Join(filterParts, " AND "),
+		count,
+	)
+
+	return result, storage.db.Raw(sql).Find(&result).Error
+}

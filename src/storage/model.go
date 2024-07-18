@@ -2,8 +2,6 @@ package storage
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type RelatedItems struct {
@@ -13,7 +11,7 @@ type RelatedItems struct {
 }
 
 type SubsonicAlbumItem struct {
-	Id uuid.UUID
+	Id string
 
 	Name        string
 	Artist      string
@@ -30,7 +28,9 @@ type SubsonicAlbumItem struct {
 }
 
 type SubsonicPlaylistItem struct {
-	Id uuid.UUID
+	Id string
+
+	CreatedBy string
 
 	Name   string
 	Artist string
@@ -45,9 +45,9 @@ type SubsonicPlaylistItem struct {
 }
 
 type SubsonicTrackItem struct {
-	Id uuid.UUID
+	Id string
 
-	AlbumId uuid.UUID
+	AlbumId string
 
 	AlbumTrackIndex    int
 	PlaylistTrackIndex int
@@ -73,4 +73,10 @@ type CachedAlbumId struct {
 type CachedSongId struct {
 	ServiceName string
 	Id          string
+}
+
+type CachedSongIdWithIndex struct {
+	CachedSongId
+
+	TrackIndex int
 }

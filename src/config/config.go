@@ -34,8 +34,9 @@ type TapesonicConfig struct {
 	YtdlpPath  string
 	FfmpegPath string
 
-	TasksImportQueueImport BackgroundTaskConfig
-	TasksLibrarySync       BackgroundTaskConfig
+	TasksImportQueueImport        BackgroundTaskConfig
+	TasksLibrarySync              BackgroundTaskConfig
+	TasksListenBrainzPlaylistSync BackgroundTaskConfig
 
 	ScrobbleMode int
 
@@ -101,8 +102,9 @@ func NewConfig() (*TapesonicConfig, error) {
 		MediaStorageDir: getEnvOrDefault("TAPESONIC_MEDIA_STORAGE_DIR", "media"),
 		CacheDir:        getEnvOrDefault("TAPESONIC_CACHE_DIR", "cache"),
 
-		TasksImportQueueImport: getBackgroundTaskConfig("IMPORT_QUEUE_IMPORT", "0 * * * * *", 15*time.Minute),
-		TasksLibrarySync:       getBackgroundTaskConfig("LIBRARY_SYNC", "0 */15 * * * *", 15*time.Minute),
+		TasksImportQueueImport:        getBackgroundTaskConfig("IMPORT_QUEUE_IMPORT", "0 * * * * *", 15*time.Minute),
+		TasksLibrarySync:              getBackgroundTaskConfig("LIBRARY_SYNC", "0 */15 * * * *", 15*time.Minute),
+		TasksListenBrainzPlaylistSync: getBackgroundTaskConfig("LISTENBRAINZ_PLAYLIST_SYNC", "0 0 */4 * * *", 15*time.Minute),
 
 		ScrobbleMode: scrobbleMode,
 

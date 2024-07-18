@@ -22,19 +22,20 @@ import (
 type Context struct {
 	Config *configPkg.TapesonicConfig
 
-	TapeStorage             *storage.TapeStorage
-	TrackStorage            *storage.TrackStorage
-	PlaylistStorage         *storage.PlaylistStorage
-	AlbumStorage            *storage.AlbumStorage
-	ImportQueueStorage      *storage.ImportQueueStorage
-	TapeTrackListensStorage *storage.TapeTrackListensStorage
-	CachedMuxSongStorage    *storage.CachedMuxSongStorage
-	CachedMuxAlbumStorage   *storage.CachedMuxAlbumStorage
-	CachedMuxArtistStorage  *storage.CachedMuxArtistStorage
-	MuxedSongListensStorage *storage.MuxedSongListensStorage
-	MediaStorage            *storage.MediaStorage
-	StreamCacheStorage      *storage.StreamCacheStorage
-	Importer                *storage.Importer
+	TapeStorage                 *storage.TapeStorage
+	TrackStorage                *storage.TrackStorage
+	PlaylistStorage             *storage.PlaylistStorage
+	AlbumStorage                *storage.AlbumStorage
+	ImportQueueStorage          *storage.ImportQueueStorage
+	TapeTrackListensStorage     *storage.TapeTrackListensStorage
+	CachedMuxSongStorage        *storage.CachedMuxSongStorage
+	CachedMuxAlbumStorage       *storage.CachedMuxAlbumStorage
+	CachedMuxArtistStorage      *storage.CachedMuxArtistStorage
+	MuxedSongListensStorage     *storage.MuxedSongListensStorage
+	ListenbrainzPlaylistStorage *storage.ListenbrainzPlaylistStorage
+	MediaStorage                *storage.MediaStorage
+	StreamCacheStorage          *storage.StreamCacheStorage
+	Importer                    *storage.Importer
 
 	Ytdlp  *ytdlp.Ytdlp
 	Ffmpeg *ffmpeg.Ffmpeg
@@ -106,6 +107,9 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	if context.MuxedSongListensStorage, err = storage.NewMuxedSongListensStorage(db); err != nil {
 		return nil, err
 	}
+	if context.ListenbrainzPlaylistStorage, err = storage.NewListenBrainzPlaylistStorage(db); err != nil {
+		return nil, err
+	}
 
 	context.MediaStorage = storage.NewMediaStorage(
 		config.MediaStorageDir,
@@ -175,6 +179,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		context.CachedMuxSongStorage,
 		context.CachedMuxAlbumStorage,
 		context.CachedMuxArtistStorage,
+		context.ListenbrainzPlaylistStorage,
 	)
 
 	context.StreamService = logic.NewStreamService(
@@ -205,6 +210,17 @@ func registerBackgroundTasks(context *Context) error {
 		context.Config.TasksImportQueueImport,
 	).RegisterSchedules(cron); err != nil {
 		return err
+	}
+
+	if context.ListenBrainzClient != nil {
+		if err = tasks.NewListenBrainzPlaylistSyncHandler(
+			context.ListenBrainzClient,
+			context.CachedMuxSongStorage,
+			*context.ListenbrainzPlaylistStorage,
+			context.Config.TasksListenBrainzPlaylistSync,
+		).RegisterSchedules(cron); err != nil {
+			return err
+		}
 	}
 
 	if err = tasks.NewSyncLibraryHandler(

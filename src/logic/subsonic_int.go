@@ -304,7 +304,7 @@ func toChild(track storage.SubsonicTrackItem) responses.SubsonicChild {
 		track.DurationSec,
 	)
 
-	if track.AlbumId != uuid.Nil {
+	if track.AlbumId != "" {
 		trackResponse.Album = track.Album
 		trackResponse.AlbumId = encodeId(track.AlbumId)
 		trackResponse.CoverArt = getAlbumCoverId(track.AlbumId)
@@ -315,15 +315,15 @@ func toChild(track storage.SubsonicTrackItem) responses.SubsonicChild {
 	return *trackResponse
 }
 
-func getAlbumCoverId(albumId uuid.UUID) string {
-	if albumId == uuid.Nil {
+func getAlbumCoverId(albumId string) string {
+	if albumId == "" {
 		return ""
 	}
 	return fmt.Sprintf("album_%s", encodeId(albumId))
 }
 
-func getPlaylistCoverId(playlistId uuid.UUID) string {
-	if playlistId == uuid.Nil {
+func getPlaylistCoverId(playlistId string) string {
+	if playlistId == "" {
 		return ""
 	}
 	return fmt.Sprintf("playlist_%s", encodeId(playlistId))
@@ -435,7 +435,7 @@ func (svc *subsonicInternalService) Stream(ctx context.Context, rawId string) (m
 	}), nil
 }
 
-func encodeId(id uuid.UUID) string {
+func encodeId(id string) string {
 	return strings.ReplaceAll(fmt.Sprint(id), "-", "_")
 }
 
