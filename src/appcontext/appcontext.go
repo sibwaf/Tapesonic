@@ -63,7 +63,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		return nil, err
 	}
 	db, err := gorm.Open(
-		sqlite.Open(path.Join(config.DataStorageDir, "data.sqlite?_foreign_keys=on")),
+		sqlite.Open(path.Join(config.DataStorageDir, "data.sqlite?_foreign_keys=on&_journal_mode=wal")),
 		&gorm.Config{
 			Logger: slogGorm.New(
 				slogGorm.SetLogLevel(slogGorm.DefaultLogType, configPkg.LevelTrace),
