@@ -29,86 +29,90 @@ func ParallelMapContext[T any, R any](ctx context.Context, items []T, mapper fun
 }
 
 type StripedRwMutex struct {
-	lock      *sync.Mutex
-	itemLocks map[string]*sync.RWMutex
+	lock        *sync.Mutex
+	lockCounter int64
+	itemLocks   map[string]*StripedRwMutexToken
 }
 
 type StripedRwMutexToken struct {
-	lock *sync.RWMutex
+	serial int64
+	usages int
+	lock   *sync.RWMutex
 }
 
 func NewStripedRwMutex() *StripedRwMutex {
 	return &StripedRwMutex{
-		lock:      &sync.Mutex{},
-		itemLocks: map[string]*sync.RWMutex{},
+		lock:        &sync.Mutex{},
+		lockCounter: 0,
+		itemLocks:   map[string]*StripedRwMutexToken{},
 	}
 }
 
 func (l *StripedRwMutex) LockForReading(id string) *StripedRwMutexToken {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
-	itemLock := l.getOrCreateLock(id)
+	itemLock := l.acquireLock(id)
 	itemLock.lock.RLock()
 	return itemLock
 }
 
 func (l *StripedRwMutex) UnlockReader(id string, itemLock *StripedRwMutexToken) {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
 	itemLock.lock.RUnlock()
-
-	// no one else can change item lock's state right now so if we're able to
-	// write-lock it we can safely delete it because it's not used by anyone;
-	// if we failed to get a lock, the current lock's user will deal with it
-
-	if itemLock.lock.TryLock() {
-		itemLock.lock.Unlock()
-		delete(l.itemLocks, id)
-	}
+	l.releaseLock(id, itemLock)
 }
 
 func (l *StripedRwMutex) LockForWriting(id string) *StripedRwMutexToken {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
-	itemLock := l.getOrCreateLock(id)
+	itemLock := l.acquireLock(id)
 	itemLock.lock.Lock()
 	return itemLock
 }
 
 func (l *StripedRwMutex) TryLockForWriting(id string) *StripedRwMutexToken {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
-	itemLock := l.getOrCreateLock(id)
+	itemLock := l.acquireLock(id)
 	if !itemLock.lock.TryLock() {
+		l.releaseLock(id, itemLock)
 		return nil
 	}
+
 	return itemLock
 }
 
 func (l *StripedRwMutex) UnlockWriter(id string, itemLock *StripedRwMutexToken) {
+	itemLock.lock.Unlock()
+	l.releaseLock(id, itemLock)
+}
+
+func (l *StripedRwMutex) acquireLock(id string) *StripedRwMutexToken {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
-	itemLock.lock.Unlock()
-
-	// see UnlockReader
-
-	if itemLock.lock.TryLock() {
-		itemLock.lock.Unlock()
-		delete(l.itemLocks, id)
-	}
-}
-
-func (l *StripedRwMutex) getOrCreateLock(id string) *StripedRwMutexToken {
 	itemLock := l.itemLocks[id]
 	if itemLock == nil {
-		itemLock = &sync.RWMutex{}
+		l.lockCounter += 1
+
+		itemLock = &StripedRwMutexToken{
+			serial: l.lockCounter,
+			usages: 0,
+			lock:   &sync.RWMutex{},
+		}
 		l.itemLocks[id] = itemLock
 	}
 
-	return &StripedRwMutexToken{lock: itemLock}
+	itemLock.usages += 1
+
+	return itemLock
+}
+
+func (l *StripedRwMutex) releaseLock(id string, itemLock *StripedRwMutexToken) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
+	itemLock.usages -= 1
+
+	currentLock := l.itemLocks[id]
+	if currentLock.serial != itemLock.serial {
+		return
+	}
+
+	if currentLock.usages == 0 {
+		delete(l.itemLocks, id)
+	}
 }
