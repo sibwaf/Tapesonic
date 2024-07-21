@@ -105,6 +105,8 @@ func extractFile(
 
 		ThumbnailPath: thumbnailPath,
 		MediaPath:     mediaPath,
+		AudioCodec:    metadata.ACodec,
+		AudioFormat:   metadata.AudioExt,
 
 		ReleaseDate: parseDateOrNull(metadata.ReleaseDate),
 	}

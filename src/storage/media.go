@@ -19,7 +19,7 @@ type TrackDescriptor struct {
 	Path          string
 	StartOffsetMs int
 	EndOffsetMs   int
-	Format        string
+	Codec         string
 }
 
 type CoverDescriptor struct {
@@ -52,7 +52,7 @@ func (ms *MediaStorage) GetTrack(id uuid.UUID) (TrackDescriptor, error) {
 		Path:          path.Join(ms.dir, track.TapeFile.MediaPath),
 		StartOffsetMs: track.StartOffsetMs,
 		EndOffsetMs:   track.EndOffsetMs,
-		Format:        "opus", // todo
+		Codec:         track.TapeFile.AudioCodec,
 	}, nil
 }
 

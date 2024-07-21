@@ -48,6 +48,8 @@ type TapeFile struct {
 
 	ThumbnailPath string
 	MediaPath     string
+	AudioCodec    string
+	AudioFormat   string
 
 	ReleaseDate *time.Time
 

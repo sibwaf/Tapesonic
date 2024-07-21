@@ -34,6 +34,9 @@ type YtdlpFile struct {
 	Chapters []YtdlpChapter `json:"chapters"`
 	Tags     []string       `json:"tags"`
 
+	ACodec   string `json:"acodec"`
+	AudioExt string `json:"audio_ext"`
+
 	ExtractorKey string `json:"extractor_key"`
 }
 

@@ -11,9 +11,8 @@ import (
 	"strings"
 	"tapesonic/ffmpeg"
 	"tapesonic/http/subsonic/responses"
-	httpUtil "tapesonic/http/util"
 	"tapesonic/storage"
-	commonUtil "tapesonic/util"
+	"tapesonic/util"
 	"time"
 
 	"github.com/google/uuid"
@@ -358,7 +357,7 @@ func (svc *subsonicInternalService) scrobbleWithScrobbler(rawId string, time_ ti
 	}
 }
 
-func (svc *subsonicInternalService) GetCoverArt(rawId string) (mime string, reader io.ReadCloser, err error) {
+func (svc *subsonicInternalService) GetCoverArt(rawId string) (mediaType string, reader io.ReadCloser, err error) {
 	var cover storage.CoverDescriptor
 	if strings.HasPrefix(rawId, "playlist_") {
 		id, e := decodeId(strings.TrimPrefix(rawId, "playlist_"))
@@ -382,26 +381,18 @@ func (svc *subsonicInternalService) GetCoverArt(rawId string) (mime string, read
 		return
 	}
 
-	mime = httpUtil.FormatToMediaType(cover.Format)
+	mediaType = util.FormatToMediaType(cover.Format)
 	reader, err = os.Open(cover.Path)
 	return
 }
 
-func (svc *subsonicInternalService) Stream(ctx context.Context, rawId string) (mime string, reader io.ReadCloser, err error) {
+func (svc *subsonicInternalService) Stream(ctx context.Context, rawId string) (mediaType string, reader io.ReadCloser, err error) {
 	id, err := decodeId(rawId)
 	if err != nil {
 		return
 	}
 
 	track, err := svc.media.GetTrack(id)
-	if err != nil {
-		return
-	}
-
-	// todo: we always stream in opus for now, so this is wrong
-	mime = httpUtil.FormatToMediaType(track.Format)
-
-	sourceReader, err := os.Open(track.Path)
 	if err != nil {
 		return
 	}
@@ -416,23 +407,13 @@ func (svc *subsonicInternalService) Stream(ctx context.Context, rawId string) (m
 		),
 	)
 
-	streamReader, err := svc.ffmpeg.Stream(
+	return svc.ffmpeg.StreamFromFile(
 		ctx,
+		track.Codec,
 		track.StartOffsetMs,
 		track.EndOffsetMs-track.StartOffsetMs,
-		sourceReader,
+		track.Path,
 	)
-	if err != nil {
-		sourceReader.Close()
-		return
-	}
-
-	return mime, commonUtil.NewCustomCloseReadCloser(streamReader, func() error {
-		return errors.Join(
-			streamReader.Close(),
-			sourceReader.Close(),
-		)
-	}), nil
 }
 
 func encodeId(id string) string {

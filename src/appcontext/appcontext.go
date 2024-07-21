@@ -111,6 +111,10 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		return nil, err
 	}
 
+	if err = storage.Migrate(db); err != nil {
+		return nil, err
+	}
+
 	context.MediaStorage = storage.NewMediaStorage(
 		config.MediaStorageDir,
 		context.TapeStorage,
