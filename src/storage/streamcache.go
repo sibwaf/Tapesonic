@@ -114,6 +114,7 @@ func (storage *StreamCacheStorage) GetOrSave(
 
 	contentType, rawReader, err := provider()
 	if err != nil {
+		storage.lock.UnlockWriter(id, itemLock)
 		return StreamCacheItem{}, nil, err
 	}
 
