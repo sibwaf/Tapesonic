@@ -20,6 +20,8 @@ type AlbumId3 struct {
 
 	Year int `json:"year" xml:"year,attr"`
 
+	ReleaseDate *ItemDate `json:"releaseDate" xml:"releaseDate"`
+
 	Song []SubsonicChild `json:"song,omitempty" xml:"song"`
 }
 

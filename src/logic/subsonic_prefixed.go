@@ -151,11 +151,11 @@ func (svc *SubsonicNamedService) GetCoverArtByRawId(id string) (mime string, rea
 	return svc.delegate.GetCoverArt(id)
 }
 
-func (svc *SubsonicNamedService) Stream(ctx context.Context, id string) (mime string, reader io.ReadCloser, err error) {
+func (svc *SubsonicNamedService) Stream(ctx context.Context, id string) (AudioStream, error) {
 	return svc.StreamByRawId(ctx, svc.RemovePrefix(id))
 }
 
-func (svc *SubsonicNamedService) StreamByRawId(ctx context.Context, id string) (mime string, reader io.ReadCloser, err error) {
+func (svc *SubsonicNamedService) StreamByRawId(ctx context.Context, id string) (AudioStream, error) {
 	return svc.delegate.Stream(ctx, id)
 }
 

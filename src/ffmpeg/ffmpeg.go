@@ -7,16 +7,31 @@ import (
 	"io"
 	"log/slog"
 	"os/exec"
-	"tapesonic/util"
+	"slices"
+	"strings"
+	"tapesonic/config"
 )
 
 var (
+	// alac/mp4a are not supported by Chromium-based clients, don't support streaming them
+	// mp4 format is not supported by ffmpeg stdout output; use "matroska" instead for alac/mp4
+
 	codecToFormat = map[string]string{
-		// "alac": "mp4", // todo: mp4/m4a don't support exporting to stdout
 		"flac": "flac",
 		"mp3":  "mp3",
 		"opus": "opus",
 	}
+	formatToCodecs = map[string][]string{
+		"flac": {"flac"},
+		"mp3":  {"mp3"},
+		"opus": {"opus"},
+	}
+)
+
+const (
+	ANY_FORMAT = ""
+	SEEKABLE_FORMAT = "mp3" // opus produces different binaries on each encode which breaks seeking
+	FALLBACK_FORMAT = "opus"
 )
 
 type Ffmpeg struct {
@@ -29,55 +44,66 @@ func NewFfmpeg(path string) *Ffmpeg {
 	}
 }
 
-func (f *Ffmpeg) StreamFromFile(
+func (f *Ffmpeg) StreamFrom(
 	ctx context.Context,
 	sourceCodec string,
-	offsetMs int,
-	durationMs int,
-	sourcePath string,
-) (mediaType string, reader io.ReadCloser, err error) {
+	targetFormat string,
+	offsetMs int64,
+	durationMs int64,
+	input string,
+) (format string, reader io.ReadCloser, err error) {
+	// ignore codec parameters, only use codec name (ex. "mp4a.40.2")
+	sourceCodec = strings.Split(sourceCodec, ".")[0]
+
 	ctx, cancel := context.WithCancel(ctx)
 
 	args := []string{}
 	args = append(args, "-v", "0")
-	args = append(args, "-ss", fmt.Sprintf("%.3f", float32(offsetMs)/1000.0))
-	args = append(args, "-i", sourcePath)
+
+	if offsetMs > 0 {
+		args = append(args, "-ss", fmt.Sprintf("%.3f", float32(offsetMs)/1000.0))
+	}
+
+	args = append(args, "-i", input)
 	args = append(args, "-t", fmt.Sprintf("%.3f", float32(durationMs)/1000.0))
 	args = append(args, "-vn")
 
-	format := codecToFormat[sourceCodec]
-	if format == "opus" && offsetMs > 0 {
+	if targetFormat == ANY_FORMAT {
+		targetFormat = codecToFormat[sourceCodec]
+		if targetFormat == "" {
+			targetFormat = FALLBACK_FORMAT
+		}
+	}
+
+	if targetFormat == "opus" && offsetMs > 0 {
 		// ffmpeg somehow fails to copy the audio data from
 		// youtube-encoded opus if the starting position is not 0,
 		// so we have to reencode it
 		// https://stackoverflow.com/questions/60621646
-		format = "opus"
-	} else if format != "" {
+		targetFormat = "opus"
+	} else if slices.Contains(formatToCodecs[targetFormat], sourceCodec) {
 		args = append(args, "-c:a", "copy")
-	} else {
-		format = "opus"
 	}
-	args = append(args, "-f", format)
+
+	args = append(args, "-f", targetFormat)
 	args = append(args, "-")
 
 	cmd := exec.CommandContext(ctx, f.path, args...)
-	slog.Debug(fmt.Sprintf("Streaming a file via ffmpeg: %s", cmd.String()))
+	slog.Log(context.Background(), config.LevelTrace, fmt.Sprintf("Streaming via ffmpeg: %s", cmd.String()))
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		cancel()
-		err = fmt.Errorf("failed to start streaming via `%s`: %s", cmd.String(), err.Error())
-		return
+		return "", nil, fmt.Errorf("failed to start streaming via `%s`: %w", cmd.String(), err)
 	}
 
 	err = cmd.Start()
 	if err != nil {
 		cancel()
-		err = fmt.Errorf("failed to start streaming via `%s`: %s", cmd.String(), err.Error())
-		return
+		return "", nil, fmt.Errorf("failed to start streaming via `%s`: %w", cmd.String(), err)
 	}
 
-	return util.FormatToMediaType(format), &ffmpegReader{cancel: cancel, cmd: cmd, stdout: stdout}, nil
+	return targetFormat, &ffmpegReader{cancel: cancel, cmd: cmd, stdout: stdout}, nil
 }
 
 type ffmpegReader struct {
@@ -96,15 +122,10 @@ func (reader *ffmpegReader) Read(p []byte) (n int, err error) {
 		}
 
 		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
-			errorMsg := fmt.Sprintf("error while streaming via `%s`: %s", reader.cmd.String(), err.Error())
-			if len(exitError.Stderr) > 0 {
-				err = fmt.Errorf("%s (%s)", errorMsg, string(exitError.Stderr))
-			} else {
-				err = errors.New(errorMsg)
-			}
+		if errors.As(err, &exitError) && len(exitError.Stderr) > 0 {
+			err = fmt.Errorf("error while streaming via `%s`: (%s) %w", reader.cmd.String(), string(exitError.Stderr), err)
 		} else {
-			err = fmt.Errorf("error while streaming via `%s`: %s", reader.cmd.String(), err.Error())
+			err = fmt.Errorf("error while streaming via `%s`: %w", reader.cmd.String(), err)
 		}
 
 		return n, err

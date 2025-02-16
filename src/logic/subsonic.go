@@ -42,7 +42,7 @@ type SubsonicService interface {
 
 	GetCoverArt(id string) (mime string, reader io.ReadCloser, err error)
 
-	Stream(ctx context.Context, id string) (mime string, reader io.ReadCloser, err error)
+	Stream(ctx context.Context, id string) (AudioStream, error)
 }
 
 const (

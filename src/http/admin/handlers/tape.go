@@ -2,48 +2,68 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
-	"tapesonic/storage"
+	"tapesonic/http/admin/requests"
+	"tapesonic/http/admin/responses"
+	"tapesonic/logic"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
 type tapeHandler struct {
-	tapeStorage *storage.TapeStorage
+	service *logic.TapeService
 }
 
 func NewTapeHandler(
-	tapeStorage *storage.TapeStorage,
+	service *logic.TapeService,
 ) *tapeHandler {
 	return &tapeHandler{
-		tapeStorage: tapeStorage,
+		service: service,
 	}
 }
 
 func (h *tapeHandler) Methods() []string {
-	return []string{http.MethodGet, http.MethodPut}
+	return []string{http.MethodGet, http.MethodPut, http.MethodDelete}
 }
 
 func (h *tapeHandler) Handle(r *http.Request) (any, error) {
-	rawId := mux.Vars(r)["tapeId"]
-	id, idErr := uuid.Parse(rawId)
+	tapeId, idErr := uuid.Parse(mux.Vars(r)["tapeId"])
+	if idErr != nil {
+		return nil, fmt.Errorf("missing or invalid tapeId")
+	}
 
 	switch r.Method {
 	case http.MethodGet:
-		if idErr != nil {
-			return nil, idErr
-		}
-		return h.tapeStorage.GetTapeWithFilesAndTracks(id)
-	case http.MethodPut:
-		var tape storage.Tape
-		err := json.NewDecoder(r.Body).Decode(&tape)
+		tape, tracks, err := h.service.GetById(tapeId)
 		if err != nil {
 			return nil, err
 		}
 
-		return nil, h.tapeStorage.UpsertTape(&tape)
+		return responses.TapeToDto(tape, tracks), nil
+	case http.MethodPut:
+		var tapeRequest requests.ModifiedTape
+		err := json.NewDecoder(r.Body).Decode(&tapeRequest)
+		if err != nil {
+			return nil, err
+		}
+
+		if tapeRequest.Id != tapeId {
+			return nil, fmt.Errorf("tapeId mismatch: tapeId=%s, tape.id=%s", tapeId, tapeRequest.Id)
+		}
+
+		tape := requests.ModifiedTapeToModel(tapeRequest)
+
+		tape, tracks, err := h.service.Update(tape)
+		if err != nil {
+			return nil, err
+		}
+
+		return responses.TapeToDto(tape, tracks), nil
+	case http.MethodDelete:
+		return nil, h.service.DeleteById(tapeId)
 	default:
 		return nil, http.ErrNotSupported
 	}

@@ -10,31 +10,39 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func GetHandler(appCtx *appcontext.Context) (string, http.Handler) {
+func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
+	type PathHandler struct {
+		Path    string
+		Handler http.HandlerFunc
+	}
+
 	// todo: logging
-	rawHandlers := map[string]util.WebappHandler{
-		"/api/formats": handlers.NewGetFormatsHandler(appCtx.Ytdlp),
+	rawHandlers := []PathHandler{
+		{Path: "/api/tapes", Handler: util.AsHandlerFunc(handlers.NewTapesHandler(appCtx.TapeService))},
+		{Path: "/api/tapes/guess-metadata", Handler: util.AsHandlerFunc(handlers.NewGuessTapeMetadataHandler(appCtx.TapeService))},
+		{Path: "/api/tapes/{tapeId}", Handler: util.AsHandlerFunc(handlers.NewTapeHandler(appCtx.TapeService))},
 
-		"/api/import-queue":          handlers.NewImportQueueHandler(appCtx.ImportQueueStorage),
-		"/api/import-queue/{itemId}": handlers.NewImportQueueItemHandler(appCtx.ImportQueueStorage),
+		{Path: "/api/sources", Handler: util.AsHandlerFunc(handlers.NewSourcesHandler(appCtx.SourceService))},
+		{Path: "/api/sources/{sourceId}", Handler: util.AsHandlerFunc(handlers.NewSourceHandler(appCtx.SourceService))},
+		{Path: "/api/sources/{sourceId}/hierarchy", Handler: util.AsHandlerFunc(handlers.NewSourceHierarchyHandler(appCtx.SourceService))},
+		{Path: "/api/sources/{sourceId}/tracks", Handler: util.AsHandlerFunc(handlers.NewSourceTracksHandler(appCtx.TrackService))},
+		{Path: "/api/sources/{sourceId}/file", Handler: util.AsHandlerFunc(handlers.NewSourceFileHandler(appCtx.SourceFileService))},
 
-		"/api/tapes":                  handlers.NewTapesHandler(appCtx.TapeStorage),
-		"/api/tapes/{tapeId}":         handlers.NewTapeHandler(appCtx.TapeStorage),
-		"/api/tapes/{tapeId}/related": handlers.NewTapeRelatedHandler(appCtx.TapeStorage),
+		{Path: "/api/tracks", Handler: util.AsHandlerFunc(handlers.NewTracksHandler(appCtx.TrackService, appCtx.SearchService))},
 
-		"/api/playlists":                      handlers.NewPlaylistsHandler(appCtx.PlaylistStorage),
-		"/api/playlists/{playlistId}":         handlers.NewPlaylistHandler(appCtx.PlaylistStorage),
-		"/api/playlists/{playlistId}/related": handlers.NewPlaylistRelatedHandler(appCtx.PlaylistStorage),
+		{Path: "/api/thumbnails", Handler: util.AsHandlerFunc(handlers.NewThumbnailsHandler(appCtx.ThumbnailService))},
 
-		"/api/albums":                   handlers.NewAlbumsHandler(appCtx.AlbumStorage),
-		"/api/albums/{albumId}":         handlers.NewAlbumHandler(appCtx.AlbumStorage),
-		"/api/albums/{albumId}/related": handlers.NewAlbumRelatedHandler(appCtx.AlbumStorage),
+		{Path: "/media/thumbnails/{thumbnailId}", Handler: util.AsRawHandlerFunc(handlers.NewThumbnailRawHandler(appCtx.ThumbnailService))},
 	}
 
 	router := mux.NewRouter()
-	for path, handler := range rawHandlers {
-		router.HandleFunc(path, util.Authenticated(util.AsHandlerFunc(handler), appCtx.Config))
+	for _, pathHandler := range rawHandlers {
+		router.HandleFunc(pathHandler.Path, util.Authenticated(pathHandler.Handler, appCtx.Config))
 	}
 
-	return "/api/", router
+	// todo: wow that's disgusting
+	return map[string]http.HandlerFunc{
+		"/api/":   router.ServeHTTP,
+		"/media/": router.ServeHTTP,
+	}
 }

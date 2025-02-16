@@ -2,12 +2,34 @@ package storage
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
-type RelatedItems struct {
-	Tapes     []*Tape
-	Playlists []*Playlist
-	Albums    []*Album
+type TrackForTapeMetadataGuessing struct {
+	Id uuid.UUID
+
+	AlbumArtist        string
+	AlbumTitle         string
+	Artist             string
+	SourceTitle        string
+	SourceParentTitles []string `gorm:"serializer:json"`
+
+	ReleaseDate *time.Time
+	ThumbnailId *uuid.UUID
+}
+
+type SourceForHierarchy struct {
+	Id       uuid.UUID
+	ParentId *uuid.UUID
+
+	Url      string
+	Title    string
+	Uploader string
+
+	ListIndex int
+
+	ThumbnailId *uuid.UUID
 }
 
 type SubsonicAlbumItem struct {
@@ -17,7 +39,7 @@ type SubsonicAlbumItem struct {
 	Artist      string
 	ReleaseDate *time.Time
 
-	ThumbnailPath string
+	ThumbnailId *uuid.UUID
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -35,7 +57,7 @@ type SubsonicPlaylistItem struct {
 	Name   string
 	Artist string
 
-	ThumbnailPath string
+	ThumbnailId *uuid.UUID
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -45,9 +67,11 @@ type SubsonicPlaylistItem struct {
 }
 
 type SubsonicTrackItem struct {
-	Id string
+	Id          string
+	ThumbnailId *uuid.UUID
 
-	AlbumId string
+	AlbumId          string
+	AlbumThumbnailId *uuid.UUID
 
 	AlbumTrackIndex    int
 	PlaylistTrackIndex int

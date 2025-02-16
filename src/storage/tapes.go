@@ -5,6 +5,12 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
+
+const (
+	TAPE_TYPE_ALBUM    = "album"
+	TAPE_TYPE_PLAYLIST = "playlist"
 )
 
 type TapeStorage struct {
@@ -14,210 +20,108 @@ type TapeStorage struct {
 type Tape struct {
 	Id uuid.UUID
 
-	Metadata string
-	Url      string
+	Name string
+	Type string
 
-	Name       string
-	AuthorName string
+	ThumbnailId *uuid.UUID
+	Thumbnail   *Thumbnail
 
-	ThumbnailPath string
+	Tracks []TapeToTrack
 
-	ReleaseDate *time.Time
+	Artist     string
+	ReleasedAt *time.Time
 
-	Files []*TapeFile
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
-func (e *Tape) BeforeCreate(tx *gorm.DB) error {
-	if e.Id.ID() == 0 {
-		e.Id = uuid.New()
-	}
-	return nil
-}
-
-type TapeFile struct {
-	Id uuid.UUID
-
-	TapeId uuid.UUID
+type TapeToTrack struct {
+	TapeId uuid.UUID `gorm:"primaryKey"`
 	Tape   *Tape
 
-	Metadata string
-	Url      string
+	TrackId uuid.UUID `gorm:"primaryKey"`
+	Track   *Track
 
-	Name       string
-	AuthorName string
-
-	ThumbnailPath string
-	MediaPath     string
-	AudioCodec    string
-	AudioFormat   string
-
-	ReleaseDate *time.Time
-
-	FileIndex int
-
-	Tracks []*TapeTrack
-}
-
-func (e *TapeFile) BeforeCreate(tx *gorm.DB) error {
-	if e.Id.ID() == 0 {
-		e.Id = uuid.New()
-	}
-	return nil
-}
-
-type TapeTrack struct {
-	Id uuid.UUID
-
-	TapeFileId uuid.UUID
-	TapeFile   *TapeFile
-
-	RawStartOffsetMs int
-	StartOffsetMs    int
-	RawEndOffsetMs   int
-	EndOffsetMs      int
-
-	Artist string
-	Title  string
-
-	ReleaseDate *time.Time
-
-	TrackIndex int
-}
-
-func (e *TapeTrack) BeforeCreate(tx *gorm.DB) error {
-	if e.Id.ID() == 0 {
-		e.Id = uuid.New()
-	}
-	return nil
+	ListIndex int
 }
 
 func NewTapeStorage(db *gorm.DB) (*TapeStorage, error) {
-	err := db.AutoMigrate(
-		&Tape{},
-		&TapeFile{},
-		&TapeTrack{},
-	)
-
-	return &TapeStorage{db: db}, err
-}
-
-func (storage *TapeStorage) UpsertTape(tape *Tape) error {
-	newFileIds := []uuid.UUID{}
-	newTrackIds := []uuid.UUID{}
-
-	for fileIndex, file := range tape.Files {
-		file.FileIndex = fileIndex
-		newFileIds = append(newFileIds, file.Id)
-
-		for trackIndex, track := range file.Tracks {
-			track.TrackIndex = trackIndex
-			newTrackIds = append(newTrackIds, track.Id)
-		}
+	if err := db.AutoMigrate(&Tape{}, &TapeToTrack{}); err != nil {
+		return nil, err
 	}
 
-	return storage.db.Transaction(func(tx *gorm.DB) error {
-		// prepare
+	return &TapeStorage{db: db}, nil
+}
 
-		oldFileIds := []uuid.UUID{}
-		if err := tx.Model(&TapeFile{}).Where("tape_id = ?", tape.Id).Pluck("id", &oldFileIds).Error; err != nil {
+func (storage *TapeStorage) Create(tape Tape) (Tape, error) {
+	tape.Id = uuid.New()
+
+	for i := range tape.Tracks {
+		tape.Tracks[i].ListIndex = i
+		tape.Tracks[i].Track = nil
+		tape.Tracks[i].Tape = nil
+		tape.Tracks[i].TapeId = tape.Id
+	}
+
+	err := storage.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Returning{}).Create(&tape).Error; err != nil {
 			return err
 		}
-
-		oldTrackIds := []uuid.UUID{}
-		if err := tx.Model(&TapeTrack{}).Where("tape_file_id IN ?", oldFileIds).Pluck("id", &oldTrackIds).Error; err != nil {
-			return err
-		}
-
-		// save
-
-		if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Save(tape).Error; err != nil {
-			return err
-		}
-
-		// cleanup
-
-		if len(newTrackIds) > 0 {
-			if err := tx.Where("id IN ? AND id NOT IN ?", oldTrackIds, newTrackIds).Delete(&TapeTrack{}).Error; err != nil {
-				return err
-			}
-		} else {
-			if err := tx.Where("id IN ?", oldTrackIds).Delete(&TapeTrack{}).Error; err != nil {
-				return err
-			}
-		}
-
-		if len(newFileIds) > 0 {
-			if err := tx.Where("id IN ? AND id NOT IN ?", oldFileIds, newFileIds).Delete(&TapeFile{}).Error; err != nil {
-				return err
-			}
-		} else {
-			if err := tx.Where("id IN ?", oldFileIds).Delete(&TapeFile{}).Error; err != nil {
+		if len(tape.Tracks) > 0 {
+			if err := tx.Save(&tape.Tracks).Error; err != nil {
 				return err
 			}
 		}
 
 		return nil
 	})
+
+	return tape, err
+}
+
+func (storage *TapeStorage) Update(tape Tape) (Tape, error) {
+	for i := range tape.Tracks {
+		tape.Tracks[i].ListIndex = i
+		tape.Tracks[i].Track = nil
+		tape.Tracks[i].Tape = nil
+		tape.Tracks[i].TapeId = tape.Id
+	}
+
+	err := storage.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Returning{}).Omit("created_at").Save(&tape).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("tape_id = ?", tape.Id).Delete(&TapeToTrack{}).Error; err != nil {
+			return err
+		}
+		if len(tape.Tracks) > 0 {
+			if err := tx.Save(&tape.Tracks).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return tape, err
+}
+
+func (storage *TapeStorage) DeleteById(id uuid.UUID) error {
+	return storage.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("tape_id = ?", id).Delete(&TapeToTrack{}).Error; err != nil {
+			return err
+		}
+
+		return tx.Delete(&Tape{Id: id}).Error
+	})
 }
 
 func (storage *TapeStorage) GetAllTapes() ([]Tape, error) {
 	result := []Tape{}
+	return result, storage.db.Order("created_at DESC").Find(&result).Error
+}
+
+func (storage *TapeStorage) GetTape(id uuid.UUID) (Tape, error) {
+	result := Tape{Id: id}
 	return result, storage.db.Find(&result).Error
-}
-
-func (storage *TapeStorage) GetTapeWithFiles(id uuid.UUID) (*Tape, error) {
-	result := Tape{}
-
-	return &result, storage.db.Where(&Tape{Id: id}).Preload("Files", func(db *gorm.DB) *gorm.DB {
-		return db.Order("file_index ASC")
-	}).Take(&result).Error
-}
-
-func (storage *TapeStorage) GetTapeWithFilesAndTracks(id uuid.UUID) (*Tape, error) {
-	result := Tape{}
-
-	return &result, storage.db.Where(&Tape{Id: id}).Preload("Files", func(db *gorm.DB) *gorm.DB {
-		return db.Order("file_index ASC")
-	}).Preload("Files.Tracks", func(db *gorm.DB) *gorm.DB {
-		return db.Order("track_index ASC")
-	}).Take(&result).Error
-}
-
-func (storage *TapeStorage) GetTapeRelationships(id uuid.UUID) (*RelatedItems, error) {
-	result := RelatedItems{}
-
-	playlistIdFilter := storage.db.Raw(
-		"SELECT DISTINCT playlists.id "+
-			"FROM playlists "+
-			"JOIN playlist_tracks ON playlist_tracks.playlist_id = playlists.id "+
-			"JOIN tape_tracks ON tape_tracks.id = playlist_tracks.tape_track_id "+
-			"JOIN tape_files ON tape_files.id = tape_tracks.tape_file_id "+
-			"WHERE tape_files.tape_id = ?",
-		id,
-	)
-
-	albumIdFilter := storage.db.Raw(
-		"SELECT DISTINCT albums.id "+
-			"FROM albums "+
-			"JOIN album_tracks ON album_tracks.album_id = albums.id "+
-			"JOIN tape_tracks ON tape_tracks.id = album_tracks.tape_track_id "+
-			"JOIN tape_files ON tape_files.id = tape_tracks.tape_file_id "+
-			"WHERE tape_files.tape_id = ?",
-		id,
-	)
-
-	if err := storage.db.Model(&Playlist{}).Where("id IN (?)", playlistIdFilter).Find(&result.Playlists).Error; err != nil {
-		return nil, err
-	}
-
-	if err := storage.db.Model(&Album{}).Where("id IN (?)", albumIdFilter).Find(&result.Albums).Error; err != nil {
-		return nil, err
-	}
-
-	return &result, nil
-}
-
-func (storage *TapeStorage) GetTapeTrackWithFile(id uuid.UUID) (*TapeTrack, error) {
-	result := TapeTrack{}
-	return &result, storage.db.Where(&TapeTrack{Id: id}).Preload("TapeFile").Take(&result).Error
 }

@@ -18,8 +18,9 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 		handlers[path] = handler
 	}
 
-	apiPath, apiHandler := admin.GetHandler(appCtx)
-	handlers[apiPath] = apiHandler.ServeHTTP
+	for path, handler := range admin.GetHandlers(appCtx) {
+		handlers[path] = handler
+	}
 
 	handlers["/assets/"] = http.FileServer(http.Dir(appCtx.Config.WebappDir)).ServeHTTP
 	handlers["/"] = func(w http.ResponseWriter, r *http.Request) {

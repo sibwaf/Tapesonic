@@ -74,6 +74,14 @@ func (svc *subsonicExternalService) GetCoverArt(id string) (mime string, reader 
 	return svc.client.GetCoverArt(id)
 }
 
-func (svc *subsonicExternalService) Stream(ctx context.Context, id string) (mime string, reader io.ReadCloser, err error) {
-	return svc.client.Stream(id)
+func (svc *subsonicExternalService) Stream(ctx context.Context, id string) (AudioStream, error) {
+	mime, reader, err := svc.client.Stream(id)
+	if err != nil {
+		return AudioStream{}, err
+	}
+
+	return AudioStream{
+		Reader:        reader,
+		MimeType:      mime,
+	}, nil
 }

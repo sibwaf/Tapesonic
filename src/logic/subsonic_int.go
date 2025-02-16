@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"math"
 	"os"
+	"slices"
 	"strings"
 	"tapesonic/ffmpeg"
 	"tapesonic/http/subsonic/responses"
@@ -19,34 +20,43 @@ import (
 )
 
 type subsonicInternalService struct {
-	tracks    *storage.TrackStorage
-	albums    *storage.AlbumStorage
-	playlists *storage.PlaylistStorage
-	listens   *storage.TapeTrackListensStorage
-	media     *storage.MediaStorage
+	tracks      *storage.TrackStorage
+	albums      *storage.AlbumStorage
+	playlists   *storage.PlaylistStorage
+	listens     *storage.TrackListensStorage
+	media       *storage.MediaStorage
+	streamCache *storage.StreamCacheStorage
 
 	ffmpeg *ffmpeg.Ffmpeg
 
-	scrobbler *ScrobbleService
+	thumbnails *ThumbnailService
+	scrobbler  *ScrobbleService
+	ytdlp      *YtdlpService
 }
 
 func NewSubsonicInternalService(
 	tracks *storage.TrackStorage,
 	albums *storage.AlbumStorage,
 	playlists *storage.PlaylistStorage,
-	listens *storage.TapeTrackListensStorage,
+	listens *storage.TrackListensStorage,
 	media *storage.MediaStorage,
+	streamCache *storage.StreamCacheStorage,
 	ffmpeg *ffmpeg.Ffmpeg,
+	thumbnails *ThumbnailService,
 	scrobbler *ScrobbleService,
+	ytdlp *YtdlpService,
 ) SubsonicService {
 	return &subsonicInternalService{
-		tracks:    tracks,
-		albums:    albums,
-		playlists: playlists,
-		listens:   listens,
-		media:     media,
-		ffmpeg:    ffmpeg,
-		scrobbler: scrobbler,
+		tracks:      tracks,
+		albums:      albums,
+		playlists:   playlists,
+		listens:     listens,
+		media:       media,
+		streamCache: streamCache,
+		ffmpeg:      ffmpeg,
+		thumbnails:  thumbnails,
+		scrobbler:   scrobbler,
+		ytdlp:       ytdlp,
 	}
 }
 
@@ -227,11 +237,7 @@ func (svc *subsonicInternalService) GetPlaylist(rawId string) (*responses.Subson
 
 	for _, track := range tracks {
 		trackResponse := toChild(track)
-
 		trackResponse.Track = track.PlaylistTrackIndex + 1
-		if trackResponse.CoverArt == "" {
-			trackResponse.CoverArt = getPlaylistCoverId(playlist.Id)
-		}
 
 		playlistResponse.Entry = append(playlistResponse.Entry, trackResponse)
 	}
@@ -259,11 +265,16 @@ func (svc *subsonicInternalService) GetArtist(id string) (*responses.Artist, err
 }
 
 func toAlbumId3(album storage.SubsonicAlbumItem) responses.AlbumId3 {
+	coverArtId := ""
+	if album.ThumbnailId != nil {
+		coverArtId = encodeId(album.ThumbnailId.String())
+	}
+
 	albumResponse := responses.NewAlbumId3(
 		encodeId(album.Id),
 		album.Name,
 		album.Artist,
-		getAlbumCoverId(album.Id),
+		coverArtId,
 		album.SongCount,
 		album.DurationSec,
 		album.CreatedAt,
@@ -271,6 +282,11 @@ func toAlbumId3(album storage.SubsonicAlbumItem) responses.AlbumId3 {
 
 	if album.ReleaseDate != nil {
 		albumResponse.Year = album.ReleaseDate.Year()
+		albumResponse.ReleaseDate = responses.NewItemDate(
+			album.ReleaseDate.Year(),
+			int(album.ReleaseDate.Month()),
+			album.ReleaseDate.Day(),
+		)
 	}
 
 	albumResponse.PlayCount = album.PlayCount
@@ -288,7 +304,9 @@ func toPlaylist(playlist storage.SubsonicPlaylistItem) responses.SubsonicPlaylis
 		playlist.UpdatedAt,
 	)
 
-	responsePlaylist.CoverArt = getPlaylistCoverId(playlist.Id)
+	if playlist.ThumbnailId != nil {
+		responsePlaylist.CoverArt = encodeId(playlist.ThumbnailId.String())
+	}
 
 	return *responsePlaylist
 }
@@ -304,28 +322,22 @@ func toChild(track storage.SubsonicTrackItem) responses.SubsonicChild {
 	)
 
 	if track.AlbumId != "" {
-		trackResponse.Album = track.Album
 		trackResponse.AlbumId = encodeId(track.AlbumId)
-		trackResponse.CoverArt = getAlbumCoverId(track.AlbumId)
+	}
+
+	if track.AlbumThumbnailId != nil {
+		trackResponse.CoverArt = encodeId(track.AlbumThumbnailId.String())
+	} else if track.ThumbnailId != nil {
+		trackResponse.CoverArt = encodeId(track.ThumbnailId.String())
+	}
+
+	if track.Album != "" {
+		trackResponse.Album = track.Album
 	}
 
 	trackResponse.PlayCount = track.PlayCount
 
 	return *trackResponse
-}
-
-func getAlbumCoverId(albumId string) string {
-	if albumId == "" {
-		return ""
-	}
-	return fmt.Sprintf("album_%s", encodeId(albumId))
-}
-
-func getPlaylistCoverId(playlistId string) string {
-	if playlistId == "" {
-		return ""
-	}
-	return fmt.Sprintf("playlist_%s", encodeId(playlistId))
 }
 
 func (svc *subsonicInternalService) Scrobble(rawId string, time_ time.Time, submission bool) error {
@@ -358,62 +370,116 @@ func (svc *subsonicInternalService) scrobbleWithScrobbler(rawId string, time_ ti
 }
 
 func (svc *subsonicInternalService) GetCoverArt(rawId string) (mediaType string, reader io.ReadCloser, err error) {
-	var cover storage.CoverDescriptor
-	if strings.HasPrefix(rawId, "playlist_") {
-		id, e := decodeId(strings.TrimPrefix(rawId, "playlist_"))
-		if e != nil {
-			err = e
-		} else {
-			cover, err = svc.media.GetPlaylistCover(id)
-		}
-	} else if strings.HasPrefix(rawId, "album_") {
-		id, e := decodeId(strings.TrimPrefix(rawId, "album_"))
-		if e != nil {
-			err = e
-		} else {
-			cover, err = svc.media.GetAlbumCover(id)
-		}
-	} else {
-		err = fmt.Errorf("failed to find cover art `%s`", rawId)
-	}
-
-	if err != nil {
-		return
-	}
-
-	mediaType = util.FormatToMediaType(cover.Format)
-	reader, err = os.Open(cover.Path)
-	return
-}
-
-func (svc *subsonicInternalService) Stream(ctx context.Context, rawId string) (mediaType string, reader io.ReadCloser, err error) {
 	id, err := decodeId(rawId)
 	if err != nil {
-		return
+		return "", nil, err
 	}
 
-	track, err := svc.media.GetTrack(id)
+	return svc.thumbnails.GetThumbnailContent(id)
+}
+
+// some codecs like mp4/alac are not supported by Chromium-based clients
+var ALLOWED_STREAMING_CODECS = []string{"mp3", "flac", "opus"}
+
+func (svc *subsonicInternalService) Stream(ctx context.Context, rawId string) (AudioStream, error) {
+	id, err := decodeId(rawId)
 	if err != nil {
-		return
+		return AudioStream{}, err
 	}
 
-	slog.Debug(
-		fmt.Sprintf(
-			"Streaming track id=`%s` (%s) via ffmpeg, start=%d, end=%d",
-			id,
-			track.Path,
-			track.StartOffsetMs,
-			track.EndOffsetMs,
-		),
-	)
+	track, err := svc.media.GetTrackSources(id)
+	if err != nil {
+		return AudioStream{}, err
+	}
 
-	return svc.ffmpeg.StreamFromFile(
-		ctx,
-		track.Codec,
-		track.StartOffsetMs,
-		track.EndOffsetMs-track.StartOffsetMs,
-		track.Path,
-	)
+	if track.LocalPath != "" {
+		allowDirectStreaming := true
+		switch {
+		case track.StartOffsetMs > 0:
+			slog.Debug(fmt.Sprintf("Direct streaming for track id=`%s` (%s) is forbidden because StartOffsetMs > 0 (%d)", id, track.LocalPath, track.StartOffsetMs))
+			allowDirectStreaming = false
+		case track.EndOffsetMs != track.SourceDurationMs:
+			slog.Debug(fmt.Sprintf("Direct streaming for track id=`%s` (%s) is forbidden because EndOffsetMs != SourceDurationMs (%d != %d)", id, track.LocalPath, track.EndOffsetMs, track.SourceDurationMs))
+			allowDirectStreaming = false
+		case !slices.Contains(ALLOWED_STREAMING_CODECS, track.LocalCodec):
+			slog.Debug(fmt.Sprintf("Direct streaming for track id=`%s` (%s) is forbidden because codec `%s` is not allowed", id, track.LocalPath, track.LocalCodec))
+			allowDirectStreaming = false
+		}
+
+		if allowDirectStreaming {
+			slog.Debug(fmt.Sprintf("Streaming downloaded track id=`%s` (%s) directly from file", id, track.LocalPath))
+
+			reader, err := os.Open(track.LocalPath)
+			if err != nil {
+				return AudioStream{}, err
+			}
+
+			slog.Debug(fmt.Sprintf("Got streaming data for track id=`%s`", id))
+
+			return AudioStream{
+				Reader:   reader,
+				MimeType: util.FormatToMediaType(track.LocalFormat),
+			}, nil
+		} else {
+			slog.Debug(fmt.Sprintf("Streaming downloaded track id=`%s` (%s) via ffmpeg, start=%d, end=%d", id, track.LocalPath, track.StartOffsetMs, track.EndOffsetMs))
+
+			item, reader, err := svc.streamCache.GetOrSave(fmt.Sprintf("tapesonic-%s", id), func() (string, io.ReadCloser, error) {
+				slog.Debug(fmt.Sprintf("Populating stream cache for track id=`%s`", id))
+
+				format, reader, err := svc.ffmpeg.StreamFrom(
+					ctx,
+					track.LocalCodec,
+					ffmpeg.ANY_FORMAT,
+					track.StartOffsetMs,
+					track.EndOffsetMs-track.StartOffsetMs,
+					track.LocalPath,
+				)
+				if err != nil {
+					return "", nil, err
+				}
+
+				return util.FormatToMediaType(format), reader, nil
+			})
+			if err != nil {
+				return AudioStream{}, err
+			}
+
+			slog.Debug(fmt.Sprintf("Got streaming data for track id=`%s`", id))
+
+			return AudioStream{
+				Reader:   reader,
+				MimeType: item.ContentType,
+			}, nil
+		}
+	} else if track.RemoteUrl != "" {
+		streamInfo, err := svc.ytdlp.GetStreamInfo(ctx, track.RemoteUrl, "ba")
+		if err != nil {
+			return AudioStream{}, err
+		}
+
+		slog.Debug(fmt.Sprintf("Streaming remote track id=`%s` (%s) via ffmpeg, start=%d, end=%d", id, track.RemoteUrl, track.StartOffsetMs, track.EndOffsetMs))
+
+		format, reader, err := svc.ffmpeg.StreamFrom(
+			ctx,
+			streamInfo.ACodec,
+			ffmpeg.SEEKABLE_FORMAT,
+			track.StartOffsetMs,
+			track.EndOffsetMs-track.StartOffsetMs,
+			streamInfo.Url,
+		)
+		if err != nil {
+			return AudioStream{}, err
+		}
+
+		slog.Debug(fmt.Sprintf("Got streaming data for track id=`%s`", id))
+
+		return AudioStream{
+			Reader:   reader,
+			MimeType: util.FormatToMediaType(format),
+		}, nil
+	} else {
+		return AudioStream{}, fmt.Errorf("no local path or remote url for track id=`%s`", id)
+	}
 }
 
 func encodeId(id string) string {

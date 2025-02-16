@@ -15,7 +15,8 @@ export default defineConfig({
   },
   server: { // todo: move to local configuration
     proxy: {
-      "/api": "http://localhost:8080"
+      "/api": "http://localhost:8080",
+      "/media": "http://localhost:8080",
     }
   }
 })

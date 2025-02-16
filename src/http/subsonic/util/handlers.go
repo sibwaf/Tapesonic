@@ -1,6 +1,8 @@
 package util
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -21,8 +23,12 @@ func AsRawHandlerFunc(handler SubsonicRawHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		response, err := handler(w, r)
 		if err != nil {
-			LogError(r, fmt.Sprintf("Failed to process request: %s", err.Error()))
-			response = responses.NewFailedResponse(responses.ERROR_CODE_GENERIC, "Server failed to process the request")
+			if errors.Is(err, context.Canceled) && errors.Is(r.Context().Err(), context.Canceled) {
+				LogDebug(r, "Client cancelled the request")
+			} else {
+				LogError(r, fmt.Sprintf("Failed to process request: %s", err.Error()))
+				response = responses.NewFailedResponse(responses.ERROR_CODE_GENERIC, "Server failed to process the request")
+			}
 		}
 
 		if response != nil {

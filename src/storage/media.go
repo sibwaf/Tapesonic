@@ -1,13 +1,16 @@
 package storage
 
 import (
+	"fmt"
 	"path"
-	"strings"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type MediaStorage struct {
+	db *DbHelper
+
 	dir string
 
 	tapeStorage     *TapeStorage
@@ -15,11 +18,16 @@ type MediaStorage struct {
 	albumStorage    *AlbumStorage
 }
 
-type TrackDescriptor struct {
-	Path          string
-	StartOffsetMs int
-	EndOffsetMs   int
-	Codec         string
+type TrackSourceDescriptor struct {
+	LocalPath   string
+	LocalFormat string
+	LocalCodec  string
+
+	RemoteUrl        string
+	SourceDurationMs int64
+
+	StartOffsetMs int64
+	EndOffsetMs   int64
 }
 
 type CoverDescriptor struct {
@@ -28,12 +36,15 @@ type CoverDescriptor struct {
 }
 
 func NewMediaStorage(
+	db *gorm.DB,
 	dir string,
 	tapeStorage *TapeStorage,
 	playlistStorage *PlaylistStorage,
 	albumStorage *AlbumStorage,
 ) *MediaStorage {
 	return &MediaStorage{
+		db: NewDbHelper(db),
+
 		dir: dir,
 
 		tapeStorage:     tapeStorage,
@@ -42,52 +53,33 @@ func NewMediaStorage(
 	}
 }
 
-func (ms *MediaStorage) GetTrack(id uuid.UUID) (TrackDescriptor, error) {
-	track, err := ms.tapeStorage.GetTapeTrackWithFile(id)
-	if err != nil {
-		return TrackDescriptor{}, err
+func (ms *MediaStorage) GetTrackSources(trackId uuid.UUID) (TrackSourceDescriptor, error) {
+	query := fmt.Sprintf(
+		`
+			SELECT
+				source_files.media_path AS local_path,
+				source_files.format AS local_format,
+				source_files.codec AS local_codec,
+				sources.url AS remote_url,
+				sources.duration_ms AS source_duration_ms,
+				tracks.start_offset_ms AS start_offset_ms,
+				tracks.end_offset_ms AS end_offset_ms
+			FROM tracks
+			JOIN sources ON sources.id = tracks.source_id
+			LEFT JOIN source_files ON source_files.source_id = sources.id
+			WHERE tracks.id = '%s'
+		`,
+		trackId.String(),
+	)
+
+	sourceDescriptor := TrackSourceDescriptor{}
+	if err := ms.db.Raw(query).Find(&sourceDescriptor).Error; err != nil {
+		return sourceDescriptor, err
 	}
 
-	return TrackDescriptor{
-		Path:          path.Join(ms.dir, track.TapeFile.MediaPath),
-		StartOffsetMs: track.StartOffsetMs,
-		EndOffsetMs:   track.EndOffsetMs,
-		Codec:         track.TapeFile.AudioCodec,
-	}, nil
-}
-
-func (ms *MediaStorage) GetTapeCover(id uuid.UUID) (CoverDescriptor, error) {
-	tape, err := ms.tapeStorage.GetTapeWithFiles(id)
-	if err != nil {
-		return CoverDescriptor{}, err
+	if sourceDescriptor.LocalPath != "" {
+		sourceDescriptor.LocalPath = path.Join(ms.dir, sourceDescriptor.LocalPath)
 	}
 
-	return CoverDescriptor{
-		Path:   path.Join(ms.dir, tape.ThumbnailPath),
-		Format: strings.TrimPrefix(path.Ext(tape.ThumbnailPath), "."),
-	}, nil
-}
-
-func (ms *MediaStorage) GetPlaylistCover(id uuid.UUID) (CoverDescriptor, error) {
-	playlist, err := ms.playlistStorage.GetPlaylistWithoutTracks(id)
-	if err != nil {
-		return CoverDescriptor{}, err
-	}
-
-	return CoverDescriptor{
-		Path:   path.Join(ms.dir, playlist.ThumbnailPath),
-		Format: strings.TrimPrefix(path.Ext(playlist.ThumbnailPath), "."),
-	}, nil
-}
-
-func (ms *MediaStorage) GetAlbumCover(id uuid.UUID) (CoverDescriptor, error) {
-	album, err := ms.albumStorage.GetAlbumWithoutTracks(id)
-	if err != nil {
-		return CoverDescriptor{}, err
-	}
-
-	return CoverDescriptor{
-		Path:   path.Join(ms.dir, album.ThumbnailPath),
-		Format: strings.TrimPrefix(path.Ext(album.ThumbnailPath), "."),
-	}, nil
+	return sourceDescriptor, nil
 }

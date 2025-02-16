@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from "vue-router"
 import HomeView from "@/views/HomeView.vue"
 import TapeView from "@/views/TapeView.vue"
-import PlaylistView from "@/views/PlaylistView.vue"
-import AlbumView from "@/views/AlbumView.vue"
+import SourcesView from "@/views/SourcesView.vue"
+import SourceView from "@/views/SourceView.vue"
+import NewTapeView from "@/views/NewTapeView.vue"
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -13,19 +14,25 @@ const router = createRouter({
       component: HomeView
     },
     {
+      path: "/tapes/new",
+      name: "tape-new",
+      component: NewTapeView
+    },
+    {
       path: "/tapes/:tapeId",
+      name: "tape",
       component: TapeView
     },
     {
-      path: "/playlists/:playlistId",
-      name: "playlist",
-      component: PlaylistView
+      path: "/sources",
+      name: "sources",
+      component: SourcesView
     },
     {
-      path: "/albums/:albumId",
-      name: "album",
-      component: AlbumView
-    }
+      path: "/sources/:sourceId",
+      name: "source",
+      component: SourceView
+    },
   ]
 })
 

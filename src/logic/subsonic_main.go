@@ -238,7 +238,7 @@ func (svc *subsonicMainService) GetCoverArt(id string) (mime string, reader io.R
 	return svc.delegate.GetCoverArt(id)
 }
 
-func (svc *subsonicMainService) Stream(ctx context.Context, id string) (mime string, reader io.ReadCloser, err error) {
+func (svc *subsonicMainService) Stream(ctx context.Context, id string) (AudioStream, error) {
 	return svc.delegate.Stream(ctx, id)
 }
 

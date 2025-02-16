@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"io"
 	"net/http"
 	"time"
 
@@ -9,14 +10,14 @@ import (
 )
 
 type streamHandler struct {
-	streamService *logic.StreamService
+	subsonic logic.SubsonicService
 }
 
 func NewStreamHandler(
-	streamService *logic.StreamService,
+	subsonic logic.SubsonicService,
 ) *streamHandler {
 	return &streamHandler{
-		streamService: streamService,
+		subsonic: subsonic,
 	}
 }
 
@@ -26,17 +27,23 @@ func (h *streamHandler) Handle(w http.ResponseWriter, r *http.Request) (*respons
 		return responses.NewParameterMissingResponse("id"), nil
 	}
 
-	mediaType, reader, err := h.streamService.Stream(id)
+	stream, err := h.subsonic.Stream(r.Context(), id)
 	if err != nil {
 		return nil, err
 	}
-	defer reader.Close()
 
-	if mediaType != "" {
-		w.Header().Add("Content-Type", mediaType)
+	defer stream.Reader.Close()
+
+	if stream.MimeType != "" {
+		w.Header().Add("Content-Type", stream.MimeType)
 	}
 
-	http.ServeContent(w, r, id, time.Time{}, reader)
+	readSeeker, isSeekable := stream.Reader.(io.ReadSeeker)
+	if isSeekable {
+		http.ServeContent(w, r, "", time.Time{}, readSeeker)
+	} else {
+		io.Copy(w, stream.Reader)
+	}
 
 	return nil, nil
 }

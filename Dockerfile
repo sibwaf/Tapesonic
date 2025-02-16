@@ -7,7 +7,7 @@ COPY src .
 
 RUN sed -i "s/\"dev\"/\"$APP_VERSION\"/" build/version.go
 RUN apk add --no-cache --no-interactive build-base icu-dev
-RUN CGO_ENABLED=1 go build --tags icu
+RUN CGO_ENABLED=1 go build --tags "sqlite_icu sqlite_json"
 
 FROM alpine:3.18
 

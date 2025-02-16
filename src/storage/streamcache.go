@@ -2,11 +2,15 @@ package storage
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path"
+	"sync"
+	"tapesonic/config"
 	"tapesonic/util"
 	"time"
 
@@ -31,14 +35,20 @@ type StreamCacheItem struct {
 }
 
 type StreamCacheStorage struct {
-	dir string
-	db  *DbHelper
+	dir         string
+	maxSize     int64
+	minLifetime time.Duration
 
-	lock *util.StripedRwMutex
+	db *DbHelper
+
+	lock     *util.StripedRwMutex
+	trimLock *sync.Mutex
 }
 
 func NewStreamCacheStorage(
 	dir string,
+	maxSize int64,
+	minLifetime time.Duration,
 	db *gorm.DB,
 ) (*StreamCacheStorage, error) {
 	if err := db.AutoMigrate(&StreamCacheItem{}); err != nil {
@@ -46,10 +56,14 @@ func NewStreamCacheStorage(
 	}
 
 	return &StreamCacheStorage{
-		dir: dir,
-		db:  NewDbHelper(db),
+		dir:         dir,
+		maxSize:     maxSize,
+		minLifetime: minLifetime,
 
-		lock: util.NewStripedRwMutex(),
+		db: NewDbHelper(db),
+
+		lock:     util.NewStripedRwMutex(),
+		trimLock: &sync.Mutex{},
 	}, nil
 }
 
@@ -178,6 +192,13 @@ func (storage *StreamCacheStorage) writeFile(id string, contentType string, read
 		AccessedAt:  time.Now(),
 	}
 
+	go func() {
+		err := storage.trimToSize()
+		if err != nil {
+			slog.Warn(fmt.Sprintf("Stream data cache trimming failed: %s", err.Error()))
+		}
+	}()
+
 	return item, storage.db.Save(&item).Error
 }
 
@@ -208,19 +229,51 @@ func (storage *StreamCacheStorage) Delete(id string) error {
 	}
 }
 
-func (storage *StreamCacheStorage) GetCacheInfo() (StreamCacheInfo, error) {
-	sql := `
-		WITH cache_totals AS (
-			SELECT sum(stream_cache_items.size) AS cache_size FROM stream_cache_items
-		)
-		SELECT
-			stream_cache_items.*,
-			cache_totals.cache_size AS cache_size
-		FROM stream_cache_items, cache_totals
-		ORDER BY stream_cache_items.accessed_at
-		LIMIT 1
-	`
+func (storage *StreamCacheStorage) trimToSize() error {
+	if !storage.trimLock.TryLock() {
+		slog.Log(context.Background(), config.LevelTrace, "Stream cache is already being trimmed, skipping")
+		return nil
+	}
+	defer storage.trimLock.Unlock()
 
-	result := StreamCacheInfo{}
-	return result, storage.db.Raw(sql).Find(&result).Error
+	slog.Debug("Trimming stream data cache")
+
+	for {
+		currentSize := int64(0)
+		if err := storage.db.Raw("SELECT sum(size) FROM stream_cache_items").Scan(&currentSize).Error; err != nil {
+			return err
+		}
+
+		spaceStatsText := fmt.Sprintf(
+			"%s / %s taken, %s free",
+			util.FormatBytesWithMagnitude(currentSize, storage.maxSize),
+			util.FormatBytes(storage.maxSize),
+			util.FormatBytes(storage.maxSize-currentSize),
+		)
+
+		if currentSize <= storage.maxSize {
+			slog.Debug(fmt.Sprintf("Stream data cache has enough free space - done trimming (%s)", spaceStatsText))
+			break
+		}
+
+		maxAllowedAccessedAt := time.Now().Add(-storage.minLifetime)
+		nextDeletionCandidate := StreamCacheItem{}
+		if err := storage.db.Where("accessed_at < ?", maxAllowedAccessedAt).Order("accessed_at ASC").Take(&nextDeletionCandidate).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				slog.Warn(fmt.Sprintf("No suitable candidates for deletion found in stream data cache, aborting trimming (%s)", spaceStatsText))
+				break
+			} else {
+				return err
+			}
+		}
+
+		slog.Debug(fmt.Sprintf("Deleting stream data cache item id=`%s` to free up %s (%s)", nextDeletionCandidate.Id, util.FormatBytes(nextDeletionCandidate.Size), spaceStatsText))
+		if err := storage.Delete(nextDeletionCandidate.Id); err != nil {
+			return err
+		}
+	}
+
+	slog.Debug("Stream data cache trimming finished")
+
+	return nil
 }

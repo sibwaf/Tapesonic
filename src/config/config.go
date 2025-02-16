@@ -16,6 +16,8 @@ const (
 	ScrobbleNone      = 0
 	ScrobbleTapesonic = 1
 	ScrobbleAll       = 2
+
+	CronDisabled = "off"
 )
 
 type TapesonicConfig struct {
@@ -34,7 +36,10 @@ type TapesonicConfig struct {
 	YtdlpPath  string
 	FfmpegPath string
 
-	TasksImportQueueImport        BackgroundTaskConfig
+	YtdlpMetadataMaxLifetime    time.Duration
+	YtdlpMetadataMaxParallelism int
+
+	TasksDownloadSources          BackgroundTaskConfig
 	TasksLibrarySync              BackgroundTaskConfig
 	TasksListenBrainzPlaylistSync BackgroundTaskConfig
 
@@ -97,12 +102,15 @@ func NewConfig() (*TapesonicConfig, error) {
 		YtdlpPath:  getEnvOrDefault("TAPESONIC_YTDLP_PATH", "yt-dlp"),
 		FfmpegPath: getEnvOrDefault("TAPESONIC_FFMPEG_PATH", "ffmpeg"),
 
+		YtdlpMetadataMaxLifetime:    getEnvDurationOrDefault("TAPESONIC_YTDLP_METADATA_MAX_LIFETIME", 15*time.Minute),
+		YtdlpMetadataMaxParallelism: getEnvIntOrDefault("TAPESONIC_YTDLP_METADATA_MAX_PARALLELISM", 4),
+
 		WebappDir:       getEnvOrDefault("TAPESONIC_WEBAPP_DIR", "webapp"),
 		DataStorageDir:  getEnvOrDefault("TAPESONIC_DATA_STORAGE_DIR", "data"),
 		MediaStorageDir: getEnvOrDefault("TAPESONIC_MEDIA_STORAGE_DIR", "media"),
 		CacheDir:        getEnvOrDefault("TAPESONIC_CACHE_DIR", "cache"),
 
-		TasksImportQueueImport:        getBackgroundTaskConfig("IMPORT_QUEUE_IMPORT", "0 * * * * *", 15*time.Minute),
+		TasksDownloadSources:          getBackgroundTaskConfig("DOWNLOAD_SOURCES", "0 * * * * *", 15*time.Minute),
 		TasksLibrarySync:              getBackgroundTaskConfig("LIBRARY_SYNC", "0 */15 * * * *", 15*time.Minute),
 		TasksListenBrainzPlaylistSync: getBackgroundTaskConfig("LISTENBRAINZ_PLAYLIST_SYNC", "0 0 */4 * * *", 15*time.Minute),
 
@@ -150,6 +158,10 @@ func getEnvBoolOrDefault(name string, defaultValue bool) bool {
 	default:
 		return defaultValue
 	}
+}
+
+func getEnvIntOrDefault(name string, defaultValue int) int {
+	return util.StringToIntOrDefault(name, defaultValue)
 }
 
 func getEnvSizeOrDefault(name string, defaultValue int64) int64 {

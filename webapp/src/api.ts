@@ -1,97 +1,157 @@
-export interface ImportQueueItem {
+export interface FullSourceRs {
     Id: string;
+
     Url: string;
+    Title: string;
+    Uploader: string;
+
+    AlbumArtist: string;
+    AlbumTitle: string;
+    AlbumIndex: number;
+    TrackArtist: string;
+    TrackTitle: string;
+    DurationMs: number;
+
+    ReleaseDate: string | null;
+
+    ThumbnailId: string | null;
+}
+
+export interface ListSourceRs {
+    Id: string;
+
+    Url: string;
+    Title: string;
+    Uploader: string;
+
+    DurationMs: number;
+
+    ThumbnailId: string | null;
+}
+
+export interface ListSourceHierarchyRs {
+    Id: string;
+    ParentId: string | null;
+
+    Url: string;
+    Title: string;
+    Uploader: string;
+
+    ListIndex: number;
+
+    ThumbnailId: string | null;
+}
+
+export interface SourceFileRs {
+    Codec: string;
+}
+
+export interface TrackRs {
+    Id: string;
+    SourceId: string;
+
+    Artist: string;
+    Title: string;
+
+    StartOffsetMs: number;
+    EndOffsetMs: number;
+}
+
+export enum TapeType {
+    Album = "album",
+    Playlist = "playlist",
 }
 
 export interface Tape {
     Id: string;
+
     Name: string;
-    AuthorName: string;
-    ThumbnailPath: string;
-    ReleaseDate: string | null;
-    Files: TapeFile[];
-}
+    Type: TapeType;
 
-export interface TapeFile {
-    Id: string;
-    Name: string;
-    AuthorName: string;
-    ThumbnailPath: string;
-    ReleaseDate: string | null;
-    Tracks: TapeTrack[];
-}
-
-export interface TapeTrack {
-    Id: string;
-
-    RawStartOffsetMs: number;
-    StartOffsetMs: number;
-    RawEndOffsetMs: number;
-    EndOffsetMs: number;
+    ThumbnailId: string | null;
 
     Artist: string;
-    Title: string;
+    ReleasedAt: string | null;
+
+    Tracks: TrackRs[];
 }
 
-export interface Playlist {
-    Id: string;
-    Name: string;
-    ThumbnailPath: string;
-    Tracks: PlaylistTrack[];
-}
-
-export interface PlaylistTrack {
-    Id: string;
-
-    TapeTrackId: string;
-    TapeTrack: TapeTrack;
-}
-
-export interface Album {
+export interface ListTape {
     Id: string;
 
     Name: string;
+    Type: TapeType;
+
+    ThumbnailId: string | null;
+
     Artist: string;
-    ReleaseDate: string | null;
+    ReleasedAt: string | null;
 
-    ThumbnailPath: string;
-
-    Tracks: AlbumTrack[];
+    CreatedAt: string;
 }
 
-export interface AlbumTrack {
+export interface GetListSourceRs {
+    Source: ListSourceRs;
+    File: SourceFileRs | null;
+}
+
+export interface ListThumbnailRs {
     Id: string;
-
-    TapeTrackId: string;
-    TapeTrack: TapeTrack;
-}
-
-export interface RelatedItems {
-    Tapes: Tape[];
-    Playlists: Playlist[];
-    Albums: Album[];
 }
 
 export default {
-    async getImportQueue(): Promise<ImportQueueItem[]> {
-        const response = await fetch(`/api/import-queue`, { method: "GET" });
+    async addSource(url: string): Promise<FullSourceRs> {
+        const params = new URLSearchParams({ "url": url });
+        const response = await fetch(`/api/sources?${params}`, { method: "POST" });
         return await response.json();
     },
-    async addToImportQueue(url: string): Promise<ImportQueueItem> {
-        const response = await fetch(
-            "/api/import-queue?" + new URLSearchParams({ url }),
-            { method: "POST" },
-        );
+    async listSources(): Promise<GetListSourceRs[]> {
+        const response = await fetch(`/api/sources`, { method: "GET" });
         return await response.json();
     },
-    async deleteFromImportQueue(id: string) {
-        const response = await fetch(`/api/import-queue/${id}`, { method: "DELETE" });
-        if (!response.ok) {
-            throw await response.json();
+    async getSource(id: string): Promise<FullSourceRs> {
+        const response = await fetch(`/api/sources/${id}`, { method: "GET" });
+        return await response.json();
+    },
+    async getSourceHierarchy(id: string): Promise<ListSourceHierarchyRs[]> {
+        const response = await fetch(`/api/sources/${id}/hierarchy`, { method: "GET" });
+        return await response.json();
+    },
+    async getSourceTracks(id: string, recursive: boolean): Promise<TrackRs[]> {
+        const params = new URLSearchParams({ "recursive": `${recursive}` });
+        const response = await fetch(`/api/sources/${id}/tracks?${params}`, { method: "GET" });
+        return await response.json();
+    },
+    async replaceSourceTracks(id: string, tracks: TrackRs[]): Promise<TrackRs[]> {
+        const response = await fetch(`/api/sources/${id}/tracks`, { method: "PUT", body: JSON.stringify(tracks) });
+        return await response.json();
+    },
+    async getSourceFile(sourceId: string): Promise<SourceFileRs | null> {
+        const response = await fetch(`/api/sources/${sourceId}/file`, { method: "GET" });
+        const body = await response.text();
+        if (body == "") {
+            return null;
+        } else {
+            return JSON.parse(body);
         }
     },
+    async deleteSourceFile(sourceId: string): Promise<void> {
+        const response = await fetch(`/api/sources/${sourceId}/file`, { method: "DELETE" });
+        return await response.json();
+    },
 
-    async getAllTapes(): Promise<Tape[]> {
+    async createTape(tape: Tape): Promise<Tape> {
+        const response = await fetch(`/api/tapes`, { method: "POST", body: JSON.stringify(tape) });
+        return await response.json();
+    },
+    async updateTape(id: string, tape: Tape): Promise<Tape> {
+        const response = await fetch(`/api/tapes/${id}`, { method: "PUT", body: JSON.stringify(tape) });
+        return await response.json();
+    },
+    async deleteTape(id: string): Promise<void> {
+        await fetch(`/api/tapes/${id}`, { method: "DELETE" });
+    },
+    async listTapes(): Promise<ListTape[]> {
         const response = await fetch(`/api/tapes`, { method: "GET" });
         return await response.json();
     },
@@ -99,76 +159,23 @@ export default {
         const response = await fetch(`/api/tapes/${id}`, { method: "GET" });
         return await response.json();
     },
-    async getTapeRelationships(id: string): Promise<RelatedItems> {
-        const response = await fetch(`/api/tapes/${id}/related`, { method: "GET" });
-        return await response.json();
-    },
-    async saveTape(id: string, tape: Tape) {
-        const response = await fetch(`/api/tapes/${id}`, { method: "PUT", body: JSON.stringify(tape) });
-        if (!response.ok) {
-            throw await response.json();
-        }
-    },
-
-    async createPlaylist(playlist: Playlist): Promise<Playlist> {
-        const response = await fetch(`/api/playlists`, { method: "POST", body: JSON.stringify(playlist) });
-        if (!response.ok) {
-            throw await response.json();
-        } else {
-            return await response.json();
-        }
-    },
-    async deletePlaylist(id: string) {
-        const response = await fetch(`/api/playlists/${id}`, { method: "DELETE" });
-        if (!response.ok) {
-            throw await response.json();
-        }
-    },
-    async getAllPlaylists(): Promise<Playlist[]> {
-        const response = await fetch(`/api/playlists`, { method: "GET" });
-        return await response.json();
-    },
-    async getPlaylist(id: string): Promise<Playlist> {
-        const response = await fetch(`/api/playlists/${id}`, { method: "GET" });
-        return await response.json();
-    },
-    async getPlaylistRelationships(id: string): Promise<RelatedItems> {
-        const response = await fetch(`/api/playlists/${id}/related`, { method: "GET" });
+    async guessTapeMetadata(trackIds: string[]): Promise<Tape> {
+        const response = await fetch(`/api/tapes/guess-metadata`, { method: "POST", body: JSON.stringify({ trackIds }) });
         return await response.json();
     },
 
-    async createAlbum(album: Album): Promise<Album> {
-        const response = await fetch(`/api/albums`, { method: "POST", body: JSON.stringify(album) });
-        if (!response.ok) {
-            throw await response.json();
-        } else {
-            return await response.json();
-        }
-    },
-    async updateAlbum(id: string, album: Album): Promise<Album> {
-        const response = await fetch(`/api/albums/${id}`, { method: "PUT", body: JSON.stringify(album) });
-        if (!response.ok) {
-            throw await response.json();
-        } else {
-            return await response.json();
-        }
-    },
-    async deleteAlbum(id: string) {
-        const response = await fetch(`/api/albums/${id}`, { method: "DELETE" });
-        if (!response.ok) {
-            throw await response.json();
-        }
-    },
-    async getAllAlbums(): Promise<Album[]> {
-        const response = await fetch(`/api/albums`, { method: "GET" });
+    async searchTracks(query: string): Promise<TrackRs[]> {
+        const params = new URLSearchParams({ "q": query });
+        const response = await fetch(`/api/tracks?${params}`, { method: "GET" });
         return await response.json();
     },
-    async getAlbum(id: string): Promise<Album> {
-        const response = await fetch(`/api/albums/${id}`, { method: "GET" });
-        return await response.json();
-    },
-    async getAlbumRelationships(id: string): Promise<RelatedItems> {
-        const response = await fetch(`/api/albums/${id}/related`, { method: "GET" });
+
+    async searchThumbnails(sourceIds: string[]): Promise<ListThumbnailRs[]> {
+        const params = new URLSearchParams();
+        for (const sourceId of sourceIds) {
+            params.append("sourceId", sourceId);
+        }
+        const response = await fetch(`/api/thumbnails?${params}`, { method: "GET" });
         return await response.json();
     },
 }

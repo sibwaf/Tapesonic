@@ -242,11 +242,21 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 		})
 	case LIST_BY_YEAR:
 		sort.Slice(albums, func(i, j int) bool {
-			// todo: filter no-release-date albums out; pushing those to the end for now
-			if albums[i].Year == 0 {
+			var leftDate time.Time
+			if albums[i].ReleaseDate != nil {
+				leftDate = time.Date(albums[i].ReleaseDate.Year, time.Month(albums[i].ReleaseDate.Month), albums[i].ReleaseDate.Day, 0, 0, 0, 0, time.UTC)
+			} else if albums[i].Year != 0 {
+				leftDate = time.Date(albums[i].Year, 0, 0, 0, 0, 0, 0, time.UTC)
+			} else {
 				return false
 			}
-			if albums[j].Year == 0 {
+
+			var rightDate time.Time
+			if albums[j].ReleaseDate != nil {
+				rightDate = time.Date(albums[j].ReleaseDate.Year, time.Month(albums[j].ReleaseDate.Month), albums[j].ReleaseDate.Day, 0, 0, 0, 0, time.UTC)
+			} else if albums[j].Year != 0 {
+				rightDate = time.Date(albums[j].Year, 0, 0, 0, 0, 0, 0, time.UTC)
+			} else {
 				return true
 			}
 
@@ -254,10 +264,10 @@ func (svc *SubsonicMuxService) GetAlbumList2(
 				i, j = j, i
 			}
 
-			if albums[i].Year != albums[j].Year {
-				return albums[i].Year < albums[j].Year
-			} else {
+			if leftDate == rightDate {
 				return albums[i].Created.Before(albums[j].Created)
+			} else {
+				return leftDate.Before(rightDate)
 			}
 		})
 	default:
@@ -361,10 +371,10 @@ func (svc *SubsonicMuxService) GetCoverArt(id string) (mime string, reader io.Re
 	return service.GetCoverArt(id)
 }
 
-func (svc *SubsonicMuxService) Stream(ctx context.Context, id string) (mime string, reader io.ReadCloser, err error) {
+func (svc *SubsonicMuxService) Stream(ctx context.Context, id string) (AudioStream, error) {
 	service, err := svc.findServiceByEntityId(id)
 	if err != nil {
-		return
+		return AudioStream{}, err
 	}
 
 	return service.Stream(ctx, id)
