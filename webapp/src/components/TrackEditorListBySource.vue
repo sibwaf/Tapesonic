@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { ListSourceHierarchyRs } from "@/api";
+import type { ListSourceHierarchyRs, TrackRs } from "@/api";
 import TrackEditor from "@/components/TrackEditor.vue";
-import { type EditableTrack } from "@/model/EditableTrack";
+import { type Editable } from "@/model/Editable";
 import { computed } from "vue";
 
 const props = defineProps<{
-    modelValue: EditableTrack[],
+    modelValue: Editable<TrackRs>[],
     source: ListSourceHierarchyRs,
 }>();
 

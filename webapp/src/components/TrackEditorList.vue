@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { type EditableTrack } from "@/model/EditableTrack";
+import { type Editable } from "@/model/Editable";
 import { computed } from "vue";
 import TrackEditorListBySource from "@/components/TrackEditorListBySource.vue";
-import type { ListSourceHierarchyRs } from "@/api";
+import type { ListSourceHierarchyRs, TrackRs } from "@/api";
 
 const props = defineProps<{
-    modelValue: EditableTrack[],
+    modelValue: Editable<TrackRs>[],
     orderedSourceHierarchy: ListSourceHierarchyRs[],
 }>();
 
 interface SourceAndTracks {
     source: ListSourceHierarchyRs;
-    tracks: EditableTrack[];
+    tracks: Editable<TrackRs>[];
 }
 
 const tracksBySource = computed(() => {
-    const tracksBySourceId = new Map<string, EditableTrack[]>();
+    const tracksBySourceId = new Map<string, Editable<TrackRs>[]>();
 
     for (const track of props.modelValue) {
         const sourceId = track.editedValue.SourceId;

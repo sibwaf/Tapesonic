@@ -2,6 +2,7 @@
 import api, { type ListSourceHierarchyRs, type FullSourceRs, type TrackRs, type SourceFileRs } from "@/api";
 import TrackEditorList from "@/components/TrackEditorList.vue";
 import Tree from "@/components/Tree.vue";
+import type { Editable } from "@/model/Editable";
 import { EditableTrack } from "@/model/EditableTrack";
 import { type TreeNode } from "@/util";
 import { computed, ref, watch } from "vue";
@@ -25,7 +26,7 @@ const hierarchy = ref<TreeNode<ListSourceHierarchyRs>[]>([]);
 const tracks = ref<TrackRs[]>([]);
 const file = ref<SourceFileRs | null>(null);
 
-const editedTracks = ref<EditableTrack[]>([]);
+const editedTracks = ref<Editable<TrackRs>[]>([]);
 const editedTrackSourceIds = computed(() => new Set(editedTracks.value.filter(it => it.isEdited).map(it => it.editedValue.SourceId)));
 
 function buildHierarchyTree(items: ListSourceHierarchyRs[]): TreeNode<ListSourceHierarchyRs>[] {
