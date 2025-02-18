@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type ListenbrainzPlaylist struct {
@@ -47,7 +48,7 @@ func NewListenBrainzPlaylistStorage(db *gorm.DB) (*ListenbrainzPlaylistStorage, 
 	}, nil
 }
 
-func (storage *ListenbrainzPlaylistStorage) Replace(items []ListenbrainzPlaylist) error {
+func (storage *ListenbrainzPlaylistStorage) Replace(playlists []ListenbrainzPlaylist) error {
 	return storage.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&ListenbrainzPlaylistTrack{}).Error; err != nil {
 			return err
@@ -57,8 +58,22 @@ func (storage *ListenbrainzPlaylistStorage) Replace(items []ListenbrainzPlaylist
 			return err
 		}
 
-		if len(items) > 0 {
-			if err := tx.Create(&items).Error; err != nil {
+		if len(playlists) > 0 {
+			if err := tx.Omit(clause.Associations).CreateInBatches(&playlists, 256).Error; err != nil {
+				return err
+			}
+		}
+
+		tracks := []*ListenbrainzPlaylistTrack{}
+		for _, playlist := range playlists {
+			for i := range playlist.Tracks {
+				playlist.Tracks[i].ListenbrainzPlaylistId = playlist.Id
+			}
+			tracks = append(tracks, playlist.Tracks...)
+		}
+
+		if len(tracks) > 0 {
+			if err := tx.Omit(clause.Associations).CreateInBatches(&tracks, 256).Error; err != nil {
 				return err
 			}
 		}

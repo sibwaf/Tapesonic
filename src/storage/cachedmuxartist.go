@@ -47,7 +47,7 @@ func (storage *CachedMuxArtistStorage) Replace(items []CachedMuxArtist) error {
 		}
 
 		if len(items) > 0 {
-			if err := tx.Create(&items).Error; err != nil {
+			if err := tx.CreateInBatches(&items, 256).Error; err != nil {
 				return err
 			}
 		}
