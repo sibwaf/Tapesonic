@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine3.18 AS builder
+FROM golang:1.24-alpine3.21 AS builder
 
 ARG APP_VERSION
 
@@ -9,7 +9,7 @@ RUN sed -i "s/\"dev\"/\"$APP_VERSION\"/" build/version.go
 RUN apk add --no-cache --no-interactive build-base icu-dev
 RUN CGO_ENABLED=1 go build --tags "sqlite_icu sqlite_json"
 
-FROM alpine:3.18
+FROM alpine:3.21
 
 RUN apk add \
     --no-cache \
