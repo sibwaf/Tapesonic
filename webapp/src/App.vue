@@ -10,6 +10,9 @@ import { RouterView } from "vue-router"
         <RouterLink to="/sources">Sources</RouterLink>
     </span>
     <span class="header-link">
+        <RouterLink to="/settings">Settings</RouterLink>
+    </span>
+    <span class="header-link">
         <RouterLink to="/tapes/new">New tape</RouterLink>
     </span>
     <hr>

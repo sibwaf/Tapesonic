@@ -53,6 +53,9 @@ type TapesonicConfig struct {
 	StreamCacheMinLifetime time.Duration
 
 	ListenBrainzToken string
+
+	LastFmApiKey    string
+	LastFmApiSecret string
 }
 
 type BackgroundTaskConfig struct {
@@ -124,6 +127,9 @@ func NewConfig() (*TapesonicConfig, error) {
 		StreamCacheMinLifetime: getEnvDurationOrDefault("TAPESONIC_STREAM_CACHE_MIN_LIFETIME", 1*time.Hour),
 
 		ListenBrainzToken: os.Getenv("TAPESONIC_LISTENBRAINZ_TOKEN"),
+
+		LastFmApiKey:    os.Getenv("TAPESONIC_LAST_FM_API_KEY"),
+		LastFmApiSecret: os.Getenv("TAPESONIC_LAST_FM_API_SECRET"),
 	}
 
 	return config, nil

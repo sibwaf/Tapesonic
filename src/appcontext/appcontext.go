@@ -5,6 +5,7 @@ import (
 	"path"
 	configPkg "tapesonic/config"
 	"tapesonic/ffmpeg"
+	"tapesonic/http/lastfm"
 	"tapesonic/http/listenbrainz"
 	"tapesonic/http/subsonic/client"
 	"tapesonic/logic"
@@ -35,6 +36,7 @@ type Context struct {
 	CachedMuxArtistStorage      *storage.CachedMuxArtistStorage
 	MuxedSongListensStorage     *storage.MuxedSongListensStorage
 	ListenbrainzPlaylistStorage *storage.ListenbrainzPlaylistStorage
+	LastFmSessionStorage        *storage.LastFmSessionStorage
 	YtdlpMetadataStorage        *storage.YtdlpMetadataStorage
 	MediaStorage                *storage.MediaStorage
 	StreamCacheStorage          *storage.StreamCacheStorage
@@ -45,6 +47,9 @@ type Context struct {
 	YtdlpService *logic.YtdlpService
 
 	ListenBrainzClient *listenbrainz.ListenBrainzClient
+	LastFmClient       *lastfm.LastFmClient
+
+	LastFmService *logic.LastFmService
 
 	ThumbnailService *logic.ThumbnailService
 
@@ -127,6 +132,9 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	if context.ListenbrainzPlaylistStorage, err = storage.NewListenBrainzPlaylistStorage(db); err != nil {
 		return nil, err
 	}
+	if context.LastFmSessionStorage, err = storage.NewLastFmSessionStorage(db); err != nil {
+		return nil, err
+	}
 	if context.YtdlpMetadataStorage, err = storage.NewYtdlpMetadataStorage(db); err != nil {
 		return nil, err
 	}
@@ -162,6 +170,15 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	if config.ListenBrainzToken != "" {
 		context.ListenBrainzClient = listenbrainz.NewListenBrainzClient(config.ListenBrainzToken)
 	}
+
+	if config.LastFmApiKey != "" && config.LastFmApiSecret != "" {
+		context.LastFmClient = lastfm.NewLastFmClient(config.LastFmApiKey, config.LastFmApiSecret)
+	}
+
+	context.LastFmService = logic.NewLastFmService(
+		context.LastFmClient,
+		context.LastFmSessionStorage,
+	)
 
 	if context.ListenBrainzClient != nil {
 		context.ScrobbleService = logic.NewScrobbleService(*context.ListenBrainzClient)

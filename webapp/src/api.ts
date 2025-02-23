@@ -99,7 +99,42 @@ export interface ListThumbnailRs {
     Id: string;
 }
 
+export interface LastFmSessionRs {
+    Username: string;
+    UpdatedAt: string;
+}
+
+export interface LastFmAuthLinkRs {
+    Url: string;
+    Token: string;
+}
+
+export interface CreateLastFmSessionRq {
+    Token: string;
+}
+
 export default {
+    async getCurrentLastFmSession(): Promise<LastFmSessionRs | null> {
+        const response = await fetch(`/api/settings/lastfm/auth`, { method: "GET" });
+        const body = await response.text();
+        if (body == "") {
+            return null;
+        } else {
+            return JSON.parse(body);
+        }
+    },
+    async createLastFmAuthLink(): Promise<LastFmAuthLinkRs> {
+        const response = await fetch(`/api/settings/lastfm/create-auth-link`, { method: "POST" });
+        return await response.json();
+    },
+    async createLastFmSession(token: string): Promise<LastFmSessionRs> {
+        const request: CreateLastFmSessionRq = {
+            Token: token,
+        };
+        const response = await fetch(`/api/settings/lastfm/auth`, { method: "POST", body: JSON.stringify(request) });
+        return await response.json();
+    },
+
     async addSource(url: string): Promise<FullSourceRs> {
         const params = new URLSearchParams({ "url": url });
         const response = await fetch(`/api/sources?${params}`, { method: "POST" });

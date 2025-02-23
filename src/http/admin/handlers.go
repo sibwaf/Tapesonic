@@ -18,6 +18,9 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 
 	// todo: logging
 	rawHandlers := []PathHandler{
+		{Path: "/api/settings/lastfm/auth", Handler: util.AsHandlerFunc(handlers.NewSettingsLastFmAuthHandler(appCtx.LastFmService))},
+		{Path: "/api/settings/lastfm/create-auth-link", Handler: util.AsHandlerFunc(handlers.NewSettingsLastFmCreateAuthLinkHandler(appCtx.LastFmService))},
+
 		{Path: "/api/tapes", Handler: util.AsHandlerFunc(handlers.NewTapesHandler(appCtx.TapeService))},
 		{Path: "/api/tapes/guess-metadata", Handler: util.AsHandlerFunc(handlers.NewGuessTapeMetadataHandler(appCtx.TapeService))},
 		{Path: "/api/tapes/{tapeId}", Handler: util.AsHandlerFunc(handlers.NewTapeHandler(appCtx.TapeService))},

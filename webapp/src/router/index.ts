@@ -4,6 +4,7 @@ import TapeView from "@/views/TapeView.vue"
 import SourcesView from "@/views/SourcesView.vue"
 import SourceView from "@/views/SourceView.vue"
 import NewTapeView from "@/views/NewTapeView.vue"
+import Settings from "@/views/Settings.vue"
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -32,6 +33,11 @@ const router = createRouter({
       path: "/sources/:sourceId",
       name: "source",
       component: SourceView
+    },
+    {
+      path: "/settings",
+      name: "settings",
+      component: Settings
     },
   ]
 })
