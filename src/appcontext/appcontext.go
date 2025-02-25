@@ -180,9 +180,10 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		context.LastFmSessionStorage,
 	)
 
-	if context.ListenBrainzClient != nil {
-		context.ScrobbleService = logic.NewScrobbleService(*context.ListenBrainzClient)
-	}
+	context.ScrobbleService = logic.NewScrobbleService(
+		context.ListenBrainzClient,
+		context.LastFmService,
+	)
 
 	context.ThumbnailService = logic.NewThumbnailService(
 		context.ThumbnailStorage,

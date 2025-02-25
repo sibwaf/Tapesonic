@@ -93,3 +93,49 @@ func (s *LastFmService) GetCurrentSession() (*LastFmSession, error) {
 		UpdatedAt:  session.UpdatedAt,
 	}, err
 }
+
+func (s *LastFmService) UpdateNowPlaying(artist string, title string, album string) error {
+	if s.client == nil {
+		return ErrLastFmNotConfigured
+	}
+
+	session, err := s.sessions.Find()
+	if err != nil {
+		return err
+	} else if session == nil {
+		return errors.New("no active last.fm session")
+	}
+
+	if artist == "" || title == "" {
+		return fmt.Errorf("artist and title must be provided")
+	}
+
+	return s.client.UpdateNowPlaying(session.SessionKey, lastfm.UpdateNowPlayingRq{Artist: artist, Track: title, Album: album})
+}
+
+func (s *LastFmService) Scrobble(timestamp time.Time, artist string, title string, album string) error {
+	if s.client == nil {
+		return ErrLastFmNotConfigured
+	}
+
+	session, err := s.sessions.Find()
+	if err != nil {
+		return err
+	} else if session == nil {
+		return errors.New("no active last.fm session")
+	}
+
+	if artist == "" || title == "" {
+		return fmt.Errorf("artist and title must be provided")
+	}
+
+	return s.client.Scrobble(
+		session.SessionKey,
+		lastfm.ScrobbleRq{
+			Timestamp: timestamp.Unix(),
+			Artist:    artist,
+			Track:     title,
+			Album:     album,
+		},
+	)
+}

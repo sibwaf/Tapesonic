@@ -12,3 +12,16 @@ type Session struct {
 	Name string `json:"name"`
 	Key  string `json:"key"`
 }
+
+type UpdateNowPlayingRq struct {
+	Artist string
+	Track  string
+	Album  string
+}
+
+type ScrobbleRq struct {
+	Artist    string
+	Track     string
+	Album     string
+	Timestamp int64
+}

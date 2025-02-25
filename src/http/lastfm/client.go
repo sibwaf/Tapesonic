@@ -87,6 +87,53 @@ func (c *LastFmClient) AuthGetSession(token string) (SessionWrapper, error) {
 	return result, json.NewDecoder(res.Body).Decode(&result)
 }
 
+func (c *LastFmClient) UpdateNowPlaying(sessionKey string, request UpdateNowPlayingRq) error {
+	params := url.Values{}
+	params.Add("method", "track.updateNowPlaying")
+	params.Add("artist", request.Artist)
+	params.Add("track", request.Track)
+	if request.Album != "" {
+		params.Add("album", request.Album)
+	}
+	params.Add("api_key", c.apiKey)
+	params.Add("sk", sessionKey)
+	params.Add("api_sig", c.createSignature(params))
+	params.Add("format", "json")
+
+	res, err := http.DefaultClient.PostForm(c.baseUrl, params)
+	if err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+
+	return extractError(res)
+}
+
+func (c *LastFmClient) Scrobble(sessionKey string, request ScrobbleRq) error {
+	params := url.Values{}
+	params.Add("method", "track.scrobble")
+	params.Add("timestamp", fmt.Sprint(request.Timestamp))
+	params.Add("artist", request.Artist)
+	params.Add("track", request.Track)
+	if request.Album != "" {
+		params.Add("album", request.Album)
+	}
+	params.Add("api_key", c.apiKey)
+	params.Add("sk", sessionKey)
+	params.Add("api_sig", c.createSignature(params))
+	params.Add("format", "json")
+
+	res, err := http.DefaultClient.PostForm(c.baseUrl, params)
+	if err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+
+	return extractError(res)
+}
+
 func (c *LastFmClient) createSignature(params url.Values) string {
 	sortedKeys := make([]string, len(params))
 	for key := range params {
