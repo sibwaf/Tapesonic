@@ -148,7 +148,16 @@ func (storage *SourceStorage) FindNextForDownload() (*Source, error) {
 		SELECT sources.*
 		FROM sources
 		LEFT JOIN source_files ON source_files.source_id = sources.id
-		WHERE sources.duration_ms > 0 AND source_files.id IS NULL
+		WHERE
+			sources.duration_ms > 0
+			AND source_files.id IS NULL
+			AND EXISTS (
+				SELECT 1
+				FROM tracks
+				JOIN tape_to_tracks ON tape_to_tracks.track_id = tracks.id
+				WHERE tracks.source_id = sources.id
+				LIMIT 1
+			)
 		ORDER BY random()
 		LIMIT 1
 	`
