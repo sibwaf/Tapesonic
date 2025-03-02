@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -46,8 +47,8 @@ func NewCachedMuxSongStorage(db *gorm.DB) (*CachedMuxSongStorage, error) {
 	return &CachedMuxSongStorage{db: NewDbHelper(db)}, err
 }
 
-func (storage *CachedMuxSongStorage) Save(item CachedMuxSong) (*CachedMuxSong, error) {
-	return &item, storage.db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&item).Error
+func (storage *CachedMuxSongStorage) Save(item CachedMuxSong) (CachedMuxSong, error) {
+	return item, storage.db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&item).Error
 }
 
 func (storage *CachedMuxSongStorage) Replace(items []CachedMuxSong) error {
@@ -71,7 +72,13 @@ func (storage *CachedMuxSongStorage) GetById(serviceName string, songId string) 
 		ServiceName: serviceName,
 		SongId:      songId,
 	}
-	return &result, storage.db.First(&result).Error
+
+	err := storage.db.Take(&result).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	} else {
+		return &result, err
+	}
 }
 
 func (storage *CachedMuxSongStorage) Search(query string, count int, offset int) ([]CachedSongId, error) {

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"math/rand"
 	"slices"
 	"sort"
@@ -23,21 +22,21 @@ const (
 type SubsonicMuxService struct {
 	services []*SubsonicNamedService
 
-	cachedMuxSong    *storage.CachedMuxSongStorage
 	muxedSongListens *storage.MuxedSongListensStorage
+	songCache        *SongCacheService
 
 	scrobbler *ScrobbleService
 }
 
 func NewSubsonicMuxService(
-	cachedMuxSong *storage.CachedMuxSongStorage,
 	muxedSongListens *storage.MuxedSongListensStorage,
+	songCache *SongCacheService,
 	scrobbler *ScrobbleService,
 ) *SubsonicMuxService {
 	return &SubsonicMuxService{
 		services:         []*SubsonicNamedService{},
-		cachedMuxSong:    cachedMuxSong,
 		muxedSongListens: muxedSongListens,
+		songCache:        songCache,
 		scrobbler:        scrobbler,
 	}
 }
@@ -318,26 +317,6 @@ func (svc *SubsonicMuxService) Scrobble(id string, time_ time.Time, submission b
 		return err
 	}
 
-	song, cacheWriteErr := service.GetSong(id)
-	if cacheWriteErr == nil {
-		rawSong := service.GetRawSong(*song)
-		_, cacheWriteErr = svc.cachedMuxSong.Save(
-			storage.CachedMuxSong{
-				ServiceName: service.Name(),
-				SongId:      rawSong.Id,
-				AlbumId:     rawSong.AlbumId,
-				Artist:      rawSong.Artist,
-				Album:       rawSong.Album,
-				Title:       rawSong.Title,
-				DurationSec: rawSong.Duration,
-				CachedAt:    time.Now(),
-			},
-		)
-	}
-	if cacheWriteErr != nil {
-		slog.Error(fmt.Sprintf("Failed to cache song info when scrobbling: %s", cacheWriteErr.Error()))
-	}
-
 	selfErr := svc.muxedSongListens.Record(service.Name(), service.RemovePrefix(id), time_, submission)
 	serviceErr := service.Scrobble(id, time_, submission)
 	scrobblerErr := svc.scrobbleWithScrobbler(service.Name(), service.RemovePrefix(id), time_, submission)
@@ -350,7 +329,7 @@ func (svc *SubsonicMuxService) scrobbleWithScrobbler(serviceName string, id stri
 		return nil
 	}
 
-	song, err := svc.cachedMuxSong.GetById(serviceName, id)
+	song, err := svc.songCache.Refresh(serviceName, id)
 	if err != nil {
 		return err
 	}

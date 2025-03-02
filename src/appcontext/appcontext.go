@@ -23,23 +23,23 @@ import (
 type Context struct {
 	Config *configPkg.TapesonicConfig
 
-	TapeStorage                 *storage.TapeStorage
-	SourceStorage               *storage.SourceStorage
-	SourceFileStorage           *storage.SourceFileStorage
-	TrackStorage                *storage.TrackStorage
-	ThumbnailStorage            *storage.ThumbnailStorage
-	PlaylistStorage             *storage.PlaylistStorage
-	AlbumStorage                *storage.AlbumStorage
-	TrackListensStorage         *storage.TrackListensStorage
-	CachedMuxSongStorage        *storage.CachedMuxSongStorage
-	CachedMuxAlbumStorage       *storage.CachedMuxAlbumStorage
-	CachedMuxArtistStorage      *storage.CachedMuxArtistStorage
-	MuxedSongListensStorage     *storage.MuxedSongListensStorage
-	ListenbrainzPlaylistStorage *storage.ListenbrainzPlaylistStorage
-	LastFmSessionStorage        *storage.LastFmSessionStorage
-	YtdlpMetadataStorage        *storage.YtdlpMetadataStorage
-	MediaStorage                *storage.MediaStorage
-	StreamCacheStorage          *storage.StreamCacheStorage
+	TapeStorage             *storage.TapeStorage
+	SourceStorage           *storage.SourceStorage
+	SourceFileStorage       *storage.SourceFileStorage
+	TrackStorage            *storage.TrackStorage
+	ThumbnailStorage        *storage.ThumbnailStorage
+	PlaylistStorage         *storage.PlaylistStorage
+	AlbumStorage            *storage.AlbumStorage
+	TrackListensStorage     *storage.TrackListensStorage
+	CachedMuxSongStorage    *storage.CachedMuxSongStorage
+	CachedMuxAlbumStorage   *storage.CachedMuxAlbumStorage
+	CachedMuxArtistStorage  *storage.CachedMuxArtistStorage
+	MuxedSongListensStorage *storage.MuxedSongListensStorage
+	ExternalPlaylistStorage *storage.ExternalPlaylistStorage
+	LastFmSessionStorage    *storage.LastFmSessionStorage
+	YtdlpMetadataStorage    *storage.YtdlpMetadataStorage
+	MediaStorage            *storage.MediaStorage
+	StreamCacheStorage      *storage.StreamCacheStorage
 
 	Ytdlp  *ytdlp.Ytdlp
 	Ffmpeg *ffmpeg.Ffmpeg
@@ -59,7 +59,8 @@ type Context struct {
 	SourceService     *logic.SourceService
 	TapeService       *logic.TapeService
 
-	SearchService *logic.SearchService
+	SearchService    *logic.SearchService
+	SongCacheService *logic.SongCacheService
 
 	SubsonicProviders []*logic.SubsonicNamedService
 	SubsonicMuxer     logic.SubsonicService
@@ -129,7 +130,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	if context.MuxedSongListensStorage, err = storage.NewMuxedSongListensStorage(db); err != nil {
 		return nil, err
 	}
-	if context.ListenbrainzPlaylistStorage, err = storage.NewListenBrainzPlaylistStorage(db); err != nil {
+	if context.ExternalPlaylistStorage, err = storage.NewExternalPlaylistStorage(db); err != nil {
 		return nil, err
 	}
 	if context.LastFmSessionStorage, err = storage.NewLastFmSessionStorage(db); err != nil {
@@ -210,13 +211,6 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 
 	context.SearchService = logic.NewSearchService(context.SourceStorage, context.TrackStorage)
 
-	subsonicMux := logic.NewSubsonicMuxService(
-		context.CachedMuxSongStorage,
-		context.MuxedSongListensStorage,
-		util.TakeIf(context.ScrobbleService, config.ScrobbleMode == configPkg.ScrobbleAll),
-	)
-	context.SubsonicMuxer = subsonicMux
-
 	internalSubsonic := logic.NewSubsonicNamedService(
 		"tapesonic",
 		logic.NewSubsonicInternalService(
@@ -233,7 +227,6 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		),
 	)
 	context.SubsonicProviders = append(context.SubsonicProviders, internalSubsonic)
-	subsonicMux.AddService(internalSubsonic)
 
 	if config.SubsonicProxyUrl != "" {
 		externalSubsonic := logic.NewSubsonicNamedService(
@@ -247,7 +240,19 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 			),
 		)
 		context.SubsonicProviders = append(context.SubsonicProviders, externalSubsonic)
-		subsonicMux.AddService(externalSubsonic)
+	}
+
+	context.SongCacheService = logic.NewSongCacheService(context.SubsonicProviders, context.CachedMuxSongStorage)
+
+	subsonicMux := logic.NewSubsonicMuxService(
+		context.MuxedSongListensStorage,
+		context.SongCacheService,
+		util.TakeIf(context.ScrobbleService, config.ScrobbleMode == configPkg.ScrobbleAll),
+	)
+	context.SubsonicMuxer = subsonicMux
+
+	for _, subsonicProvider := range context.SubsonicProviders {
+		subsonicMux.AddService(subsonicProvider)
 	}
 
 	context.SubsonicService = logic.NewSubsonicMainService(
@@ -256,7 +261,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		context.CachedMuxSongStorage,
 		context.CachedMuxAlbumStorage,
 		context.CachedMuxArtistStorage,
-		context.ListenbrainzPlaylistStorage,
+		context.ExternalPlaylistStorage,
 	)
 
 	if err = registerBackgroundTasks(&context); err != nil {
@@ -287,8 +292,8 @@ func registerBackgroundTasks(context *Context) error {
 	if context.Config.TasksListenBrainzPlaylistSync.Cron != configPkg.CronDisabled && context.ListenBrainzClient != nil {
 		if err = tasks.NewListenBrainzPlaylistSyncHandler(
 			context.ListenBrainzClient,
-			context.CachedMuxSongStorage,
-			*context.ListenbrainzPlaylistStorage,
+			context.SongCacheService,
+			context.ExternalPlaylistStorage,
 			context.Config.TasksListenBrainzPlaylistSync,
 		).RegisterSchedules(cron); err != nil {
 			return err

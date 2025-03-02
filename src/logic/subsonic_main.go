@@ -20,7 +20,7 @@ type subsonicMainService struct {
 	albumCache  *storage.CachedMuxAlbumStorage
 	artistCache *storage.CachedMuxArtistStorage
 
-	listenbrainzPlaylists *storage.ListenbrainzPlaylistStorage
+	externalPlaylists *storage.ExternalPlaylistStorage
 }
 
 func NewSubsonicMainService(
@@ -29,15 +29,15 @@ func NewSubsonicMainService(
 	songCache *storage.CachedMuxSongStorage,
 	albumCache *storage.CachedMuxAlbumStorage,
 	artistCache *storage.CachedMuxArtistStorage,
-	listenbrainzPlaylists *storage.ListenbrainzPlaylistStorage,
+	externalPlaylists *storage.ExternalPlaylistStorage,
 ) SubsonicService {
 	return &subsonicMainService{
-		delegate:              delegate,
-		subsonicProviders:     subsonicProviders,
-		songCache:             songCache,
-		albumCache:            albumCache,
-		artistCache:           artistCache,
-		listenbrainzPlaylists: listenbrainzPlaylists,
+		delegate:          delegate,
+		subsonicProviders: subsonicProviders,
+		songCache:         songCache,
+		albumCache:        albumCache,
+		artistCache:       artistCache,
+		externalPlaylists: externalPlaylists,
 	}
 }
 
@@ -135,22 +135,21 @@ func (svc *subsonicMainService) GetAlbumList2(type_ string, size int, offset int
 }
 
 func (svc *subsonicMainService) GetPlaylist(id string) (*responses.SubsonicPlaylist, error) {
-	if strings.HasPrefix(id, "listenbrainz_") {
-		id = strings.TrimPrefix(id, "listenbrainz_")
+	if strings.HasPrefix(id, "external_") {
+		id = strings.TrimPrefix(id, "external_")
 
-		playlist, err := svc.listenbrainzPlaylists.GetSubsonicPlaylist(id)
+		playlist, err := svc.externalPlaylists.GetSubsonicPlaylist(id)
+		if err != nil {
+			return nil, err
+		}
+		trackIds, err := svc.externalPlaylists.GetTracksByPlaylist(id)
 		if err != nil {
 			return nil, err
 		}
 
-		tracks, err := svc.listenbrainzPlaylists.GetTracksByPlaylist(id)
-		if err != nil {
-			return nil, err
-		}
+		responsePlaylist := addPlaylistIdPrefix("external", playlist)
 
-		responsePlaylist := listenbrainzPlaylistToSubsonic(*playlist)
-
-		responsePlaylist.Entry, err = util.ParallelMap(tracks, func(item storage.CachedSongIdWithIndex) (responses.SubsonicChild, error) {
+		responsePlaylist.Entry, err = util.ParallelMap(trackIds, func(item storage.CachedSongIdWithIndex) (responses.SubsonicChild, error) {
 			subsonicProvider, err := svc.findServiceByName(item.ServiceName)
 			if err != nil {
 				return responses.SubsonicChild{}, err
@@ -178,11 +177,11 @@ func (svc *subsonicMainService) GetPlaylist(id string) (*responses.SubsonicPlayl
 func (svc *subsonicMainService) GetPlaylists() (*responses.SubsonicPlaylists, error) {
 	allPlaylists := []responses.SubsonicPlaylist{}
 
-	listenbrainzPlaylists, err := svc.getListenbrainzPlaylists()
+	externalPlaylists, err := svc.getExternalPlaylists()
 	if err != nil {
 		return nil, err
 	}
-	allPlaylists = append(allPlaylists, listenbrainzPlaylists.Playlist...)
+	allPlaylists = append(allPlaylists, externalPlaylists.Playlist...)
 
 	libraryPlaylists, err := svc.delegate.GetPlaylists()
 	if err != nil {
@@ -193,8 +192,8 @@ func (svc *subsonicMainService) GetPlaylists() (*responses.SubsonicPlaylists, er
 	return responses.NewSubsonicPlaylists(allPlaylists), nil
 }
 
-func (svc *subsonicMainService) getListenbrainzPlaylists() (*responses.SubsonicPlaylists, error) {
-	playlists, err := svc.listenbrainzPlaylists.GetSubsonicPlaylists(math.MaxInt32, 0)
+func (svc *subsonicMainService) getExternalPlaylists() (*responses.SubsonicPlaylists, error) {
+	playlists, err := svc.externalPlaylists.GetSubsonicPlaylists(math.MaxInt32, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -205,15 +204,15 @@ func (svc *subsonicMainService) getListenbrainzPlaylists() (*responses.SubsonicP
 			continue
 		}
 
-		resultPlaylists = append(resultPlaylists, *listenbrainzPlaylistToSubsonic(playlist))
+		resultPlaylists = append(resultPlaylists, *addPlaylistIdPrefix("external", playlist))
 	}
 
 	return responses.NewSubsonicPlaylists(resultPlaylists), nil
 }
 
-func listenbrainzPlaylistToSubsonic(playlist storage.SubsonicPlaylistItem) *responses.SubsonicPlaylist {
+func addPlaylistIdPrefix(prefix string, playlist storage.SubsonicPlaylistItem) *responses.SubsonicPlaylist {
 	result := responses.NewSubsonicPlaylist(
-		fmt.Sprintf("listenbrainz_%s", playlist.Id),
+		fmt.Sprintf("%s_%s", prefix, playlist.Id),
 		playlist.Name,
 		playlist.SongCount,
 		playlist.DurationSec,

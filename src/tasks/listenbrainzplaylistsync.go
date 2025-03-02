@@ -6,30 +6,33 @@ import (
 	"strings"
 	"tapesonic/config"
 	"tapesonic/http/listenbrainz"
+	"tapesonic/logic"
 	"tapesonic/storage"
 
 	"github.com/robfig/cron/v3"
 )
 
+const providerListenbrainz = "listenbrainz"
+
 type ListenBrainzPlaylistSyncHandler struct {
-	client                *listenbrainz.ListenBrainzClient
-	songs                 *storage.CachedMuxSongStorage
-	listenbrainzPlaylists storage.ListenbrainzPlaylistStorage
+	client      *listenbrainz.ListenBrainzClient
+	cachedSongs *logic.SongCacheService
+	playlists   *storage.ExternalPlaylistStorage
 
 	taskConfig config.BackgroundTaskConfig
 }
 
 func NewListenBrainzPlaylistSyncHandler(
 	client *listenbrainz.ListenBrainzClient,
-	songs *storage.CachedMuxSongStorage,
-	listenbrainzPlaylists storage.ListenbrainzPlaylistStorage,
+	cachedSongs *logic.SongCacheService,
+	playlists *storage.ExternalPlaylistStorage,
 
 	taskConfig config.BackgroundTaskConfig,
 ) *ListenBrainzPlaylistSyncHandler {
 	return &ListenBrainzPlaylistSyncHandler{
-		client:                client,
-		songs:                 songs,
-		listenbrainzPlaylists: listenbrainzPlaylists,
+		client:      client,
+		cachedSongs: cachedSongs,
+		playlists:   playlists,
 
 		taskConfig: taskConfig,
 	}
@@ -55,7 +58,7 @@ func (h *ListenBrainzPlaylistSyncHandler) onSchedule() {
 		return
 	}
 
-	resultPlaylists := []storage.ListenbrainzPlaylist{}
+	resultPlaylists := []storage.ExternalPlaylist{}
 	for _, playlist := range playlists.Playlists {
 		resultPlaylist, err := h.processPlaylist(playlist.Playlist)
 		if err != nil {
@@ -66,7 +69,7 @@ func (h *ListenBrainzPlaylistSyncHandler) onSchedule() {
 		resultPlaylists = append(resultPlaylists, resultPlaylist)
 	}
 
-	err = h.listenbrainzPlaylists.Replace(resultPlaylists)
+	err = h.playlists.Replace(providerListenbrainz, resultPlaylists)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to replace ListenBrainz playlists in the database: %s", err.Error()))
 	}
@@ -74,23 +77,25 @@ func (h *ListenBrainzPlaylistSyncHandler) onSchedule() {
 	slog.Info("Done synchronizing ListenBrainz playlists")
 }
 
-func (h *ListenBrainzPlaylistSyncHandler) processPlaylist(playlist listenbrainz.PlaylistResponse) (storage.ListenbrainzPlaylist, error) {
+func (h *ListenBrainzPlaylistSyncHandler) processPlaylist(playlist listenbrainz.PlaylistResponse) (storage.ExternalPlaylist, error) {
 	slog.Debug(fmt.Sprintf("Processing ListenBrainz playlist `%s`", playlist.Title))
 
 	playlistIdParts := strings.Split(playlist.Identifier, "/")
 	if len(playlistIdParts) == 0 {
-		return storage.ListenbrainzPlaylist{}, fmt.Errorf("unable to parse id from `%s`", playlist.Identifier)
+		return storage.ExternalPlaylist{}, fmt.Errorf("unable to parse id from `%s`", playlist.Identifier)
 	}
 
 	playlistId := playlistIdParts[len(playlistIdParts)-1]
 
 	playlistInfo, err := h.client.GetPlaylist(playlistId)
 	if err != nil {
-		return storage.ListenbrainzPlaylist{}, err
+		return storage.ExternalPlaylist{}, err
 	}
 
-	resultPlaylist := storage.ListenbrainzPlaylist{
-		Id:          playlistId,
+	resultPlaylist := storage.ExternalPlaylist{
+		Id:          fmt.Sprintf("%s_%s", providerListenbrainz, playlistId),
+		Provider:    providerListenbrainz,
+		RawId:       playlistId,
 		Name:        playlistInfo.Title,
 		Description: playlistInfo.Annotation,
 		CreatedBy:   playlistInfo.Creator,
@@ -98,9 +103,9 @@ func (h *ListenBrainzPlaylistSyncHandler) processPlaylist(playlist listenbrainz.
 	}
 
 	for i, track := range playlistInfo.Track {
-		trackId, err := h.findTrack(track.Creator, track.Album, track.Title)
+		trackId, err := h.cachedSongs.FindSongIdByFields(track.Creator, track.Title, track.Album)
 		if err != nil {
-			return storage.ListenbrainzPlaylist{}, err
+			return storage.ExternalPlaylist{}, err
 		}
 
 		if trackId == nil {
@@ -108,12 +113,12 @@ func (h *ListenBrainzPlaylistSyncHandler) processPlaylist(playlist listenbrainz.
 			continue
 		}
 
-		resultTrack := storage.ListenbrainzPlaylistTrack{
+		resultTrack := storage.ExternalPlaylistTrack{
 			Artist: track.Creator,
 			Album:  track.Album,
 			Title:  track.Title,
 
-			ListenbrainzPlaylist: &resultPlaylist,
+			ExternalPlaylist: &resultPlaylist,
 
 			MatchedServiceName: trackId.ServiceName,
 			MatchedSongId:      trackId.Id,
@@ -121,7 +126,7 @@ func (h *ListenBrainzPlaylistSyncHandler) processPlaylist(playlist listenbrainz.
 			TrackIndex: i,
 		}
 
-		resultPlaylist.Tracks = append(resultPlaylist.Tracks, &resultTrack)
+		resultPlaylist.Tracks = append(resultPlaylist.Tracks, resultTrack)
 	}
 
 	slog.Debug(
@@ -135,17 +140,4 @@ func (h *ListenBrainzPlaylistSyncHandler) processPlaylist(playlist listenbrainz.
 	)
 
 	return resultPlaylist, nil
-}
-
-func (h *ListenBrainzPlaylistSyncHandler) findTrack(artist string, album string, title string) (*storage.CachedSongId, error) {
-	tracks, err := h.songs.SearchByFields(artist, album, title, 2)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(tracks) == 1 {
-		return &tracks[0], nil
-	}
-
-	return nil, nil
 }
