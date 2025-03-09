@@ -3,12 +3,9 @@ package tasks
 import (
 	"fmt"
 	"log/slog"
-	"tapesonic/config"
 	"tapesonic/logic"
 	"tapesonic/storage"
 	"time"
-
-	"github.com/robfig/cron/v3"
 )
 
 type SyncLibraryHandler struct {
@@ -17,8 +14,6 @@ type SyncLibraryHandler struct {
 	songs   *storage.CachedMuxSongStorage
 	albums  *storage.CachedMuxAlbumStorage
 	artists *storage.CachedMuxArtistStorage
-
-	taskConfig config.BackgroundTaskConfig
 }
 
 func NewSyncLibraryHandler(
@@ -27,25 +22,20 @@ func NewSyncLibraryHandler(
 	songs *storage.CachedMuxSongStorage,
 	albums *storage.CachedMuxAlbumStorage,
 	artists *storage.CachedMuxArtistStorage,
-
-	taskConfig config.BackgroundTaskConfig,
 ) *SyncLibraryHandler {
 	return &SyncLibraryHandler{
 		subsonicProviders: subsonicProviders,
 		songs:             songs,
 		albums:            albums,
 		artists:           artists,
-
-		taskConfig: taskConfig,
 	}
 }
 
-func (h *SyncLibraryHandler) RegisterSchedules(cron *cron.Cron) error {
-	_, err := cron.AddFunc(h.taskConfig.Cron, h.onSchedule)
-	return err
+func (h *SyncLibraryHandler) Name() string {
+	return "SYNC_LIBRARY"
 }
 
-func (h *SyncLibraryHandler) onSchedule() {
+func (h *SyncLibraryHandler) OnSchedule() error {
 	slog.Debug("Refreshing the library cache")
 
 	artists := []storage.CachedMuxArtist{}
@@ -62,8 +52,7 @@ func (h *SyncLibraryHandler) onSchedule() {
 			slog.Debug(fmt.Sprintf("Requesting %d more contents from subsonic `%s` for the library cache sync", batchSize, subsonicProvider.Name()))
 			search, err := subsonicProvider.Search3("", batchSize, len(thisArtists), batchSize, len(thisAlbums), batchSize, len(thisSongs))
 			if err != nil {
-				slog.Error(fmt.Sprintf("Failed to make a no-query search while syncing the library cache, aborting: %s", err.Error()))
-				return
+				return fmt.Errorf("failed to make a no-query search while syncing the library cache, aborting: %w", err)
 			}
 
 			slog.Debug(fmt.Sprintf("Got another %d artists, %d albums and %d songs from subsonic `%s` while syncing the library cache", len(search.Artist), len(search.Album), len(search.Song), subsonicProvider.Name()))
@@ -129,18 +118,19 @@ func (h *SyncLibraryHandler) onSchedule() {
 
 	err := h.artists.Replace(artists)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to save refreshed artist cache: %s", err.Error()))
+		return fmt.Errorf("failed to save refreshed artist cache: %w", err)
 	}
 
 	err = h.albums.Replace(albums)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to save refreshed album cache: %s", err.Error()))
+		return fmt.Errorf("failed to save refreshed album cache: %w", err)
 	}
 
 	err = h.songs.Replace(songs)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to save refreshed song cache: %s", err.Error()))
+		return fmt.Errorf("failed to save refreshed song cache: %w", err)
 	}
 
 	slog.Info("Done refreshing the library cache")
+	return nil
 }

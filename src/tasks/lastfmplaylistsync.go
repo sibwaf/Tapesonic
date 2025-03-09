@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"tapesonic/config"
 	"tapesonic/http/lastfm"
 	"tapesonic/logic"
 	"tapesonic/storage"
-
-	"github.com/robfig/cron/v3"
 )
 
 const providerLastfm = "lastfm"
@@ -23,8 +20,6 @@ type LastFmPlaylistSyncHandler struct {
 	playlists   *storage.ExternalPlaylistStorage
 
 	targetPlaylistSize int
-
-	taskConfig config.BackgroundTaskConfig
 }
 
 func NewLastFmPlaylistSyncHandler(
@@ -34,7 +29,6 @@ func NewLastFmPlaylistSyncHandler(
 	importer *logic.AutoImportService,
 	playlists *storage.ExternalPlaylistStorage,
 	targetPlaylistSize int,
-	taskConfig config.BackgroundTaskConfig,
 ) *LastFmPlaylistSyncHandler {
 	return &LastFmPlaylistSyncHandler{
 		client:             client,
@@ -43,27 +37,24 @@ func NewLastFmPlaylistSyncHandler(
 		importer:           importer,
 		playlists:          playlists,
 		targetPlaylistSize: targetPlaylistSize,
-		taskConfig:         taskConfig,
 	}
 }
 
-func (h *LastFmPlaylistSyncHandler) RegisterSchedules(cron *cron.Cron) error {
-	_, err := cron.AddFunc(h.taskConfig.Cron, h.onSchedule)
-	return err
+func (h *LastFmPlaylistSyncHandler) Name() string {
+	return "LAST_FM_PLAYLIST_SYNC"
 }
 
-func (h *LastFmPlaylistSyncHandler) onSchedule() {
+func (h *LastFmPlaylistSyncHandler) OnSchedule() error {
 	slog.Debug("Synchronizing last.fm playlists")
 
 	session, err := h.svc.GetCurrentSession()
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to get current last.fm session: %s", err.Error()))
-		return
+		return fmt.Errorf("failed to get current last.fm session: %w", err)
 	}
 
 	if session == nil {
 		slog.Debug("No current last.fm session found, skipping playlist sync")
-		return
+		return nil
 	}
 
 	slog.Debug(fmt.Sprintf("Synchronizing last.fm playlists for %s", session.Username))
@@ -76,8 +67,7 @@ func (h *LastFmPlaylistSyncHandler) onSchedule() {
 		},
 	)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to get library playlist for %s from last.fm: %s", session.Username, err.Error()))
-		return
+		return fmt.Errorf("failed to get library playlist for %s from last.fm: %w", session.Username, err)
 	}
 
 	mixPlaylist, err := h.processPlaylist(
@@ -88,8 +78,7 @@ func (h *LastFmPlaylistSyncHandler) onSchedule() {
 		},
 	)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to get mix playlist for %s from last.fm: %s", session.Username, err.Error()))
-		return
+		return fmt.Errorf("failed to get mix playlist for %s from last.fm: %w", session.Username, err)
 	}
 
 	recommendedPlaylist, err := h.processPlaylist(
@@ -100,16 +89,16 @@ func (h *LastFmPlaylistSyncHandler) onSchedule() {
 		},
 	)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to get recommended playlist for %s from last.fm: %s", session.Username, err.Error()))
-		return
+		return fmt.Errorf("failed to get recommended playlist for %s from last.fm: %w", session.Username, err)
 	}
 
 	err = h.playlists.Replace(providerLastfm, []storage.ExternalPlaylist{libraryPlaylist, mixPlaylist, recommendedPlaylist})
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to replace last.fm playlists in the database: %s", err.Error()))
+		return fmt.Errorf("failed to replace last.fm playlists in the database: %w", err)
 	}
 
 	slog.Info("Done synchronizing last.fm playlists")
+	return nil
 }
 
 func (h *LastFmPlaylistSyncHandler) processPlaylist(

@@ -40,7 +40,7 @@ type TapesonicConfig struct {
 	YtdlpMetadataMaxParallelism int
 
 	TasksDownloadSources          BackgroundTaskConfig
-	TasksLibrarySync              BackgroundTaskConfig
+	TasksSyncLibrary              BackgroundTaskConfig
 	TasksListenBrainzPlaylistSync BackgroundTaskConfig
 	TasksLastFmPlaylistSync       BackgroundTaskConfig
 
@@ -61,8 +61,9 @@ type TapesonicConfig struct {
 }
 
 type BackgroundTaskConfig struct {
-	Cron     string
-	Cooldown time.Duration
+	Cron        string
+	RetryDelay  time.Duration
+	MaxAttempts int
 }
 
 func NewConfig() (*TapesonicConfig, error) {
@@ -115,10 +116,10 @@ func NewConfig() (*TapesonicConfig, error) {
 		MediaStorageDir: getEnvOrDefault("TAPESONIC_MEDIA_STORAGE_DIR", "media"),
 		CacheDir:        getEnvOrDefault("TAPESONIC_CACHE_DIR", "cache"),
 
-		TasksDownloadSources:          getBackgroundTaskConfig("DOWNLOAD_SOURCES", "0 * * * * *", 15*time.Minute),
-		TasksLibrarySync:              getBackgroundTaskConfig("LIBRARY_SYNC", "0 */15 * * * *", 15*time.Minute),
-		TasksListenBrainzPlaylistSync: getBackgroundTaskConfig("LISTENBRAINZ_PLAYLIST_SYNC", "0 0 */4 * * *", 15*time.Minute),
-		TasksLastFmPlaylistSync:       getBackgroundTaskConfig("LAST_FM_PLAYLIST_SYNC", "0 0 */4 * * *", 15*time.Minute),
+		TasksDownloadSources:          getBackgroundTaskConfig("DOWNLOAD_SOURCES", "0 * * * * *", 15*time.Minute, 1),
+		TasksSyncLibrary:              getBackgroundTaskConfig("SYNC_LIBRARY", "0 */15 * * * *", 1*time.Minute, 5),
+		TasksListenBrainzPlaylistSync: getBackgroundTaskConfig("LISTENBRAINZ_PLAYLIST_SYNC", "0 0 4 * * *", 15*time.Minute, 5),
+		TasksLastFmPlaylistSync:       getBackgroundTaskConfig("LAST_FM_PLAYLIST_SYNC", "0 0 4 * * *", 15*time.Minute, 5),
 
 		ScrobbleMode: scrobbleMode,
 
@@ -142,11 +143,13 @@ func NewConfig() (*TapesonicConfig, error) {
 func getBackgroundTaskConfig(
 	name string,
 	defaultCron string,
-	defaultCooldown time.Duration,
+	defaultRetryDelay time.Duration,
+	defaultMaxAttempts int,
 ) BackgroundTaskConfig {
 	return BackgroundTaskConfig{
-		Cron:     getEnvOrDefault(fmt.Sprintf("TAPESONIC_TASKS_%s_CRON", name), defaultCron),
-		Cooldown: getEnvDurationOrDefault(fmt.Sprintf("TAPESONIC_TASKS_%s_COOLDOWN", name), defaultCooldown),
+		Cron:        getEnvOrDefault(fmt.Sprintf("TAPESONIC_TASKS_%s_CRON", name), defaultCron),
+		RetryDelay:  getEnvDurationOrDefault(fmt.Sprintf("TAPESONIC_TASKS_%s_RETRY_DELAY", name), defaultRetryDelay),
+		MaxAttempts: getEnvIntOrDefault(fmt.Sprintf("TAPESONIC_TASKS_%s_MAX_ATTEMPTS", name), defaultMaxAttempts),
 	}
 }
 

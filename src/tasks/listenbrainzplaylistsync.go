@@ -4,12 +4,9 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"tapesonic/config"
 	"tapesonic/http/listenbrainz"
 	"tapesonic/logic"
 	"tapesonic/storage"
-
-	"github.com/robfig/cron/v3"
 )
 
 const providerListenbrainz = "listenbrainz"
@@ -18,54 +15,44 @@ type ListenBrainzPlaylistSyncHandler struct {
 	client      *listenbrainz.ListenBrainzClient
 	cachedSongs *logic.SongCacheService
 	playlists   *storage.ExternalPlaylistStorage
-
-	taskConfig config.BackgroundTaskConfig
 }
 
 func NewListenBrainzPlaylistSyncHandler(
 	client *listenbrainz.ListenBrainzClient,
 	cachedSongs *logic.SongCacheService,
 	playlists *storage.ExternalPlaylistStorage,
-
-	taskConfig config.BackgroundTaskConfig,
 ) *ListenBrainzPlaylistSyncHandler {
 	return &ListenBrainzPlaylistSyncHandler{
 		client:      client,
 		cachedSongs: cachedSongs,
 		playlists:   playlists,
-
-		taskConfig: taskConfig,
 	}
 }
 
-func (h *ListenBrainzPlaylistSyncHandler) RegisterSchedules(cron *cron.Cron) error {
-	_, err := cron.AddFunc(h.taskConfig.Cron, h.onSchedule)
-	return err
+func (h *ListenBrainzPlaylistSyncHandler) Name() string {
+	return "LISTENBRAINZ_PLAYLIST_SYNC"
 }
 
-func (h *ListenBrainzPlaylistSyncHandler) onSchedule() {
+func (h *ListenBrainzPlaylistSyncHandler) OnSchedule() error {
 	slog.Debug("Synchronizing ListenBrainz playlists")
 
 	tokenInfo, err := h.client.ValidateToken()
 	if err != nil || !tokenInfo.Valid {
-		slog.Error(fmt.Sprintf("Failed to get ListenBrainz username: %s", err.Error()))
-		return
+		return fmt.Errorf("failed to get ListenBrainz username: %w", err)
 	}
 
 	slog.Debug(fmt.Sprintf("Synchronizing last.fm playlists for %s", tokenInfo.Username))
 
 	playlists, err := h.client.GetPlaylistsCreatedFor(tokenInfo.Username, 20, 0)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to fetch \"Created for you\" playlists from ListenBrainz: %s", err.Error()))
-		return
+		return fmt.Errorf("failed to fetch \"Created for you\" playlists from ListenBrainz: %w", err)
 	}
 
 	resultPlaylists := []storage.ExternalPlaylist{}
 	for _, playlist := range playlists.Playlists {
 		resultPlaylist, err := h.processPlaylist(playlist.Playlist)
 		if err != nil {
-			slog.Error(fmt.Sprintf("Failed to process ListenBrainz playlist %s: %s", playlist.Playlist.Title, err.Error()))
-			return
+			return fmt.Errorf("failed to process ListenBrainz playlist %s: %w", playlist.Playlist.Title, err)
 		}
 
 		resultPlaylists = append(resultPlaylists, resultPlaylist)
@@ -73,10 +60,11 @@ func (h *ListenBrainzPlaylistSyncHandler) onSchedule() {
 
 	err = h.playlists.Replace(providerListenbrainz, resultPlaylists)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to replace ListenBrainz playlists in the database: %s", err.Error()))
+		return fmt.Errorf("failed to replace ListenBrainz playlists in the database: %w", err)
 	}
 
 	slog.Info("Done synchronizing ListenBrainz playlists")
+	return nil
 }
 
 func (h *ListenBrainzPlaylistSyncHandler) processPlaylist(playlist listenbrainz.PlaylistResponse) (storage.ExternalPlaylist, error) {

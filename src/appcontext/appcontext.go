@@ -1,6 +1,9 @@
 package appcontext
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	configPkg "tapesonic/config"
@@ -13,6 +16,7 @@ import (
 	"tapesonic/tasks"
 	"tapesonic/util"
 	"tapesonic/ytdlp"
+	"time"
 
 	slogGorm "github.com/orandin/slog-gorm"
 	"github.com/robfig/cron/v3"
@@ -284,61 +288,124 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 }
 
 func registerBackgroundTasks(context *Context) error {
-	var err error
-
 	cron := cron.New(
 		cron.WithChain(cron.SkipIfStillRunning(cron.DefaultLogger)),
 		cron.WithSeconds(),
 	)
 
-	if context.Config.TasksDownloadSources.Cron != configPkg.CronDisabled {
-		if err = tasks.NewDownloadSourcesTaskHandler(
-			context.SourceFileService,
-			context.SourceStorage,
-			context.Config.TasksDownloadSources,
-		).RegisterSchedules(cron); err != nil {
-			return err
-		}
+	type backgroundTaskAndConfig struct {
+		task   tasks.BackgroundTask
+		config configPkg.BackgroundTaskConfig
 	}
 
-	if context.Config.TasksListenBrainzPlaylistSync.Cron != configPkg.CronDisabled && context.ListenBrainzClient != nil {
-		if err = tasks.NewListenBrainzPlaylistSyncHandler(
-			context.ListenBrainzClient,
-			context.SongCacheService,
-			context.ExternalPlaylistStorage,
-			context.Config.TasksListenBrainzPlaylistSync,
-		).RegisterSchedules(cron); err != nil {
-			return err
-		}
+	scheduledTasks := []backgroundTaskAndConfig{}
+
+	scheduledTasks = append(
+		scheduledTasks,
+		backgroundTaskAndConfig{
+			task: tasks.NewDownloadSourcesTaskHandler(
+				context.SourceFileService,
+				context.SourceStorage,
+			),
+			config: context.Config.TasksDownloadSources,
+		},
+	)
+
+	if context.ListenBrainzClient != nil {
+		scheduledTasks = append(
+			scheduledTasks,
+			backgroundTaskAndConfig{
+				task: tasks.NewListenBrainzPlaylistSyncHandler(
+					context.ListenBrainzClient,
+					context.SongCacheService,
+					context.ExternalPlaylistStorage,
+				),
+				config: context.Config.TasksListenBrainzPlaylistSync,
+			},
+		)
+	} else {
+		slog.Info("Not registering ListenBrainz playlist sync task because ListenBrainz client is not configured")
 	}
 
-	if context.Config.TasksLastFmPlaylistSync.Cron != configPkg.CronDisabled && context.LastFmClient != nil {
-		if err = tasks.NewLastFmPlaylistSyncHandler(
-			context.LastFmClient,
-			context.LastFmService,
-			context.SongCacheService,
-			context.AutoImportService,
-			context.ExternalPlaylistStorage,
-			context.Config.LastFmTargetPlaylistSize,
-			context.Config.TasksLastFmPlaylistSync,
-		).RegisterSchedules(cron); err != nil {
-			return err
-		}
+	if context.LastFmClient != nil {
+		scheduledTasks = append(
+			scheduledTasks,
+			backgroundTaskAndConfig{
+				task: tasks.NewLastFmPlaylistSyncHandler(
+					context.LastFmClient,
+					context.LastFmService,
+					context.SongCacheService,
+					context.AutoImportService,
+					context.ExternalPlaylistStorage,
+					context.Config.LastFmTargetPlaylistSize,
+				),
+				config: context.Config.TasksLastFmPlaylistSync,
+			},
+		)
+	} else {
+		slog.Info("Not registering last.fm playlist sync task because last.fm client is not configured")
 	}
 
-	if context.Config.TasksLibrarySync.Cron != configPkg.CronDisabled {
-		if err = tasks.NewSyncLibraryHandler(
-			context.SubsonicProviders,
-			context.CachedMuxSongStorage,
-			context.CachedMuxAlbumStorage,
-			context.CachedMuxArtistStorage,
-			context.Config.TasksLibrarySync,
-		).RegisterSchedules(cron); err != nil {
+	scheduledTasks = append(
+		scheduledTasks,
+		backgroundTaskAndConfig{
+			task: tasks.NewSyncLibraryHandler(
+				context.SubsonicProviders,
+				context.CachedMuxSongStorage,
+				context.CachedMuxAlbumStorage,
+				context.CachedMuxArtistStorage,
+			),
+			config: context.Config.TasksSyncLibrary,
+		},
+	)
+
+	for _, scheduledTask := range scheduledTasks {
+		err := setupBackgroundTask(cron, scheduledTask.task, scheduledTask.config)
+		if err != nil {
 			return err
 		}
 	}
 
 	cron.Start()
 
+	return nil
+}
+
+func setupBackgroundTask(cron *cron.Cron, task tasks.BackgroundTask, config configPkg.BackgroundTaskConfig) error {
+	if config.Cron == configPkg.CronDisabled {
+		slog.Info(fmt.Sprintf("Background task %s is disabled, skipping cron registration", task.Name()))
+		return nil
+	}
+
+	if config.MaxAttempts < 1 {
+		slog.Warn(fmt.Sprintf("Max attempts for background task %s is set to %d < 1, forcing to 1", task.Name(), config.MaxAttempts))
+		config.MaxAttempts = 1
+	}
+
+	_, err := cron.AddFunc(config.Cron, func() {
+		for retries := 0; retries < config.MaxAttempts; retries++ {
+			slog.Log(context.Background(), configPkg.LevelTrace, fmt.Sprintf("Running background task %s, attempt %d/%d", task.Name(), retries+1, config.MaxAttempts))
+
+			err := task.OnSchedule()
+			if err == nil {
+				slog.Log(context.Background(), configPkg.LevelTrace, fmt.Sprintf("Background task %s succeeded on attempt %d/%d", task.Name(), retries+1, config.MaxAttempts))
+				return
+			}
+
+			if retries == config.MaxAttempts-1 {
+				slog.Error(fmt.Sprintf("Background task %s failed after %d retries, giving up: %s", task.Name(), config.MaxAttempts, err.Error()))
+				return
+			}
+
+			slog.Warn(fmt.Sprintf("Attempt %d/%d for background task %s failed, will retry in %.0fs: %s", retries+1, config.MaxAttempts, task.Name(), config.RetryDelay.Seconds(), err.Error()))
+			time.Sleep(config.RetryDelay)
+		}
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to setup background task %s: %w", task.Name(), err)
+	}
+
+	slog.Info(fmt.Sprintf("Registered background task %s with cron=%s", task.Name(), config.Cron))
 	return nil
 }
