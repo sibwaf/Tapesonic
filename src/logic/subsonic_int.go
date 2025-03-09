@@ -482,6 +482,10 @@ func (svc *subsonicInternalService) Stream(ctx context.Context, rawId string) (A
 	}
 }
 
+func (svc *subsonicInternalService) GetLicense() (*responses.License, error) {
+	return responses.NewLicense(true), nil
+}
+
 func encodeId(id string) string {
 	return strings.ReplaceAll(fmt.Sprint(id), "-", "_")
 }

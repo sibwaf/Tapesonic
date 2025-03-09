@@ -38,6 +38,7 @@ type SubsonicResponse struct {
 	Artist                *Artist                `json:"artist,omitempty" xml:"artist"`
 	Genres                *Genres                `json:"genres,omitempty" xml:"genres"`
 	InternetRadioStations *InternetRadioStations `json:"internetRadioStations,omitempty" xml:"internetRadioStations"`
+	License               *License               `json:"license,omitempty" xml:"license"`
 	MusicFolders          *MusicFolders          `json:"musicFolders,omitempty" xml:"musicFolders"`
 	NewestPodcasts        *NewestPodcasts        `json:"newestPodcasts,omitempty" xml:"newestPodcasts"`
 	Playlists             *SubsonicPlaylists     `json:"playlists,omitempty" xml:"playlists"`

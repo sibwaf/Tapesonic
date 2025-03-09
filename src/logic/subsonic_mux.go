@@ -359,6 +359,42 @@ func (svc *SubsonicMuxService) Stream(ctx context.Context, id string) (AudioStre
 	return service.Stream(ctx, id)
 }
 
+func (svc *SubsonicMuxService) GetLicense() (*responses.License, error) {
+	valid := true
+	emails := util.NewCountingSet[string]()
+	var minLicenseExpires *time.Time = nil
+	var minTrialExpires *time.Time = nil
+
+	for _, service := range svc.services {
+		license, err := service.GetLicense()
+		if err != nil {
+			return nil, err
+		}
+
+		valid = valid && license.Valid
+		emails.Add(license.Email)
+
+		if minLicenseExpires == nil || license.LicenseExpires != nil && minLicenseExpires.After(*license.LicenseExpires) {
+			minLicenseExpires = license.LicenseExpires
+		}
+		if minTrialExpires == nil || license.TrialExpires != nil && minLicenseExpires.After(*license.TrialExpires) {
+			minTrialExpires = license.TrialExpires
+		}
+	}
+
+	license := responses.NewLicense(valid)
+
+	emails.RemoveAll("")
+	if emails.UniqueSize() == 1 {
+		license.Email = emails.GetDominatingValue(0.5)
+	}
+
+	license.LicenseExpires = minLicenseExpires
+	license.TrialExpires = minTrialExpires
+
+	return license, nil
+}
+
 func (svc *SubsonicMuxService) findServiceByName(name string) (*SubsonicNamedService, error) {
 	for _, service := range svc.services {
 		if service.Name() == name {

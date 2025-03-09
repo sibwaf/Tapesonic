@@ -241,6 +241,10 @@ func (svc *subsonicMainService) Stream(ctx context.Context, id string) (AudioStr
 	return svc.delegate.Stream(ctx, id)
 }
 
+func (svc *subsonicMainService) GetLicense() (*responses.License, error) {
+	return svc.delegate.GetLicense()
+}
+
 func (svc *subsonicMainService) findServiceByName(name string) (*SubsonicNamedService, error) {
 	for _, service := range svc.subsonicProviders {
 		if service.Name() == name {

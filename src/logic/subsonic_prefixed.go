@@ -159,6 +159,10 @@ func (svc *SubsonicNamedService) StreamByRawId(ctx context.Context, id string) (
 	return svc.delegate.Stream(ctx, id)
 }
 
+func (svc *SubsonicNamedService) GetLicense() (*responses.License, error) {
+	return svc.delegate.GetLicense()
+}
+
 func (svc *SubsonicNamedService) rewriteAlbumInfo(album responses.AlbumId3) responses.AlbumId3 {
 	album.Id = svc.addPrefix(album.Id)
 	album.ArtistId = svc.addPrefix(album.ArtistId)

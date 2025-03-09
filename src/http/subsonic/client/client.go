@@ -167,6 +167,15 @@ func (c *SubsonicClient) Stream(id string) (mime string, reader io.ReadCloser, e
 	return c.doRawQuery("/rest/stream", map[string]string{"id": id})
 }
 
+func (c *SubsonicClient) GetLicense() (*responses.License, error) {
+	res, err := c.doParsedQuery("/rest/getLicense", map[string]string{})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.License, nil
+}
+
 func (c *SubsonicClient) doParsedQuery(path string, params map[string]string) (*responses.SubsonicResponse, error) {
 	_, body, err := c.doRawQuery(path, params)
 	if err != nil {

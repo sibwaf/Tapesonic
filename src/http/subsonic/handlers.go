@@ -19,6 +19,7 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 		"/getArtist":                util.AsHandlerFunc(handlers.NewGetArtistHandler(appCtx.SubsonicService).Handle),
 		"/getGenres":                util.AsHandlerFunc(handlers.NewGetGenresHandler().Handle),
 		"/getInternetRadioStations": util.AsHandlerFunc(handlers.NewGetInternetRadioStationsHandler().Handle),
+		"/getLicense":               util.AsHandlerFunc(handlers.NewGetLicenseHandler(appCtx.SubsonicService).Handle),
 		"/getMusicFolders":          util.AsHandlerFunc(handlers.NewGetMusicFoldersHandler().Handle),
 		"/getNewestPodcasts":        util.AsHandlerFunc(handlers.NewGetNewestPodcastsHandler().Handle),
 		"/getPlaylists":             util.AsHandlerFunc(handlers.NewGetPlaylistsHandler(appCtx.SubsonicService).Handle),

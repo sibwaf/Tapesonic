@@ -85,3 +85,7 @@ func (svc *subsonicExternalService) Stream(ctx context.Context, id string) (Audi
 		MimeType:      mime,
 	}, nil
 }
+
+func (svc *subsonicExternalService) GetLicense() (*responses.License, error) {
+	return svc.client.GetLicense()
+}
