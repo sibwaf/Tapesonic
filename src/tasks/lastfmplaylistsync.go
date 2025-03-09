@@ -41,7 +41,7 @@ func NewLastFmPlaylistSyncHandler(
 }
 
 func (h *LastFmPlaylistSyncHandler) Name() string {
-	return "LAST_FM_PLAYLIST_SYNC"
+	return "LASTFM_PLAYLIST_SYNC"
 }
 
 func (h *LastFmPlaylistSyncHandler) OnSchedule() error {

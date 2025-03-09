@@ -119,7 +119,7 @@ func NewConfig() (*TapesonicConfig, error) {
 		TasksDownloadSources:          getBackgroundTaskConfig("DOWNLOAD_SOURCES", "0 * * * * *", 15*time.Minute, 1),
 		TasksSyncLibrary:              getBackgroundTaskConfig("SYNC_LIBRARY", "0 */15 * * * *", 1*time.Minute, 5),
 		TasksListenBrainzPlaylistSync: getBackgroundTaskConfig("LISTENBRAINZ_PLAYLIST_SYNC", "0 0 4 * * *", 15*time.Minute, 5),
-		TasksLastFmPlaylistSync:       getBackgroundTaskConfig("LAST_FM_PLAYLIST_SYNC", "0 0 4 * * *", 15*time.Minute, 5),
+		TasksLastFmPlaylistSync:       getBackgroundTaskConfig("LASTFM_PLAYLIST_SYNC", "0 0 4 * * *", 15*time.Minute, 5),
 
 		ScrobbleMode: scrobbleMode,
 
@@ -132,9 +132,9 @@ func NewConfig() (*TapesonicConfig, error) {
 
 		ListenBrainzToken: os.Getenv("TAPESONIC_LISTENBRAINZ_TOKEN"),
 
-		LastFmApiKey:             os.Getenv("TAPESONIC_LAST_FM_API_KEY"),
-		LastFmApiSecret:          os.Getenv("TAPESONIC_LAST_FM_API_SECRET"),
-		LastFmTargetPlaylistSize: getEnvIntOrDefault("TAPESONIC_LAST_FM_TARGET_PLAYLIST_SIZE", 40),
+		LastFmApiKey:             os.Getenv("TAPESONIC_LASTFM_API_KEY"),
+		LastFmApiSecret:          os.Getenv("TAPESONIC_LASTFM_API_SECRET"),
+		LastFmTargetPlaylistSize: getEnvIntOrDefault("TAPESONIC_LASTFM_TARGET_PLAYLIST_SIZE", 40),
 	}
 
 	return config, nil
