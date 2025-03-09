@@ -171,7 +171,12 @@ func getEnvBoolOrDefault(name string, defaultValue bool) bool {
 }
 
 func getEnvIntOrDefault(name string, defaultValue int) int {
-	return util.StringToIntOrDefault(name, defaultValue)
+	value := os.Getenv(name)
+	if value != "" {
+		return util.StringToIntOrDefault(value, defaultValue)
+	} else {
+		return defaultValue
+	}
 }
 
 func getEnvSizeOrDefault(name string, defaultValue int64) int64 {
