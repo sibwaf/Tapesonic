@@ -52,6 +52,8 @@ func (h *ListenBrainzPlaylistSyncHandler) onSchedule() {
 		return
 	}
 
+	slog.Debug(fmt.Sprintf("Synchronizing last.fm playlists for %s", tokenInfo.Username))
+
 	playlists, err := h.client.GetPlaylistsCreatedFor(tokenInfo.Username, 20, 0)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to fetch \"Created for you\" playlists from ListenBrainz: %s", err.Error()))
@@ -62,7 +64,7 @@ func (h *ListenBrainzPlaylistSyncHandler) onSchedule() {
 	for _, playlist := range playlists.Playlists {
 		resultPlaylist, err := h.processPlaylist(playlist.Playlist)
 		if err != nil {
-			slog.Error(fmt.Sprintf("Failed to process ListenBrainz playlist `%s`: %s", playlist.Playlist.Title, err.Error()))
+			slog.Error(fmt.Sprintf("Failed to process ListenBrainz playlist %s: %s", playlist.Playlist.Title, err.Error()))
 			return
 		}
 
@@ -78,7 +80,7 @@ func (h *ListenBrainzPlaylistSyncHandler) onSchedule() {
 }
 
 func (h *ListenBrainzPlaylistSyncHandler) processPlaylist(playlist listenbrainz.PlaylistResponse) (storage.ExternalPlaylist, error) {
-	slog.Debug(fmt.Sprintf("Processing ListenBrainz playlist `%s`", playlist.Title))
+	slog.Debug(fmt.Sprintf("Processing ListenBrainz playlist %s", playlist.Title))
 
 	playlistIdParts := strings.Split(playlist.Identifier, "/")
 	if len(playlistIdParts) == 0 {
@@ -103,15 +105,20 @@ func (h *ListenBrainzPlaylistSyncHandler) processPlaylist(playlist listenbrainz.
 	}
 
 	for i, track := range playlistInfo.Track {
-		trackId, err := h.cachedSongs.FindSongIdByFields(track.Creator, track.Title, track.Album)
+		libraryTrack, err := h.cachedSongs.FindCachedSongByFields(track.Creator, track.Title, track.Album)
 		if err != nil {
-			return storage.ExternalPlaylist{}, err
+			return storage.ExternalPlaylist{}, fmt.Errorf("failed to search for a library track: %w", err)
 		}
 
-		if trackId == nil {
-			slog.Debug(fmt.Sprintf("Didn't manage to find a matching track in the library: artist=`%s`, album=`%s`, title=`%s`", track.Creator, track.Album, track.Title))
+		targetTrackText := fmt.Sprintf("artist=%s, album=%s, title=%s", track.Creator, track.Album, track.Title)
+
+		if libraryTrack == nil {
+			slog.Debug(fmt.Sprintf("Didn't find track [%s] in library, skipping", targetTrackText))
 			continue
 		}
+
+		libraryTrackText := fmt.Sprintf("artist=%s, album=%s, title=%s", libraryTrack.Artist, libraryTrack.Album, libraryTrack.Title)
+		slog.Debug(fmt.Sprintf("Found track [%s] in library: %s %s [%s]", targetTrackText, libraryTrack.ServiceName, libraryTrack.SongId, libraryTrackText))
 
 		resultTrack := storage.ExternalPlaylistTrack{
 			Artist: track.Creator,
@@ -120,8 +127,8 @@ func (h *ListenBrainzPlaylistSyncHandler) processPlaylist(playlist listenbrainz.
 
 			ExternalPlaylist: &resultPlaylist,
 
-			MatchedServiceName: trackId.ServiceName,
-			MatchedSongId:      trackId.Id,
+			MatchedServiceName: libraryTrack.ServiceName,
+			MatchedSongId:      libraryTrack.SongId,
 
 			TrackIndex: i,
 		}

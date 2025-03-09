@@ -2,18 +2,21 @@ package logic
 
 import (
 	"fmt"
+	"slices"
 	"tapesonic/storage"
 	"time"
 )
 
 type SongCacheService struct {
-	subsonic map[string]*SubsonicNamedService
-	cache    *storage.CachedMuxSongStorage
+	subsonic     map[string]*SubsonicNamedService
+	cache        *storage.CachedMuxSongStorage
+	trackMatcher *TrackMatcher
 }
 
 func NewSongCacheService(
 	subsonicServices []*SubsonicNamedService,
 	cache *storage.CachedMuxSongStorage,
+	trackMatcher *TrackMatcher,
 ) *SongCacheService {
 	subsonic := make(map[string]*SubsonicNamedService)
 	for _, svc := range subsonicServices {
@@ -21,16 +24,29 @@ func NewSongCacheService(
 	}
 
 	return &SongCacheService{
-		subsonic: subsonic,
-		cache:    cache,
+		subsonic:     subsonic,
+		cache:        cache,
+		trackMatcher: trackMatcher,
 	}
 }
 
-func (s *SongCacheService) FindSongIdByFields(artist string, title string, album string) (*storage.CachedSongId, error) {
+func (s *SongCacheService) FindCachedSongByFields(artist string, title string, album string) (*storage.CachedMuxSong, error) {
 	tracks, err := s.cache.SearchByFields(artist, album, title, 2)
 	if err != nil {
 		return nil, err
 	}
+
+	expected := TrackForMatching{
+		Artist: artist,
+		Title:  title,
+	}
+	tracks = slices.DeleteFunc(tracks, func(t storage.CachedMuxSong) bool {
+		actual := TrackForMatching{
+			Artist: t.Artist,
+			Title:  t.Title,
+		}
+		return !s.trackMatcher.Match(expected, actual)
+	})
 
 	if len(tracks) == 1 {
 		return &tracks[0], nil
@@ -38,8 +54,6 @@ func (s *SongCacheService) FindSongIdByFields(artist string, title string, album
 
 	// todo
 	// - if nothing found, we can try omitting album as a track can be hanging around without it
-	// - if multiple tracks were found, we can probably return the one with the shortest name
-	// - needs a check that fields do not contain any extra words to fix matching for things like "Name" "Name Pt.2"
 
 	return nil, nil
 }

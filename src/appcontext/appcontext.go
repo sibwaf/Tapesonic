@@ -54,10 +54,12 @@ type Context struct {
 	ThumbnailService *logic.ThumbnailService
 
 	TrackNormalizer   *logic.TrackNormalizer
+	TrackMatcher      *logic.TrackMatcher
 	TrackService      *logic.TrackService
 	SourceFileService *logic.SourceFileService
 	SourceService     *logic.SourceService
 	TapeService       *logic.TapeService
+	AutoImportService *logic.AutoImportService
 
 	SearchService    *logic.SearchService
 	SongCacheService *logic.SongCacheService
@@ -192,6 +194,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	)
 
 	context.TrackNormalizer = logic.NewTrackNormalizer()
+	context.TrackMatcher = logic.NewTrackMatcher()
 	context.TrackService = logic.NewTrackService(context.TrackStorage)
 	context.SourceFileService = logic.NewSourceFileService(
 		context.SourceFileStorage,
@@ -208,6 +211,11 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		context.TrackNormalizer,
 	)
 	context.TapeService = logic.NewTapeService(context.TapeStorage, context.TrackStorage)
+	context.AutoImportService = logic.NewAutoImportService(
+		context.SourceService,
+		context.TrackService,
+		context.TrackMatcher,
+	)
 
 	context.SearchService = logic.NewSearchService(context.SourceStorage, context.TrackStorage)
 
@@ -242,7 +250,11 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		context.SubsonicProviders = append(context.SubsonicProviders, externalSubsonic)
 	}
 
-	context.SongCacheService = logic.NewSongCacheService(context.SubsonicProviders, context.CachedMuxSongStorage)
+	context.SongCacheService = logic.NewSongCacheService(
+		context.SubsonicProviders,
+		context.CachedMuxSongStorage,
+		context.TrackMatcher,
+	)
 
 	subsonicMux := logic.NewSubsonicMuxService(
 		context.MuxedSongListensStorage,
@@ -295,6 +307,20 @@ func registerBackgroundTasks(context *Context) error {
 			context.SongCacheService,
 			context.ExternalPlaylistStorage,
 			context.Config.TasksListenBrainzPlaylistSync,
+		).RegisterSchedules(cron); err != nil {
+			return err
+		}
+	}
+
+	if context.Config.TasksLastFmPlaylistSync.Cron != configPkg.CronDisabled && context.LastFmClient != nil {
+		if err = tasks.NewLastFmPlaylistSyncHandler(
+			context.LastFmClient,
+			context.LastFmService,
+			context.SongCacheService,
+			context.AutoImportService,
+			context.ExternalPlaylistStorage,
+			context.Config.LastFmTargetPlaylistSize,
+			context.Config.TasksLastFmPlaylistSync,
 		).RegisterSchedules(cron); err != nil {
 			return err
 		}

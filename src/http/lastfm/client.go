@@ -169,3 +169,37 @@ func extractError(res *http.Response) error {
 		return fmt.Errorf("last.fm http %d", res.StatusCode)
 	}
 }
+
+func (c *LastFmClient) GetLibraryPlaylist(username string, page int) (PlaylistWrapper, error) {
+	return c.getStationPlaylist(username, "library", page)
+}
+
+func (c *LastFmClient) GetMixPlaylist(username string, page int) (PlaylistWrapper, error) {
+	return c.getStationPlaylist(username, "mix", page)
+}
+
+func (c *LastFmClient) GetRecommendedPlaylist(username string, page int) (PlaylistWrapper, error) {
+	return c.getStationPlaylist(username, "recommended", page)
+}
+
+func (c *LastFmClient) getStationPlaylist(username string, station string, page int) (PlaylistWrapper, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://www.last.fm/player/station/user/%s/%s", username, station), nil)
+	if err != nil {
+		return PlaylistWrapper{}, err
+	}
+
+	query := req.URL.Query()
+	query.Add("page", fmt.Sprint(page))
+	query.Add("ajax", "1")
+	req.URL.RawQuery = query.Encode()
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return PlaylistWrapper{}, err
+	}
+
+	defer res.Body.Close()
+
+	var result PlaylistWrapper
+	return result, json.NewDecoder(res.Body).Decode(&result)
+}

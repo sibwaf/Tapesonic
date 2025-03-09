@@ -256,3 +256,7 @@ func (s *SourceService) GetHierarchy(id uuid.UUID) ([]storage.SourceForHierarchy
 func (s *SourceService) GetById(id uuid.UUID) (storage.Source, error) {
 	return s.storage.GetById(id)
 }
+
+func (s *SourceService) FindByUrl(url string) (*storage.Source, error) {
+	return s.storage.FindByUrl(url)
+}

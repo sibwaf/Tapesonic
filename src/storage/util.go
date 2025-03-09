@@ -3,21 +3,15 @@ package storage
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
-	"unicode"
+	"tapesonic/util"
 
-	"golang.org/x/text/runes"
-	"golang.org/x/text/transform"
-	"golang.org/x/text/unicode/norm"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 var (
 	voidLog = logger.Default.LogMode(logger.Silent)
-
-	wordRegex = regexp.MustCompile(`[\p{Lo}\p{Ll}\p{Lu}\p{Nd}\p{Nl}\p{No}]+`)
 )
 
 type DbHelper struct {
@@ -70,17 +64,12 @@ func MakeTextSearchCondition(fields []string, query string) string {
 }
 
 func ExtractSearchTerms(query string) []string {
-	normalize := transform.Chain(norm.NFKD, runes.Remove(runes.In(unicode.Mn)), norm.NFKC)
-	query, _, err := transform.String(normalize, query)
+	query, err := util.NormalizeUnicode(query)
 	if err != nil {
 		return []string{}
 	}
 
-	terms := wordRegex.FindAllString(query, 99)
-	if terms == nil {
-		terms = []string{}
-	}
-	return terms
+	return util.SplitWords(query)
 }
 
 func EscapeTextLiteralForLike(str string, escape string) string {
