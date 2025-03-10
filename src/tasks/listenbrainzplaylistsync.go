@@ -93,16 +93,25 @@ func (h *ListenBrainzPlaylistSyncHandler) processPlaylist(playlist listenbrainz.
 	}
 
 	for i, track := range playlistInfo.Track {
+		targetTrackText := fmt.Sprintf("artist=%s, album=%s, title=%s", track.Creator, track.Album, track.Title)
+
 		libraryTrack, err := h.cachedSongs.FindCachedSongByFields(track.Creator, track.Title, track.Album)
 		if err != nil {
 			return storage.ExternalPlaylist{}, fmt.Errorf("failed to search for a library track: %w", err)
 		}
 
-		targetTrackText := fmt.Sprintf("artist=%s, album=%s, title=%s", track.Creator, track.Album, track.Title)
-
 		if libraryTrack == nil {
-			slog.Debug(fmt.Sprintf("Didn't find track [%s] in library, skipping", targetTrackText))
-			continue
+			slog.Debug(fmt.Sprintf("Didn't find track [%s] in library, retrying search without album", targetTrackText))
+
+			libraryTrack, err = h.cachedSongs.FindCachedSongByFields(track.Creator, track.Title, "")
+			if err != nil {
+				return storage.ExternalPlaylist{}, fmt.Errorf("failed to search for a library track: %w", err)
+			}
+
+			if libraryTrack == nil {
+				slog.Debug(fmt.Sprintf("Didn't find track [%s] in library even without album, skipping", targetTrackText))
+				continue
+			}
 		}
 
 		libraryTrackText := fmt.Sprintf("artist=%s, album=%s, title=%s", libraryTrack.Artist, libraryTrack.Album, libraryTrack.Title)
