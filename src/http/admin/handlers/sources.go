@@ -6,6 +6,7 @@ import (
 
 	"tapesonic/http/admin/responses"
 	"tapesonic/logic"
+	"tapesonic/model"
 )
 
 type GetListSourceRs struct {
@@ -32,7 +33,15 @@ func (h *sourcesHandler) Methods() []string {
 func (h *sourcesHandler) Handle(r *http.Request) (any, error) {
 	switch r.Method {
 	case http.MethodGet:
-		sources, err := h.service.GetListForApi()
+		managementPolicies := []string{}
+
+		for key, values := range r.URL.Query() {
+			if key == "managementPolicy" {
+				managementPolicies = append(managementPolicies, values...)
+			}
+		}
+
+		sources, err := h.service.GetListForApi(managementPolicies)
 		if err != nil {
 			return nil, err
 		}
@@ -59,7 +68,7 @@ func (h *sourcesHandler) Handle(r *http.Request) (any, error) {
 			return &resp, nil
 		}
 
-		source, err := h.service.AddSource(context.Background(), url)
+		source, err := h.service.AddSource(context.Background(), url, model.SOURCE_MANAGEMENT_POLICY_MANUAL)
 		if err != nil {
 			return nil, err
 		}

@@ -3,6 +3,8 @@ package storage
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"tapesonic/model"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,7 +36,10 @@ type Source struct {
 	ThumbnailId *uuid.UUID
 	Thumbnail   *Thumbnail
 
+	ManagementPolicy model.SourceManagementPolicy
+
 	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type SourceHierarchy struct {
@@ -121,9 +126,31 @@ func (storage *SourceStorage) GetHierarchy(id uuid.UUID) ([]SourceForHierarchy, 
 	return result, storage.db.Raw(query).Find(&result).Error
 }
 
-func (storage *SourceStorage) GetAll() ([]Source, error) {
+func (storage *SourceStorage) GetListForApi(managementPolicies []model.SourceManagementPolicy) ([]Source, error) {
+	conditions := []string{"1 = 1"}
+	params := map[string]any{}
+
+	if len(managementPolicies) > 0 {
+		conditions = append(conditions, "management_policy IN @managementPolicies")
+		params["managementPolicies"] = managementPolicies
+	}
+
+	sql := fmt.Sprintf(
+		`
+			SELECT *
+			FROM sources
+			WHERE %s
+			ORDER BY created_at DESC, uploaded_at DESC, album_index DESC, id DESC
+		`,
+		strings.Join(conditions, " AND "),
+	)
+
 	result := []Source{}
-	return result, storage.db.Order("created_at DESC, uploaded_at DESC, album_index DESC, id DESC").Find(&result).Error
+	if len(params) > 0 {
+		return result, storage.db.Raw(sql, params).Find(&result).Error
+	} else {
+		return result, storage.db.Raw(sql).Find(&result).Error
+	}
 }
 
 func (storage *SourceStorage) GetById(id uuid.UUID) (Source, error) {
@@ -141,6 +168,15 @@ func (storage *SourceStorage) FindByUrl(url string) (*Source, error) {
 		}
 	}
 	return &result, nil
+}
+
+func (storage *SourceStorage) GetManagementPolicyById(id uuid.UUID) (model.SourceManagementPolicy, error) {
+	result := model.SOURCE_MANAGEMENT_POLICY_MANUAL
+	return result, storage.db.Raw("SELECT management_policy FROM sources WHERE id = ?", id).Take(&result).Error
+}
+
+func (storage *SourceStorage) SetManagementPolicyById(id uuid.UUID, managementPolicy model.SourceManagementPolicy) error {
+	return storage.db.Exec("UPDATE sources SET management_policy = ? WHERE id = ?", managementPolicy, id).Error
 }
 
 func (storage *SourceStorage) FindNextForDownload() (*Source, error) {

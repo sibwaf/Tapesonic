@@ -8,6 +8,7 @@ import (
 	"tapesonic/http/admin/requests"
 	"tapesonic/http/admin/responses"
 	"tapesonic/logic"
+	"tapesonic/model"
 	"tapesonic/storage"
 	"tapesonic/util"
 
@@ -16,14 +17,17 @@ import (
 )
 
 type sourceTracksHandler struct {
-	tracks *logic.TrackService
+	tracks  *logic.TrackService
+	sources *logic.SourceService
 }
 
 func NewSourceTracksHandler(
 	tracks *logic.TrackService,
+	sources *logic.SourceService,
 ) *sourceTracksHandler {
 	return &sourceTracksHandler{
-		tracks: tracks,
+		tracks:  tracks,
+		sources: sources,
 	}
 }
 
@@ -63,7 +67,7 @@ func (h *sourceTracksHandler) Handle(r *http.Request) (any, error) {
 
 		tracks := requests.ModifiedTracksToModel(tracksRequest)
 
-		tracks, err = h.tracks.ReplaceBySource(sourceId, tracks)
+		tracks, err = h.sources.ReplaceTracksFor(sourceId, tracks, model.SOURCE_MANAGEMENT_POLICY_MANUAL)
 		if err != nil {
 			return nil, err
 		}

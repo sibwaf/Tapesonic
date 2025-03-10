@@ -28,7 +28,7 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 		{Path: "/api/sources", Handler: util.AsHandlerFunc(handlers.NewSourcesHandler(appCtx.SourceService))},
 		{Path: "/api/sources/{sourceId}", Handler: util.AsHandlerFunc(handlers.NewSourceHandler(appCtx.SourceService))},
 		{Path: "/api/sources/{sourceId}/hierarchy", Handler: util.AsHandlerFunc(handlers.NewSourceHierarchyHandler(appCtx.SourceService))},
-		{Path: "/api/sources/{sourceId}/tracks", Handler: util.AsHandlerFunc(handlers.NewSourceTracksHandler(appCtx.TrackService))},
+		{Path: "/api/sources/{sourceId}/tracks", Handler: util.AsHandlerFunc(handlers.NewSourceTracksHandler(appCtx.TrackService, appCtx.SourceService))},
 		{Path: "/api/sources/{sourceId}/file", Handler: util.AsHandlerFunc(handlers.NewSourceFileHandler(appCtx.SourceFileService))},
 
 		{Path: "/api/tracks", Handler: util.AsHandlerFunc(handlers.NewTracksHandler(appCtx.TrackService, appCtx.SearchService))},

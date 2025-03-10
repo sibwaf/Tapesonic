@@ -141,7 +141,9 @@ export default {
         return await response.json();
     },
     async listSources(): Promise<GetListSourceRs[]> {
-        const response = await fetch(`/api/sources`, { method: "GET" });
+        const params = new URLSearchParams();
+        params.append("managementPolicy", "MANUAL");
+        const response = await fetch(`/api/sources?${params}`, { method: "GET" });
         return await response.json();
     },
     async getSource(id: string): Promise<FullSourceRs> {

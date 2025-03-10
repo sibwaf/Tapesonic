@@ -3,6 +3,7 @@ package logic
 import (
 	"context"
 	"fmt"
+	"tapesonic/model"
 	"tapesonic/storage"
 )
 
@@ -40,9 +41,8 @@ func (svc *AutoImportService) ImportTrackFrom(ctx context.Context, url string, e
 		tracks = []storage.Track{}
 	}
 
-	tracksAreFreshlyImported := false
 	if source == nil || len(tracks) == 0 {
-		importedSource, err := svc.sources.AddSource(ctx, url)
+		importedSource, err := svc.sources.AddSource(ctx, url, model.SOURCE_MANAGEMENT_POLICY_AUTO)
 		if err != nil {
 			return storage.Track{}, fmt.Errorf("failed to import source: %w", err)
 		}
@@ -52,7 +52,6 @@ func (svc *AutoImportService) ImportTrackFrom(ctx context.Context, url string, e
 			return storage.Track{}, fmt.Errorf("failed to get tracks for source: %w", err)
 		}
 
-		tracksAreFreshlyImported = true
 		source = &importedSource
 	}
 
@@ -62,19 +61,21 @@ func (svc *AutoImportService) ImportTrackFrom(ctx context.Context, url string, e
 		return storage.Track{}, fmt.Errorf("multiple tracks were imported from url=%s", url)
 	}
 
+	sourceIsAutoManaged := source.ManagementPolicy == model.SOURCE_MANAGEMENT_POLICY_AUTO
+
 	track := tracks[0]
 	expectedTrack := TrackForMatching{Artist: expectedArtist, Title: expectedTitle}
 
 	if !svc.trackMatcher.Match(expectedTrack, TrackForMatching{Artist: track.Artist, Title: track.Title}) {
 		// check if we maybe switched up artist and title during guessing
-		if !(tracksAreFreshlyImported && svc.trackMatcher.Match(expectedTrack, TrackForMatching{Artist: track.Title, Title: track.Artist})) {
+		if !(sourceIsAutoManaged && svc.trackMatcher.Match(expectedTrack, TrackForMatching{Artist: track.Title, Title: track.Artist})) {
 			actualText := fmt.Sprintf("artist=%s, title=%s", track.Artist, track.Title)
 			expectedText := fmt.Sprintf("artist=%s, title=%s", expectedArtist, expectedTitle)
 			return storage.Track{}, fmt.Errorf("track [%s] doesn't match expected [%s] with url=%s", actualText, expectedText, url)
 		}
 	}
 
-	if tracksAreFreshlyImported {
+	if sourceIsAutoManaged {
 		track.Artist = expectedArtist
 		track.Title = expectedTitle
 

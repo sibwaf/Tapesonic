@@ -3,6 +3,7 @@ package logic
 import (
 	"context"
 	"fmt"
+	"tapesonic/model"
 	"tapesonic/storage"
 	"tapesonic/util"
 	"tapesonic/ytdlp"
@@ -41,8 +42,8 @@ func NewSourceService(
 	}
 }
 
-func (s *SourceService) AddSource(ctx context.Context, url string) (storage.Source, error) {
-	result, err := s.addSourceRecursive(ctx, url, uuid.Nil)
+func (s *SourceService) AddSource(ctx context.Context, url string, managementPolicy model.SourceManagementPolicy) (storage.Source, error) {
+	result, err := s.addSourceRecursive(ctx, url, managementPolicy, uuid.Nil)
 	return result.Source, err
 }
 
@@ -51,7 +52,7 @@ type SourceAndMetadata struct {
 	Metadata ytdlp.YtdlpFile
 }
 
-func (s *SourceService) addSourceRecursive(ctx context.Context, url string, parentId uuid.UUID) (SourceAndMetadata, error) {
+func (s *SourceService) addSourceRecursive(ctx context.Context, url string, managementPolicy model.SourceManagementPolicy, parentId uuid.UUID) (SourceAndMetadata, error) {
 	metadata, err := s.ytdlp.GetMetadata(ctx, url)
 	if err != nil {
 		return SourceAndMetadata{}, err
@@ -65,6 +66,12 @@ func (s *SourceService) addSourceRecursive(ctx context.Context, url string, pare
 		}
 
 		thumbnail = &savedThumbnail
+	}
+
+	// this really needs SELECT FOR UPDATE in a transaction, but oh well
+	existingSource, err := s.storage.FindByUrl(metadata.WebpageUrl)
+	if err != nil {
+		return SourceAndMetadata{}, err
 	}
 
 	source := storage.Source{
@@ -89,6 +96,13 @@ func (s *SourceService) addSourceRecursive(ctx context.Context, url string, pare
 		Thumbnail: thumbnail,
 	}
 
+	// never override MANUAL management policy
+	if existingSource == nil || existingSource.ManagementPolicy != model.SOURCE_MANAGEMENT_POLICY_MANUAL {
+		source.ManagementPolicy = managementPolicy
+	} else {
+		source.ManagementPolicy = existingSource.ManagementPolicy
+	}
+
 	source, err = s.storage.Upsert(source)
 	if err != nil {
 		return SourceAndMetadata{}, err
@@ -105,7 +119,7 @@ func (s *SourceService) addSourceRecursive(ctx context.Context, url string, pare
 			wg.Go(func() error {
 				entryUrl := util.Coalesce(metadata.Entries[index].WebpageUrl, metadata.Entries[index].Url)
 
-				child, err := s.addSourceRecursive(nestedCtx, entryUrl, source.Id)
+				child, err := s.addSourceRecursive(nestedCtx, entryUrl, managementPolicy, source.Id)
 				if err != nil {
 					return err
 				}
@@ -180,7 +194,7 @@ func (s *SourceService) addSourceRecursive(ctx context.Context, url string, pare
 		}
 
 		for sourceId, tracks := range tracksBySource {
-			if _, err := s.tracks.InitializeTracksFor(sourceId, tracks); err != nil {
+			if _, err := s.initializeTracksFor(sourceId, tracks, managementPolicy); err != nil {
 				return SourceAndMetadata{Source: source, Metadata: metadata}, fmt.Errorf("failed to initialize tracks for source %s: %w", sourceId, err)
 			}
 		}
@@ -211,13 +225,51 @@ func extractTrackProperties(source storage.Source) TrackProperties {
 	}
 }
 
+func (s *SourceService) initializeTracksFor(sourceId uuid.UUID, tracks []storage.Track, managementPolicy model.SourceManagementPolicy) ([]storage.Track, error) {
+	currentManagementPolicy, err := s.storage.GetManagementPolicyById(sourceId)
+	if err != nil {
+		return tracks, fmt.Errorf("failed to get current source management policy: %w", err)
+	}
+
+	if currentManagementPolicy == model.SOURCE_MANAGEMENT_POLICY_MANUAL && managementPolicy != model.SOURCE_MANAGEMENT_POLICY_MANUAL {
+		return s.tracks.GetDirectTracksBySource(sourceId)
+	}
+
+	if managementPolicy == model.SOURCE_MANAGEMENT_POLICY_MANUAL && currentManagementPolicy != managementPolicy {
+		if err := s.storage.SetManagementPolicyById(sourceId, managementPolicy); err != nil {
+			return tracks, fmt.Errorf("failed to update source management policy: %w", err)
+		}
+	}
+
+	return s.tracks.InitializeTracksFor(sourceId, tracks)
+}
+
+func (s *SourceService) ReplaceTracksFor(sourceId uuid.UUID, tracks []storage.Track, managementPolicy model.SourceManagementPolicy) ([]storage.Track, error) {
+	currentManagementPolicy, err := s.storage.GetManagementPolicyById(sourceId)
+	if err != nil {
+		return tracks, fmt.Errorf("failed to get current source management policy: %w", err)
+	}
+
+	if currentManagementPolicy == model.SOURCE_MANAGEMENT_POLICY_MANUAL && managementPolicy != model.SOURCE_MANAGEMENT_POLICY_MANUAL {
+		return s.tracks.GetDirectTracksBySource(sourceId)
+	}
+
+	if managementPolicy == model.SOURCE_MANAGEMENT_POLICY_MANUAL && currentManagementPolicy != managementPolicy {
+		if err := s.storage.SetManagementPolicyById(sourceId, managementPolicy); err != nil {
+			return tracks, fmt.Errorf("failed to update source management policy: %w", err)
+		}
+	}
+
+	return s.tracks.ReplaceBySource(sourceId, tracks)
+}
+
 type ListSourceForApi struct {
 	Source storage.Source
 	File   *storage.SourceFile
 }
 
-func (s *SourceService) GetListForApi() ([]ListSourceForApi, error) {
-	sources, err := s.storage.GetAll()
+func (s *SourceService) GetListForApi(managementPolicies []model.SourceManagementPolicy) ([]ListSourceForApi, error) {
+	sources, err := s.storage.GetListForApi(managementPolicies)
 	if err != nil {
 		return []ListSourceForApi{}, err
 	}
