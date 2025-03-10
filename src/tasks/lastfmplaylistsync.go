@@ -108,25 +108,66 @@ func (h *LastFmPlaylistSyncHandler) processPlaylist(
 ) (storage.ExternalPlaylist, error) {
 	slog.Debug(fmt.Sprintf("Synchronizing last.fm playlist %s", playlistId))
 
-	sourceTracks := []lastfm.PlaylistItem{}
-	page := 1
-	for len(sourceTracks) < h.targetPlaylistSize {
-		playlist, err := fetch(page)
-		if err != nil {
-			return storage.ExternalPlaylist{}, fmt.Errorf("failed to fetch playlist page: %w", err)
-		}
+	type trackOrErr struct {
+		track lastfm.PlaylistItem
+		err   error
+	}
 
-		slog.Debug(fmt.Sprintf("Fetched %d more tracks from last.fm playlist %s page %d", len(playlist.Items), playlistId, page))
-		if len(playlist.Items) == 0 {
+	rawTracks := make(chan trackOrErr)
+	producerCtx, cancelProducer := context.WithCancel(context.Background())
+
+	go func() {
+		page := 1
+		tracksSeen := 0
+		for {
+			if tracksSeen >= h.targetPlaylistSize*3 {
+				slog.Warn(fmt.Sprintf("Processed %d raw tracks while trying to collect %d tracks for last.fm playlist %s, giving up", tracksSeen, h.targetPlaylistSize, playlistId))
+				close(rawTracks)
+				break
+			}
+
+			playlist, err := fetch(page)
+			if err != nil {
+				rawTracks <- trackOrErr{err: fmt.Errorf("failed to fetch playlist page: %w", err)}
+				close(rawTracks)
+				break
+			}
+
+			slog.Debug(fmt.Sprintf("Fetched %d more tracks from last.fm playlist %s page %d", len(playlist.Items), playlistId, page))
+
+			if len(playlist.Items) == 0 {
+				slog.Warn(fmt.Sprintf("last.fm playlist %s has no tracks on page %d, stopping enumeration", playlistId, page))
+				close(rawTracks)
+				break
+			}
+
+			for _, track := range playlist.Items {
+				select {
+				case <-producerCtx.Done():
+					return
+				case rawTracks <- trackOrErr{track: track}:
+					tracksSeen += 1
+				}
+			}
+
+			page += 1
+		}
+	}()
+
+	defer cancelProducer()
+
+	tracks := []storage.ExternalPlaylistTrack{}
+	for trackOrErr := range rawTracks {
+		if len(tracks) >= h.targetPlaylistSize {
 			break
 		}
 
-		sourceTracks = append(sourceTracks, playlist.Items...)
-		page += 1
-	}
+		if trackOrErr.err != nil {
+			return storage.ExternalPlaylist{}, trackOrErr.err
+		}
 
-	tracks := []storage.ExternalPlaylistTrack{}
-	for _, track := range sourceTracks {
+		track := trackOrErr.track
+
 		artists := []string{}
 		for _, artist := range track.Artists {
 			artists = append(artists, artist.Name)
