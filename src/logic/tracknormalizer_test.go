@@ -130,6 +130,31 @@ func TestNormalize_BandcampCompilationFromLabel(t *testing.T) {
 	compareTracks(normalized, expected, t)
 }
 
+func TestNormalize_RemoveJunkPrefixForSingleTracks(t *testing.T) {
+	svc := logic.NewTrackNormalizer()
+
+	type inputAndOutput struct {
+		input  logic.TrackProperties
+		output artistAndTitle
+	}
+
+	samples := []inputAndOutput{
+		{
+			input:  logic.TrackProperties{RawTitle: "Artist 1 - 04 - Song 1"},
+			output: artistAndTitle{Artist: "Artist 1", Title: "Song 1"},
+		},
+	}
+
+	for _, sample := range samples {
+		normalized, err := svc.Normalize([]logic.TrackProperties{sample.input})
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+
+		compareTracks(normalized, []artistAndTitle{sample.output}, t)
+	}
+}
+
 func TestNormalize_RemoveJunkSuffixForSingleTracks(t *testing.T) {
 	svc := logic.NewTrackNormalizer()
 

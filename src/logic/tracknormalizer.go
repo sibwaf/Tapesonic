@@ -32,6 +32,8 @@ var parenthesesOptions = []openClosePair{
 	{open: "（", close: "）"},
 }
 
+var removeAlbumIndexPrefixRegex = regexp.MustCompile("^\\d+\\s+-\\s+")
+
 var removeJunkSuffixRegex = buildJunkSuffixRegex(
 	"official lyric video",
 	"official music video",
@@ -95,6 +97,11 @@ func (normalizer *TrackNormalizer) Normalize(tracks []TrackProperties) ([]TrackP
 	}
 
 	for i := range result {
+		titleWithoutAlbumIndexPrefix := strings.TrimSpace(removeAlbumIndexPrefixRegex.ReplaceAllString(result[i].Title, ""))
+		if titleWithoutAlbumIndexPrefix != "" {
+			result[i].Title = titleWithoutAlbumIndexPrefix
+		}
+
 		titleWithoutJunkSuffix := strings.TrimSpace(removeJunkSuffixRegex.ReplaceAllString(result[i].Title, ""))
 		if titleWithoutJunkSuffix != "" {
 			result[i].Title = titleWithoutJunkSuffix
