@@ -156,6 +156,7 @@ func (h *LastFmPlaylistSyncHandler) processPlaylist(
 
 	defer cancelProducer()
 
+	trackIds := map[string]bool{}
 	tracks := []storage.ExternalPlaylistTrack{}
 	for trackOrErr := range rawTracks {
 		if len(tracks) >= h.targetPlaylistSize {
@@ -183,9 +184,10 @@ func (h *LastFmPlaylistSyncHandler) processPlaylist(
 			return storage.ExternalPlaylist{}, fmt.Errorf("failed to search for a library track: %w", err)
 		}
 
+		var libraryTrackText string
 		if libraryTrack != nil {
-			libraryTrackText := fmt.Sprintf("artist=%s, title=%s", artist, title)
-			slog.Debug(fmt.Sprintf("Found track [%s] in library: %s %s [%s]", targetTrackText, libraryTrack.ServiceName, libraryTrack.SongId, libraryTrackText))
+			libraryTrackText = fmt.Sprintf("service=%s, id=%s, artist=%s, title=%s", libraryTrack.ServiceName, libraryTrack.SongId, libraryTrack.Artist, libraryTrack.Title)
+			slog.Debug(fmt.Sprintf("Found track [%s] in library: [%s]", targetTrackText, libraryTrackText))
 		} else {
 			if len(track.Playlinks) == 0 {
 				slog.Debug(fmt.Sprintf("Didn't find track [%s] in library and no playlinks available, skipping", targetTrackText))
@@ -208,8 +210,17 @@ func (h *LastFmPlaylistSyncHandler) processPlaylist(
 				continue
 			}
 
-			slog.Debug(fmt.Sprintf("Imported track [%s] from %s for playlist %s", targetTrackText, url, playlistId))
 			libraryTrack = &cachedTrack
+			libraryTrackText = fmt.Sprintf("service=%s, id=%s, artist=%s, title=%s", libraryTrack.ServiceName, libraryTrack.SongId, libraryTrack.Artist, libraryTrack.Title)
+			slog.Debug(fmt.Sprintf("Imported track [%s] from %s for playlist %s: [%s]", targetTrackText, url, playlistId, libraryTrackText))
+		}
+
+		deduplicationId := fmt.Sprintf("%s/%s", libraryTrack.ServiceName, libraryTrack.SongId)
+		if _, alreadyAdded := trackIds[deduplicationId]; alreadyAdded {
+			slog.Debug(fmt.Sprintf("Track [%s] was already added to playlist %s, skipping", libraryTrackText, playlistId))
+			continue
+		} else {
+			trackIds[deduplicationId] = true
 		}
 
 		tracks = append(tracks, storage.ExternalPlaylistTrack{

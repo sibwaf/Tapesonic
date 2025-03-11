@@ -114,8 +114,8 @@ func (h *ListenBrainzPlaylistSyncHandler) processPlaylist(playlist listenbrainz.
 			}
 		}
 
-		libraryTrackText := fmt.Sprintf("artist=%s, album=%s, title=%s", libraryTrack.Artist, libraryTrack.Album, libraryTrack.Title)
-		slog.Debug(fmt.Sprintf("Found track [%s] in library: %s %s [%s]", targetTrackText, libraryTrack.ServiceName, libraryTrack.SongId, libraryTrackText))
+		libraryTrackText := fmt.Sprintf("service=%s, id=%s, artist=%s, album=%s, title=%s", libraryTrack.ServiceName, libraryTrack.SongId, libraryTrack.Artist, libraryTrack.Album, libraryTrack.Title)
+		slog.Debug(fmt.Sprintf("Found track [%s] in library: [%s]", targetTrackText, libraryTrackText))
 
 		resultTrack := storage.ExternalPlaylistTrack{
 			Artist: track.Creator,
