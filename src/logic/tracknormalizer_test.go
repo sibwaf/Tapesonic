@@ -130,6 +130,148 @@ func TestNormalize_BandcampCompilationFromLabel(t *testing.T) {
 	compareTracks(normalized, expected, t)
 }
 
+func TestNormalize_RemoveJunkSuffixForSingleTracks(t *testing.T) {
+	svc := logic.NewTrackNormalizer()
+
+	type inputAndOutput struct {
+		input  logic.TrackProperties
+		output artistAndTitle
+	}
+
+	samples := []inputAndOutput{
+		{
+			input:  logic.TrackProperties{RawTitle: "Artist1「Song1」（Official Music Video）"},
+			output: artistAndTitle{Title: "Artist1「Song1」"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Artist1「Song1」(Official Visualiser)"},
+			output: artistAndTitle{Title: "Artist1「Song1」"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "\"Song 1\" by Artist 1 (official video)"},
+			output: artistAndTitle{Title: "\"Song 1\" by Artist 1"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "“Song 1” (Official Audio)"},
+			output: artistAndTitle{Title: "“Song 1”"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Artist1 Song1(Official Music Video)"},
+			output: artistAndTitle{Title: "Artist1 Song1"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Song 1 (OFFICIAL LYRIC VIDEO)"},
+			output: artistAndTitle{Title: "Song 1"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Song 1 [OFFICIAL AUDIO]"},
+			output: artistAndTitle{Title: "Song 1"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Song 1 (MV)"},
+			output: artistAndTitle{Title: "Song 1"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "曲名(MV)"},
+			output: artistAndTitle{Title: "曲名"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Artist 1 \"Song 1\" (Official Video)"},
+			output: artistAndTitle{Title: "Artist 1 \"Song 1\""},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Song 1 (Official Music Video)"},
+			output: artistAndTitle{Title: "Song 1"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "\"cold weather\" (Official Lyric Video)"},
+			output: artistAndTitle{Title: "\"cold weather\""},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Artist 1-Song 1 (w/Lyrics)"},
+			output: artistAndTitle{Title: "Artist 1-Song 1"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Song 1 (Audio)"},
+			output: artistAndTitle{Title: "Song 1"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Song 1 (Lyrics)"},
+			output: artistAndTitle{Title: "Song 1"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "\"Song 1\" (audio only)"},
+			output: artistAndTitle{Title: "\"Song 1\""},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Artist 1 - Song 1 【Subbed】"},
+			output: artistAndTitle{Artist: "Artist 1", Title: "Song 1"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "\"Song 1\" (Full Album Stream)"},
+			output: artistAndTitle{Title: "\"Song 1\""},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Song 1 (HD)"},
+			output: artistAndTitle{Title: "Song 1"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Song 1 (official)"},
+			output: artistAndTitle{Title: "Song 1"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "Song 1 (Music video)"},
+			output: artistAndTitle{Title: "Song 1"},
+		},
+		{
+			input:  logic.TrackProperties{RawTitle: "\"Song 1\" (360º)"},
+			output: artistAndTitle{Title: "\"Song 1\""},
+		},
+	}
+
+	for _, sample := range samples {
+		normalized, err := svc.Normalize([]logic.TrackProperties{sample.input})
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+
+		compareTracks(normalized, []artistAndTitle{sample.output}, t)
+	}
+}
+
+func TestNormalize_KeepAllowedSuffixForSingleTracks(t *testing.T) {
+	svc := logic.NewTrackNormalizer()
+
+	type inputAndOutput struct {
+		input  logic.TrackProperties
+		output artistAndTitle
+	}
+
+	samples := []inputAndOutput{
+		{ // non-matching parentheses
+			input:  logic.TrackProperties{RawTitle: "Artist 1 - Song 1 [official audio)"},
+			output: artistAndTitle{Artist: "Artist 1", Title: "Song 1 [official audio)"},
+		},
+		{ // keep "live" to differentiate from proper recordings
+			input:  logic.TrackProperties{RawTitle: "Artist 1 - Song 1 (live)"},
+			output: artistAndTitle{Artist: "Artist 1", Title: "Song 1 (live)"},
+		},
+		{ // not a suffix but an actual title
+			input:  logic.TrackProperties{RawTitle: "Artist 3 - (official audio)"},
+			output: artistAndTitle{Artist: "Artist 3", Title: "(official audio)"},
+		},
+	}
+
+	for _, sample := range samples {
+		normalized, err := svc.Normalize([]logic.TrackProperties{sample.input})
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+
+		compareTracks(normalized, []artistAndTitle{sample.output}, t)
+	}
+}
+
 func compareTracks(actualTracks []logic.TrackProperties, expectedTracks []artistAndTitle, t *testing.T) {
 	if len(actualTracks) != len(expectedTracks) {
 		t.Fatalf("Expected %d tracks, but got %d tracks", len(expectedTracks), len(actualTracks))
@@ -144,7 +286,7 @@ func compareTracks(actualTracks []logic.TrackProperties, expectedTracks []artist
 				expectedTrack.Artist,
 				expectedTrack.Title,
 				actualTrack.Artist,
-				actualTrack.RawTitle,
+				actualTrack.Title,
 			)
 		}
 	}

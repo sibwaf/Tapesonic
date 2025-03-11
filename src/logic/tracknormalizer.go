@@ -19,7 +19,43 @@ const (
 	FORMAT_ARTIST_DASH_TITLE
 )
 
-func (*TrackNormalizer) Normalize(tracks []TrackProperties) ([]TrackProperties, error) {
+type openClosePair struct {
+	open  string
+	close string
+}
+
+var parenthesesOptions = []openClosePair{
+	{open: "(", close: ")"},
+	{open: "[", close: "]"},
+	{open: "「", close: "」"},
+	{open: "【", close: "】"},
+	{open: "（", close: "）"},
+}
+
+var removeJunkSuffixRegex = buildJunkSuffixRegex(
+	"official lyric video",
+	"official music video",
+	"official audio",
+	"official video",
+	"official visualizer",
+	"official visualiser",
+	"english subtitles",
+	"mv",
+	"pv",
+	"w/lyrics",
+	"lyrics",
+	"audio",
+	"audio only",
+	"subbed",
+	"hd",
+	"official",
+	"360º",
+	"music video",
+	"full album stream",
+	"lyric video",
+)
+
+func (normalizer *TrackNormalizer) Normalize(tracks []TrackProperties) ([]TrackProperties, error) {
 	result := make([]TrackProperties, len(tracks))
 	copy(result, tracks)
 
@@ -33,7 +69,7 @@ func (*TrackNormalizer) Normalize(tracks []TrackProperties) ([]TrackProperties, 
 		if artist != "" {
 			removeArtistFromTitleRegex, err := regexp.Compile(fmt.Sprintf("^%s\\s+-\\s+(.+)", regexp.QuoteMeta(artist)))
 			if err != nil {
-				return []TrackProperties{}, fmt.Errorf("failed to compile regex for artist removal:%w", err)
+				return []TrackProperties{}, fmt.Errorf("failed to compile regex for artist removal: %w", err)
 			}
 
 			if match := removeArtistFromTitleRegex.FindStringSubmatch(title); match != nil {
@@ -55,6 +91,13 @@ func (*TrackNormalizer) Normalize(tracks []TrackProperties) ([]TrackProperties, 
 
 			result[index].Artist = artist
 			result[index].Title = title
+		}
+	}
+
+	for i := range result {
+		titleWithoutJunkSuffix := strings.TrimSpace(removeJunkSuffixRegex.ReplaceAllString(result[i].Title, ""))
+		if titleWithoutJunkSuffix != "" {
+			result[i].Title = titleWithoutJunkSuffix
 		}
 	}
 
@@ -84,4 +127,23 @@ func extractArtistAndTitle(text string, format int) (string, string) {
 	}
 
 	return "", strings.TrimSpace(text)
+}
+
+func buildJunkSuffixRegex(suffixes ...string) *regexp.Regexp {
+	suffixOptions := []string{}
+	for _, suffix := range suffixes {
+		suffixRegex := regexp.QuoteMeta(suffix)
+		suffixRegex = strings.ReplaceAll(suffixRegex, " ", "\\s+?")
+
+		for _, parentheses := range parenthesesOptions {
+			openRegex := regexp.QuoteMeta(parentheses.open)
+			closeRegex := regexp.QuoteMeta(parentheses.close)
+
+			// non-capture group of: OPEN any-space-count SUFFIX any-space-count CLOSE
+			suffixOptions = append(suffixOptions, fmt.Sprintf("(?:%s\\s*?%s\\s*?%s)", openRegex, suffixRegex, closeRegex))
+		}
+	}
+
+	// case-insensitive: OPTION or OPTION ... any-space-count end-of-string
+	return regexp.MustCompile(fmt.Sprintf("(?i)%s\\s*?$", strings.Join(suffixOptions, "|")))
 }
