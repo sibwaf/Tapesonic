@@ -20,7 +20,7 @@ type SubmitListensRequestPayloadItem struct {
 type SubmitListensRequestPayloadItemTrackMetadata struct {
 	ArtistName  string `json:"artist_name"`
 	TrackName   string `json:"track_name"`
-	ReleaseName string `json:"release_name"`
+	ReleaseName string `json:"release_name,omitempty"`
 }
 
 type ValidateTokenResponse struct {
