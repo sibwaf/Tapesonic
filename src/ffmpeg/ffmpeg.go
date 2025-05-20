@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"os/exec"
+	"regexp"
 	"slices"
 	"strings"
 	"tapesonic/config"
@@ -26,10 +27,12 @@ var (
 		"mp3":  {"mp3"},
 		"opus": {"opus"},
 	}
+
+	versionRegexp = regexp.MustCompile(`ffmpeg version ([^\s]+)`)
 )
 
 const (
-	ANY_FORMAT = ""
+	ANY_FORMAT      = ""
 	SEEKABLE_FORMAT = "mp3" // opus produces different binaries on each encode which breaks seeking
 	FALLBACK_FORMAT = "opus"
 )
@@ -42,6 +45,22 @@ func NewFfmpeg(path string) *Ffmpeg {
 	return &Ffmpeg{
 		path: path,
 	}
+}
+
+func (f *Ffmpeg) GetCurrentVersion() (string, error) {
+	cmd := exec.Command(f.path, "-version")
+
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	match := versionRegexp.FindSubmatch(out)
+	if match == nil {
+		return "", fmt.Errorf("can't extract version from '%s'", out)
+	}
+
+	return string(match[1]), nil
 }
 
 func (f *Ffmpeg) StreamFrom(

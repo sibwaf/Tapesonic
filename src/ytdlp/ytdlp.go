@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os/exec"
 	"path"
+	"strings"
 	"tapesonic/config"
 )
 
@@ -19,6 +20,13 @@ func NewYtdlp(path string) *Ytdlp {
 	return &Ytdlp{
 		path: path,
 	}
+}
+
+func (y *Ytdlp) GetCurrentVersion() (string, error) {
+	cmd := exec.Command(y.path, "--version")
+
+	out, err := cmd.Output()
+	return strings.TrimSpace(string(out)), err
 }
 
 func (y *Ytdlp) ExtractMetadata(url string) (YtdlpFile, error) {

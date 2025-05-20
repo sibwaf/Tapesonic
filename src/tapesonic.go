@@ -44,6 +44,22 @@ func main() {
 		os.Exit(2)
 	}
 
+	ytdlpVersion, err := appCtx.Ytdlp.GetCurrentVersion()
+	if err != nil {
+		slog.Error(fmt.Sprintf("Failed to determine yt-dlp version: %s", err.Error()))
+		os.Exit(3)
+	} else {
+		slog.Info(fmt.Sprintf("yt-dlp version: %s", ytdlpVersion))
+	}
+
+	ffmpegVersion, err := appCtx.Ffmpeg.GetCurrentVersion()
+	if err != nil {
+		slog.Error(fmt.Sprintf("Failed to determine ffmpeg version: %s", err.Error()))
+		os.Exit(3)
+	} else {
+		slog.Info(fmt.Sprintf("ffmpeg version: %s", ffmpegVersion))
+	}
+
 	mux := http.NewServeMux()
 	for route, handler := range tshttp.GetHandlers(appCtx) {
 		mux.HandleFunc(route, handler)
