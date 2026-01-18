@@ -6,7 +6,7 @@ import (
 	"tapesonic/subsonic"
 )
 
-func GetStarred2(auth *authenticator) SubsonicHandler {
+func GetStarred(auth *authenticator) SubsonicHandler {
 	return func(r *http.Request) (*subsonic.Response, error) {
 		_, err := auth.Authenticate(r)
 		if err != nil {

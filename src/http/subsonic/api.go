@@ -150,13 +150,17 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 	auth := newAuthenticator(appCtx.Users.UserService)
 
 	rawHandlers := map[string]http.HandlerFunc{
-		"/ping": asHandlerFunc(Ping(auth)),
+		"/ping":                      asHandlerFunc(Ping(auth)),
+		"/getOpenSubsonicExtensions": asHandlerFunc(GetOpenSubsonicExtensions()),
+
+		"/getUser": asHandlerFunc(GetUser(auth)),
 
 		"/getAlbumList2":            asHandlerFunc(GetAlbumList2(auth, appCtx.Library.LibraryService)),
 		"/getAlbum":                 asHandlerFunc(GetAlbum(auth, appCtx.Library.LibraryService)),
 		"/getArtists":               asHandlerFunc(GetArtists(auth)),
 		"/getArtist":                asHandlerFunc(GetArtist(auth, appCtx.Library.LibraryService)),
 		"/getGenres":                asHandlerFunc(GetGenres(auth)),
+		"/getIndexes":               asHandlerFunc(GetIndexes(auth)),
 		"/getInternetRadioStations": asHandlerFunc(GetInternetRadioStations(auth)),
 		"/getLicense":               asHandlerFunc(GetLicense(auth)),
 		"/getMusicFolders":          asHandlerFunc(GetMusicFolders(auth)),
@@ -167,7 +171,9 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 		"/getRandomSongs":           asHandlerFunc(GetRandomSongs(auth, appCtx.Library.LibraryService)),
 		"/getScanStatus":            asHandlerFunc(GetScanStatus(auth)),
 		"/getSong":                  asHandlerFunc(GetSong(auth, appCtx.Library.LibraryService)),
+		"/getStarred":               asHandlerFunc(GetStarred(auth)),
 		"/getStarred2":              asHandlerFunc(GetStarred2(auth)),
+		"/getTopSongs":              asHandlerFunc(GetTopSongs(auth)),
 		"/search3":                  asHandlerFunc(Search3(auth, appCtx.Library.LibraryService)),
 
 		"/scrobble": asHandlerFunc(Scrobble(auth, appCtx.Scrobbling.ScrobbleService)),

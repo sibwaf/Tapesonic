@@ -75,7 +75,7 @@ func ToChild(track model.LibraryTrack) subsonic.Child {
 		Title:     track.Title,
 		Album:     track.AlbumName,
 		AlbumId:   track.AlbumId,
-		Track:     track.AlbumTrackIndex,
+		Track:     track.AlbumTrackIndex + 1,
 		CoverArt:  track.CoverId,
 		Duration:  int(track.Duration.Seconds()),
 		PlayCount: 0,

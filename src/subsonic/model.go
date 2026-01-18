@@ -30,6 +30,7 @@ const (
 	ERROR_CODE_GENERIC           = 0
 	ERROR_CODE_PARAMETER_MISSING = 10
 	ERROR_CODE_NOT_AUTHENTICATED = 40
+	ERROR_CODE_NOT_AUTHORIZED    = 50
 	ERROR_CODE_NOT_FOUND         = 70
 )
 
@@ -60,23 +61,29 @@ type Response struct {
 
 	Error *Error `json:"error,omitempty" xml:"error"`
 
+	License                *License                `json:"license,omitempty" xml:"license"`
+	OpenSubsonicExtensions *OpenSubsonicExtensions `json:"openSubsonicExtensions" xml:"-"`
+	ScanStatus             *ScanStatus             `json:"scanStatus,omitempty" xml:"scanStatus"`
+	User                   *User                   `json:"user,omitempty" xml:"user"`
+
 	AlbumList2            *AlbumList2            `json:"albumList2,omitempty" xml:"albumList2"`
 	Album                 *AlbumId3              `json:"album,omitempty" xml:"album"`
 	Artists               *Artists               `json:"artists,omitempty" xml:"artists"`
 	Artist                *ArtistId3             `json:"artist,omitempty" xml:"artist"`
 	Genres                *Genres                `json:"genres,omitempty" xml:"genres"`
+	Indexes               *Indexes               `json:"indexes,omitempty" xml:"indexes"`
 	InternetRadioStations *InternetRadioStations `json:"internetRadioStations,omitempty" xml:"internetRadioStations"`
-	License               *License               `json:"license,omitempty" xml:"license"`
 	MusicFolders          *MusicFolders          `json:"musicFolders,omitempty" xml:"musicFolders"`
 	Podcasts              *Podcasts              `json:"podcasts,omitempty" xml:"podcasts"`
 	NewestPodcasts        *NewestPodcasts        `json:"newestPodcasts,omitempty" xml:"newestPodcasts"`
 	Playlists             *Playlists             `json:"playlists,omitempty" xml:"playlists"`
 	Playlist              *Playlist              `json:"playlist,omitempty" xml:"playlist"`
 	RandomSongs           *RandomSongs           `json:"randomSongs,omitempty" xml:"randomSongs"`
-	ScanStatus            *ScanStatus            `json:"scanStatus,omitempty" xml:"scanStatus"`
 	SearchResult3         *SearchResult3         `json:"searchResult3,omitempty" xml:"searchResult3"`
 	Song                  *Child                 `json:"song,omitempty" xml:"song"`
-	Starred2              *Starred2              `json:"starred2,omitempty" xml:"starred2"`
+	Starred               *Starred               `json:"starred,omitempty" xml:"starred"`
+	Starred2              *Starred               `json:"starred2,omitempty" xml:"starred2"`
+	TopSongs              *TopSongs              `json:"topSongs,omitempty" xml:"topSongs"`
 }
 
 type Error struct {
@@ -109,8 +116,21 @@ func NewParameterMissingResponse(name string) *Response {
 	return NewFailedResponse(ERROR_CODE_PARAMETER_MISSING, fmt.Sprintf("Required parameter `%s` is missing", name))
 }
 
+func NewNotAuthorizedResponse() *Response {
+	return NewFailedResponse(ERROR_CODE_NOT_AUTHORIZED, "Insufficient permissions")
+}
+
 func NewNotFoundResponse(what string) *Response {
 	return NewFailedResponse(ERROR_CODE_NOT_FOUND, fmt.Sprintf("Not found: %s", what))
+}
+
+type OpenSubsonicExtensions struct {
+	OpenSubsonicExtensions []OpenSubsonicExtension `json:"openSubsonicExtensions" xml:"-"`
+}
+
+type OpenSubsonicExtension struct {
+	Name     string `json:"name" xml:"-"`
+	Versions []int  `json:"versions" xml:"-"`
 }
 
 type MusicFolder struct {
@@ -209,7 +229,16 @@ type ArtistId3 struct {
 
 	Starred *time.Time `json:"starred" xml:"starred,attr,omitempty"`
 
-	Album []AlbumId3 `json:"album,omitempty" xml:"album"`
+	Album []AlbumId3 `json:"album" xml:"album"`
+}
+
+type Indexes struct {
+	IgnoredArticles string `json:"ignoredArticles" xml:"ignoredArticles,attr"`
+	LastModified    int64  `json:"lastModified" xml:"lastModified,attr"`
+
+	Shortcut []ArtistId3 `json:"shortcut" xml:"shortcut"`
+	Child    []Child     `json:"child" xml:"child"`
+	Index    []IndexId3  `json:"index" xml:"index"`
 }
 
 type ItemDate struct {
@@ -275,8 +304,29 @@ type NewestPodcasts struct {
 	Episode []PodcastEpisode `json:"episode" xml:"episode"`
 }
 
-type Starred2 struct {
+type Starred struct {
 	Artist []ArtistId3 `json:"artist" xml:"artist"`
 	Album  []AlbumId3  `json:"album" xml:"album"`
 	Song   []Child     `json:"song" xml:"song"`
+}
+
+type User struct {
+	Username            string `json:"username" xml:"username"`
+	ScrobblingEnabled   bool   `json:"scrobblingEnabled" xml:"scrobblingEnabled"`
+	AdminRole           bool   `json:"adminRole" xml:"adminRole"`
+	SettingsRole        bool   `json:"settingsRole" xml:"settingsRole"`
+	DownloadRole        bool   `json:"downloadRole" xml:"downloadRole"`
+	UploadRole          bool   `json:"uploadRole" xml:"uploadRole"`
+	PlaylistRole        bool   `json:"playlistRole" xml:"playlistRole"`
+	CoverArtRole        bool   `json:"coverArtRole" xml:"coverArtRole"`
+	CommentRole         bool   `json:"commentRole" xml:"commentRole"`
+	PodcastRole         bool   `json:"podcastRole" xml:"podcastRole"`
+	StreamRole          bool   `json:"streamRole" xml:"streamRole"`
+	JukeboxRole         bool   `json:"jukeboxRole" xml:"jukeboxRole"`
+	ShareRole           bool   `json:"shareRole" xml:"shareRole"`
+	VideoConversionRole bool   `json:"videoConversionRole" xml:"videoConversionRole"`
+}
+
+type TopSongs struct {
+	Song []Child `json:"song" xml:"song"`
 }
