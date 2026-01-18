@@ -30,8 +30,8 @@ type StreamCacheItem struct {
 	Size        int64
 	ContentType string
 
-	CreatedAt  time.Time
-	AccessedAt time.Time
+	CreatedAt  util.TimestampWrapper
+	AccessedAt util.TimestampWrapper
 }
 
 type StreamCacheStorage struct {
@@ -149,13 +149,23 @@ func (storage *StreamCacheStorage) readFile(id string) (StreamCacheItem, io.Read
 	filename := id
 	fullPath := path.Join(storage.dir, filename)
 
-	item := StreamCacheItem{Id: id}
-	if err := storage.db.Model(&item).Clauses(clause.Returning{}).Update("accessed_at", time.Now()).Error; err != nil {
-		return StreamCacheItem{}, nil, err
+	query := `
+		UPDATE stream_cache_items
+		SET accessed_at = @accessedAt
+		WHERE id = @id
+		RETURNING *
+	`
+	params := map[string]any{
+		"id":         id,
+		"accessedAt": util.NewTimestampWrapper(time.Now()),
 	}
 
-	if item.Filename == "" {
+	item := StreamCacheItem{}
+	err := storage.db.Raw(query, params).First(&item).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return StreamCacheItem{}, nil, fmt.Errorf("file with id=`%s` is not present in stream cache metadata", id)
+	} else if err != nil {
+		return StreamCacheItem{}, nil, err
 	}
 
 	reader, err := os.Open(fullPath)
@@ -183,13 +193,18 @@ func (storage *StreamCacheStorage) writeFile(id string, contentType string, read
 		return StreamCacheItem{}, err
 	}
 
-	item := StreamCacheItem{
-		Id:          id,
-		Filename:    filename,
-		Size:        size,
-		ContentType: contentType,
-		CreatedAt:   time.Now(),
-		AccessedAt:  time.Now(),
+	sql := `
+		INSERT INTO stream_cache_items (id, filename, size, content_type, created_at, accessed_at)
+		VALUES (@id, @filename, @size, @contentType, @createdAt, @accessedAt)
+		RETURNING *
+	`
+	params := map[string]any{
+		"id":          id,
+		"filename":    filename,
+		"size":        size,
+		"contentType": contentType,
+		"createdAt":   util.NewTimestampWrapper(time.Now()),
+		"accessedAt":  util.NewTimestampWrapper(time.Now()),
 	}
 
 	go func() {
@@ -199,7 +214,8 @@ func (storage *StreamCacheStorage) writeFile(id string, contentType string, read
 		}
 	}()
 
-	return item, storage.db.Save(&item).Error
+	item := StreamCacheItem{}
+	return item, storage.db.Raw(sql, params).First(&item).Error
 }
 
 func (storage *StreamCacheStorage) Delete(id string) error {

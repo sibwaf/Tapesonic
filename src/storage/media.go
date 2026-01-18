@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"path"
+	"tapesonic/model"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -12,22 +13,6 @@ type MediaStorage struct {
 	db *DbHelper
 
 	dir string
-
-	tapeStorage     *TapeStorage
-	playlistStorage *PlaylistStorage
-	albumStorage    *AlbumStorage
-}
-
-type TrackSourceDescriptor struct {
-	LocalPath   string
-	LocalFormat string
-	LocalCodec  string
-
-	RemoteUrl        string
-	SourceDurationMs int64
-
-	StartOffsetMs int64
-	EndOffsetMs   int64
 }
 
 type CoverDescriptor struct {
@@ -38,22 +23,15 @@ type CoverDescriptor struct {
 func NewMediaStorage(
 	db *gorm.DB,
 	dir string,
-	tapeStorage *TapeStorage,
-	playlistStorage *PlaylistStorage,
-	albumStorage *AlbumStorage,
 ) *MediaStorage {
 	return &MediaStorage{
 		db: NewDbHelper(db),
 
 		dir: dir,
-
-		tapeStorage:     tapeStorage,
-		playlistStorage: playlistStorage,
-		albumStorage:    albumStorage,
 	}
 }
 
-func (ms *MediaStorage) GetTrackSources(trackId uuid.UUID) (TrackSourceDescriptor, error) {
+func (ms *MediaStorage) GetTrackSources(trackId uuid.UUID) (model.TrackSourceDescriptor, error) {
 	query := fmt.Sprintf(
 		`
 			SELECT
@@ -72,7 +50,7 @@ func (ms *MediaStorage) GetTrackSources(trackId uuid.UUID) (TrackSourceDescripto
 		trackId.String(),
 	)
 
-	sourceDescriptor := TrackSourceDescriptor{}
+	sourceDescriptor := model.TrackSourceDescriptor{}
 	if err := ms.db.Raw(query).Find(&sourceDescriptor).Error; err != nil {
 		return sourceDescriptor, err
 	}

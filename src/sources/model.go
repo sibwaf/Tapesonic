@@ -1,0 +1,7 @@
+package sources
+
+// tasks
+
+const (
+	TASK_SOURCES_FIND_SOURCE_FOR_DOWNLOAD = "SOURCES_FIND_SOURCE_FOR_DOWNLOAD"
+)

@@ -41,7 +41,7 @@ func SourceToFullSourceRs(source storage.Source) FullSourceRs {
 		TrackTitle:  source.TrackTitle,
 		DurationMs:  source.DurationMs,
 
-		ReleaseDate: source.ReleaseDate,
+		ReleaseDate: source.ReleaseDate.UnwrapNullable(),
 
 		ThumbnailId: source.ThumbnailId,
 	}

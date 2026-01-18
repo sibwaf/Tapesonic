@@ -8,6 +8,8 @@ import (
 	"path"
 	"path/filepath"
 	"tapesonic/storage"
+	"tapesonic/util"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -106,10 +108,13 @@ func (s *SourceFileService) DownloadIfMissingFor(sourceId uuid.UUID) (storage.So
 	}
 
 	file := storage.SourceFile{
+		Id:        uuid.New(),
 		SourceId:  source.Id,
 		Codec:     downloadedFile.ACodec,
 		Format:    downloadedFile.Ext,
 		MediaPath: path,
+		CreatedAt: util.NewTimestampWrapper(time.Now()),
+		UpdatedAt: util.NewTimestampWrapper(time.Now()),
 	}
 
 	slog.Info(fmt.Sprintf("Downloaded a file for source id=%s (%s): %s, %s", source.Id, source.Url, file.Codec, file.MediaPath))

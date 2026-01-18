@@ -2,13 +2,11 @@ package responses
 
 import (
 	"tapesonic/storage"
-
-	"github.com/google/uuid"
 )
 
 type TrackRs struct {
-	Id       uuid.UUID
-	SourceId uuid.UUID
+	Id       string
+	SourceId string
 
 	Artist string
 	Title  string
@@ -27,10 +25,10 @@ func TracksToTrackRs(tracks []storage.Track) []TrackRs {
 
 func TrackToTrackRs(track storage.Track) TrackRs {
 	return TrackRs{
-		Id:            track.Id,
+		Id:            track.Id.String(),
 		Artist:        track.Artist,
 		Title:         track.Title,
-		SourceId:      track.SourceId,
+		SourceId:      track.SourceId.String(),
 		StartOffsetMs: track.StartOffsetMs,
 		EndOffsetMs:   track.EndOffsetMs,
 	}

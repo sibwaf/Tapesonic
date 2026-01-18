@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type Tape, TapeType, type TrackRs } from '@/api';
+import { type GuessTapeMetadataRs, type Tape, TapeType, type TrackRs } from '@/api';
 import api from '@/api';
 import util from '@/util';
 import TapeTrackSearch from '@/components/TapeTrackSearch.vue';
@@ -28,7 +28,7 @@ const isNewTape = computed(() => tapeId.value == "new");
 const tape = ref<Tape | null>(null);
 const editedTape = ref<Tape | null>(null);
 
-const guessedMetadata = ref<Tape | null>(null);
+const guessedMetadata = ref<GuessTapeMetadataRs | null>(null);
 const thumbnailIds = ref<string[]>([]);
 
 const sourceIds = computed(() => editedTape.value?.Tracks?.map(it => it.SourceId) ?? []);
@@ -63,7 +63,7 @@ function onRemoveTrackAt(tape: Tape, index: number) {
     tape.Tracks.splice(index, 1);
 }
 
-function onApplyGuessedMetadata(tape: Tape, guessedMetadata: Tape) {
+function onApplyGuessedMetadata(tape: Tape, guessedMetadata: GuessTapeMetadataRs) {
     if (guessedMetadata.Artist) {
         tape.Artist = guessedMetadata.Artist;
     }
@@ -138,7 +138,7 @@ watch(albumTrackIds, async (trackIds) => {
     }
 
     try {
-        guessedMetadata.value = await api.guessTapeMetadata(trackIds);
+        guessedMetadata.value = await api.guessTapeMetadata({ TrackIds: trackIds });
     } catch (e) {
         console.error("Failed to guess metadata", e);
     }

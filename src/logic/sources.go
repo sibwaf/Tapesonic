@@ -75,6 +75,8 @@ func (s *SourceService) addSourceRecursive(ctx context.Context, url string, mana
 	}
 
 	source := storage.Source{
+		Id: uuid.New(),
+
 		ExtractorKey: metadata.ExtractorKey,
 		ExtractedId:  metadata.Id,
 		Url:          metadata.WebpageUrl,
@@ -90,10 +92,15 @@ func (s *SourceService) addSourceRecursive(ctx context.Context, url string, mana
 		TrackTitle:  metadata.Track,
 		DurationMs:  int64(metadata.Duration * 1000),
 
-		UploadedAt:  time.Unix(int64(metadata.Timestamp), 0),
-		ReleaseDate: parseDateOrNull(metadata.ReleaseDate),
+		UploadedAt:  util.NewTimestampWrapper(time.Unix(int64(metadata.Timestamp), 0)),
+		ReleaseDate: util.NewTimestampWrapperOrNull(parseDateOrNull(metadata.ReleaseDate)),
 
-		Thumbnail: thumbnail,
+		CreatedAt: util.NewTimestampWrapper(time.Now()),
+		UpdatedAt: util.NewTimestampWrapper(time.Now()),
+	}
+
+	if thumbnail != nil {
+		source.ThumbnailId = &thumbnail.Id
 	}
 
 	// never override MANUAL management policy

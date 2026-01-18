@@ -1,5 +1,11 @@
 package ytdlp
 
+import "errors"
+
+var (
+	ErrNotAvailable = errors.New("url not available")
+)
+
 type YtdlpFile struct {
 	Id         string  `json:"id"`
 	Title      string  `json:"title"`

@@ -63,6 +63,10 @@ func MakeTextSearchCondition(fields []string, query string) string {
 	return strings.Join(filter, " AND ")
 }
 
+func MakeTextSearchString(raw string) string {
+	return strings.Join(ExtractSearchTerms(raw), " ")
+}
+
 func ExtractSearchTerms(query string) []string {
 	query, err := util.NormalizeUnicode(query)
 	if err != nil {

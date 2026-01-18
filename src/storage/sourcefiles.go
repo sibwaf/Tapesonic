@@ -2,11 +2,10 @@ package storage
 
 import (
 	"errors"
-	"time"
+	"tapesonic/util"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type SourceFile struct {
@@ -20,8 +19,8 @@ type SourceFile struct {
 
 	MediaPath string
 
-	CreatedAt time.Time
-	UpdatedAt *time.Time
+	CreatedAt util.TimestampWrapper
+	UpdatedAt util.TimestampWrapper
 }
 
 type SourceFileStorage struct {
@@ -37,11 +36,22 @@ func NewSourceFileStorage(db *gorm.DB) (*SourceFileStorage, error) {
 }
 
 func (storage *SourceFileStorage) Create(file SourceFile) (SourceFile, error) {
-	if file.Id == uuid.Nil {
-		file.Id = uuid.New()
+	sql := `
+		INSERT INTO source_files (id, source_id, format, codec, media_path, created_at, updated_at)
+		VALUES (@id, @sourceId, @format, @codec, @mediaPath, @createdAt, @updatedAt)
+		RETURNING *
+	`
+	params := map[string]any{
+		"id":        file.Id,
+		"sourceId":  file.SourceId,
+		"format":    file.Format,
+		"codec":     file.Codec,
+		"mediaPath": file.MediaPath,
+		"createdAt": file.CreatedAt,
+		"updatedAt": file.UpdatedAt,
 	}
 
-	return file, storage.db.Clauses(clause.Returning{}).Create(&file).Error
+	return file, storage.db.Raw(sql, params).First(&file).Error
 }
 
 func (storage *SourceFileStorage) DeleteById(id uuid.UUID) error {

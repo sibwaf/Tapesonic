@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os/exec"
@@ -26,7 +27,7 @@ func (y *Ytdlp) GetCurrentVersion() (string, error) {
 	cmd := exec.Command(y.path, "--version")
 
 	out, err := cmd.Output()
-	return strings.TrimSpace(string(out)), err
+	return strings.TrimSpace(string(out)), mapError(err)
 }
 
 func (y *Ytdlp) ExtractMetadata(url string) (YtdlpFile, error) {
@@ -44,7 +45,7 @@ func (y *Ytdlp) ExtractMetadata(url string) (YtdlpFile, error) {
 
 	out, err := cmd.Output()
 	if err != nil {
-		return YtdlpFile{}, err
+		return YtdlpFile{}, mapError(err)
 	}
 
 	result := YtdlpFile{}
@@ -75,7 +76,7 @@ func (y *Ytdlp) Download(url string, format string, downloadDir string) (YtdlpFi
 
 	out, err := cmd.Output()
 	if err != nil {
-		return YtdlpFile{}, err
+		return YtdlpFile{}, mapError(err)
 	}
 
 	result := YtdlpFile{}
@@ -97,9 +98,27 @@ func (y *Ytdlp) GetFormatFromMetadata(metadata string, format string) (YtdlpForm
 
 	out, err := cmd.Output()
 	if err != nil {
-		return YtdlpFormat{}, err
+		return YtdlpFormat{}, mapError(err)
 	}
 
 	result := YtdlpFormat{}
 	return result, json.Unmarshal(out, &result)
+}
+
+func mapError(err error) error {
+	var exitError *exec.ExitError
+	if errors.As(err, &exitError) {
+		errorText := strings.ToLower(string(exitError.Stderr))
+		if strings.Contains(errorText, "video unavailable") {
+			return ErrNotAvailable
+		} else if strings.Contains(errorText, "404: not found") {
+			return ErrNotAvailable
+		} else if strings.Contains(errorText, "private video") {
+			return ErrNotAvailable
+		} else if strings.Contains(errorText, "sign in to confirm your age") {
+			return ErrNotAvailable
+		}
+	}
+
+	return err
 }

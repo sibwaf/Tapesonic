@@ -10,6 +10,7 @@ import (
 	"path"
 	"tapesonic/storage"
 	"tapesonic/util"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -30,26 +31,32 @@ func NewThumbnailService(
 }
 
 func (s *ThumbnailService) CreateFromUrl(url string) (storage.Thumbnail, error) {
-	thumbnail := storage.Thumbnail{}
-
 	err := os.MkdirAll(s.contentPath, 0777)
 	if err != nil {
-		return thumbnail, err
+		return storage.Thumbnail{}, err
 	}
 
 	response, err := http.Get(url)
 	if err != nil {
-		return thumbnail, err
+		return storage.Thumbnail{}, err
 	}
 	defer response.Body.Close()
 
 	content, err := io.ReadAll(response.Body)
 	if err != nil {
-		return thumbnail, err
+		return storage.Thumbnail{}, err
 	}
 
 	hashBytes := sha256.Sum256(content)
 	hashString := hex.EncodeToString(hashBytes[:])
+
+	thumbnail := storage.Thumbnail{
+		Id:              uuid.New(),
+		DeduplicationId: hashString,
+		FilePath:        hashString,
+		CreatedAt:       util.NewTimestampWrapper(time.Now()),
+		UpdatedAt:       util.NewTimestampWrapper(time.Now()),
+	}
 
 	thumbnail.DeduplicationId = hashString
 	thumbnail.FilePath = hashString
@@ -64,7 +71,7 @@ func (s *ThumbnailService) CreateFromUrl(url string) (storage.Thumbnail, error) 
 	filePath := path.Join(s.contentPath, thumbnail.FilePath)
 	err = os.WriteFile(filePath, content, 0777)
 	if err != nil {
-		return thumbnail, err
+		return storage.Thumbnail{}, err
 	}
 
 	return s.storage.Upsert(thumbnail)

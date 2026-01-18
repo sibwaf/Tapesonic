@@ -2,10 +2,10 @@ package storage
 
 import (
 	"errors"
+	"tapesonic/util"
 	"time"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type YtdlpMetadataCacheItem struct {
@@ -13,8 +13,8 @@ type YtdlpMetadataCacheItem struct {
 
 	Metadata string
 
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt util.TimestampWrapper
+	UpdatedAt util.TimestampWrapper
 }
 
 type YtdlpMetadataStorage struct {
@@ -30,13 +30,35 @@ func NewYtdlpMetadataStorage(db *gorm.DB) (*YtdlpMetadataStorage, error) {
 }
 
 func (s *YtdlpMetadataStorage) Upsert(url string, metadata string) error {
-	item := YtdlpMetadataCacheItem{Url: url, Metadata: metadata}
-	return s.db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&item).Error
+	query := `
+		INSERT INTO ytdlp_metadata_cache_items (url, metadata, created_at, updated_at)
+		VALUES (@url, @metadata, @createdAt, @updatedAt)
+		ON CONFLICT (url) DO UPDATE
+		SET metadata = excluded.metadata, updated_at = excluded.updated_at
+	`
+	params := map[string]any{
+		"url":       url,
+		"metadata":  metadata,
+		"createdAt": util.NewTimestampWrapper(time.Now()),
+		"updatedAt": util.NewTimestampWrapper(time.Now()),
+	}
+
+	return s.db.Exec(query, params).Error
 }
 
 func (s *YtdlpMetadataStorage) Find(url string, minUpdatedAt time.Time) (*YtdlpMetadataCacheItem, error) {
+	sql := `
+		SELECT *
+		FROM ytdlp_metadata_cache_items
+		WHERE url = @url AND updated_at >= @minUpdatedAt
+	`
+	params := map[string]any{
+		"url":          url,
+		"minUpdatedAt": util.NewTimestampWrapper(minUpdatedAt),
+	}
+
 	result := YtdlpMetadataCacheItem{}
-	err := s.db.Where("url = ? AND updated_at >= ?", url, minUpdatedAt).First(&result).Error
+	err := s.db.Raw(sql, params).First(&result).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	} else {

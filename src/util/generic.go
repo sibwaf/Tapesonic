@@ -31,6 +31,14 @@ func TakeIf[T any](value *T, condition bool) *T {
 	}
 }
 
+func Map[T any, R any](items []T, mapper func(T) R) []R {
+	result := make([]R, len(items))
+	for i := range items {
+		result[i] = mapper(items[i])
+	}
+	return result
+}
+
 func StringToIntOrDefault(text string, dflt int) int {
 	result, err := strconv.Atoi(text)
 	if err != nil {

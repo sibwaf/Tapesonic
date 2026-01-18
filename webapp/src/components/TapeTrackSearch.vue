@@ -28,26 +28,13 @@ async function search() {
         state.value = State.SEARCHING;
 
         searchResult.value = [];
-        searchResult.value = await api.searchTracks(query.value);
+
+        const rs = await api.searchTracks(query.value);
+        searchResult.value = rs.filter(it => it.SourceId != ""); // todo: only non-remote tracks can be used in tapes for now
 
         state.value = State.SEARCH_DONE;
     } catch (e) {
         state.value = State.SEARCH_FAILED;
-        console.error(e);
-    }
-}
-
-async function importSource() {
-    try {
-        state.value = State.IMPORTING;
-
-        const result = await api.addSource(query.value);
-        state.value = State.IMPORT_DONE;
-
-        query.value = result.Url;
-        await search();
-    } catch (e) {
-        state.value = State.IMPORT_FAILED;
         console.error(e);
     }
 }
@@ -67,8 +54,7 @@ function onAddAll() {
     <div>
         <div>
             <input type="text" v-model="query" :disabled="isBusy">
-            <button @click="search" :disabled="isBusy">Search</button>
-            <button @click="importSource" :disabled="isBusy">Import</button>
+            <button @click="search" :disabled="isBusy">Search or import</button>
         </div>
         <template v-if="state == State.SEARCHING">Searching...</template>
         <template v-else-if="state == State.SEARCH_DONE">
@@ -79,7 +65,7 @@ function onAddAll() {
                 <button @click="onAddAll">Add all</button>
             </div>
             <div v-else>
-                Nothing found, try importing?
+                Nothing found
             </div>
         </template>
         <template v-else-if="state == State.SEARCH_FAILED">

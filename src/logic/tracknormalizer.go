@@ -154,3 +154,6 @@ func buildJunkSuffixRegex(suffixes ...string) *regexp.Regexp {
 	// case-insensitive: OPTION or OPTION ... any-space-count end-of-string
 	return regexp.MustCompile(fmt.Sprintf("(?i)%s\\s*?$", strings.Join(suffixOptions, "|")))
 }
+
+// todo: year at title end
+// todo: "track" by artist

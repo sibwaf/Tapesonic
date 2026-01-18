@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"strings"
 	"tapesonic/model"
-	"time"
+	"tapesonic/util"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type Source struct {
@@ -30,16 +29,16 @@ type Source struct {
 	TrackTitle  string
 	DurationMs  int64
 
-	UploadedAt  time.Time
-	ReleaseDate *time.Time
+	UploadedAt  util.TimestampWrapper
+	ReleaseDate *util.TimestampWrapper
 
 	ThumbnailId *uuid.UUID
 	Thumbnail   *Thumbnail
 
 	ManagementPolicy model.SourceManagementPolicy
 
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt util.TimestampWrapper
+	UpdatedAt util.TimestampWrapper
 }
 
 type SourceHierarchy struct {
@@ -65,14 +64,53 @@ func NewSourceStorage(db *gorm.DB) (*SourceStorage, error) {
 }
 
 func (storage *SourceStorage) Upsert(source Source) (Source, error) {
-	if source.Id == uuid.Nil {
-		source.Id = uuid.New()
+	query := `
+		INSERT INTO sources (id, extractor_key, extracted_id, url, title, uploader, uploader_id, album_artist, album_title, album_index, track_artist, track_title, duration_ms, uploaded_at, release_date, thumbnail_id, management_policy, created_at, updated_at)
+		VALUES (@id, @extractorKey, @extractedId, @url, @title, @uploader, @uploaderId, @albumArtist, @albumTitle, @albumIndex, @trackArtist, @trackTitle, @durationMs, @uploadedAt, @releaseDate, @thumbnailId, @managementPolicy, @createdAt, @updatedAt)
+		ON CONFLICT (url) DO UPDATE
+		SET
+			extractor_key = excluded.extractor_key,
+			extracted_id = excluded.extracted_id,
+			url = excluded.url,
+			title = excluded.title,
+			uploader = excluded.uploader,
+			uploader_id = excluded.uploader_id,
+			album_artist = excluded.album_artist,
+			album_title = excluded.album_title,
+			album_index = excluded.album_index,
+			track_artist = excluded.track_artist,
+			track_title = excluded.track_title,
+			duration_ms = excluded.duration_ms,
+			uploaded_at = excluded.uploaded_at,
+			release_date = excluded.release_date,
+			thumbnail_id = excluded.thumbnail_id,
+			management_policy = excluded.management_policy,
+			updated_at = excluded.updated_at
+		RETURNING *
+	`
+	params := map[string]any{
+		"id":               source.Id,
+		"extractorKey":     source.ExtractorKey,
+		"extractedId":      source.ExtractedId,
+		"url":              source.Url,
+		"title":            source.Title,
+		"uploader":         source.Uploader,
+		"uploaderId":       source.UploaderId,
+		"albumArtist":      source.AlbumArtist,
+		"albumTitle":       source.AlbumTitle,
+		"albumIndex":       source.AlbumIndex,
+		"trackArtist":      source.TrackArtist,
+		"trackTitle":       source.TrackTitle,
+		"durationMs":       source.DurationMs,
+		"uploadedAt":       source.UploadedAt,
+		"releaseDate":      source.ReleaseDate,
+		"thumbnailId":      source.ThumbnailId,
+		"managementPolicy": source.ManagementPolicy,
+		"createdAt":        source.CreatedAt,
+		"updatedAt":        source.UpdatedAt,
 	}
 
-	return source, storage.db.Clauses(
-		clause.OnConflict{Columns: []clause.Column{{Name: "url"}}, UpdateAll: true},
-		clause.Returning{},
-	).Create(&source).Error
+	return source, storage.db.Raw(query, params).First(&source).Error
 }
 
 func (storage *SourceStorage) UpdateHierarchy(parentId uuid.UUID, childIds []uuid.UUID) error {

@@ -60,6 +60,8 @@ func main() {
 		slog.Info(fmt.Sprintf("ffmpeg version: %s", ffmpegVersion))
 	}
 
+	appCtx.Scheduling.Looper.Start()
+
 	mux := http.NewServeMux()
 	for route, handler := range tshttp.GetHandlers(appCtx) {
 		mux.HandleFunc(route, handler)

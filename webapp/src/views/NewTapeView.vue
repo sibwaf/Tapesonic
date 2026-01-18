@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api, { TapeType, type FullSourceRs, type ListThumbnailRs, type Tape, type TrackRs } from '@/api';
+import api, { TapeType, type GuessTapeMetadataRs, type ListThumbnailRs, type Tape, type TrackRs } from '@/api';
 import DateEditor from '@/components/DateEditor.vue';
 import TapeTrackSearch from '@/components/TapeTrackSearch.vue';
 import Thumbnail from '@/components/Thumbnail.vue';
@@ -81,16 +81,22 @@ const tape = ref<Tape>({
     Tracks: [],
 });
 
-const metadataGuess = ref<Tape | null>(null);
+const metadataGuess = ref<GuessTapeMetadataRs | null>(null);
 
 async function guessAndUpdateMetadata() {
     try {
         isBusy.value = true;
 
         const trackIdsValue = trackIds.value;
-        const guess = await api.guessTapeMetadata(trackIdsValue);
+        const guess = await api.guessTapeMetadata({
+            TrackIds: trackIdsValue,
+        });
 
-        tape.value = guess;
+        tape.value.Name = guess.Name;
+        tape.value.Type = guess.Type;
+        tape.value.Artist = guess.Artist;
+        tape.value.ReleasedAt = guess.ReleasedAt;
+        tape.value.ThumbnailId = guess.ThumbnailId;
 
         metadataGuess.value = guess;
     } catch (e) {

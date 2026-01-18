@@ -1,59 +1,61 @@
 package appcontext
 
 import (
-	"context"
-	"fmt"
-	"log/slog"
 	"os"
 	"path"
+
 	configPkg "tapesonic/config"
 	"tapesonic/ffmpeg"
-	"tapesonic/http/lastfm"
-	"tapesonic/http/listenbrainz"
-	"tapesonic/http/subsonic/client"
+	"tapesonic/lastfm"
+	"tapesonic/library"
+	"tapesonic/listenbrainz"
 	"tapesonic/logic"
+	"tapesonic/media"
+	"tapesonic/recommendations"
+	"tapesonic/remotes"
+	"tapesonic/scheduling"
+	"tapesonic/scrobbling"
+	"tapesonic/search"
+	"tapesonic/sources"
 	"tapesonic/storage"
-	"tapesonic/tasks"
-	"tapesonic/util"
+	"tapesonic/tapes"
+	"tapesonic/users"
 	"tapesonic/ytdlp"
-	"time"
 
 	slogGorm "github.com/orandin/slog-gorm"
-	"github.com/robfig/cron/v3"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 type Context struct {
-	Config *configPkg.TapesonicConfig
-
-	TapeStorage             *storage.TapeStorage
-	SourceStorage           *storage.SourceStorage
-	SourceFileStorage       *storage.SourceFileStorage
-	TrackStorage            *storage.TrackStorage
-	ThumbnailStorage        *storage.ThumbnailStorage
-	PlaylistStorage         *storage.PlaylistStorage
-	AlbumStorage            *storage.AlbumStorage
-	TrackListensStorage     *storage.TrackListensStorage
-	CachedMuxSongStorage    *storage.CachedMuxSongStorage
-	CachedMuxAlbumStorage   *storage.CachedMuxAlbumStorage
-	CachedMuxArtistStorage  *storage.CachedMuxArtistStorage
-	MuxedSongListensStorage *storage.MuxedSongListensStorage
-	ExternalPlaylistStorage *storage.ExternalPlaylistStorage
-	LastFmSessionStorage    *storage.LastFmSessionStorage
-	YtdlpMetadataStorage    *storage.YtdlpMetadataStorage
-	MediaStorage            *storage.MediaStorage
-	StreamCacheStorage      *storage.StreamCacheStorage
+	Config     *configPkg.TapesonicConfig
+	Scheduling *scheduling.SchedulingModule
 
 	Ytdlp  *ytdlp.Ytdlp
 	Ffmpeg *ffmpeg.Ffmpeg
 
+	Users           *users.UsersModule
+	Sources         *sources.SourcesModule
+	Remotes         *remotes.RemotesModule
+	Tapes           *tapes.TapesModule
+	ListenBrainz    *listenbrainz.ListenBrainzModule
+	LastFm          *lastfm.LastFmModule
+	Library         *library.LibraryModule
+	Media           *media.MediaModule
+	Scrobbling      *scrobbling.ScrobblingModule
+	Search          *search.SearchModule
+	Recommendations *recommendations.RecommendationsModule
+
+	SourceStorage     *storage.SourceStorage
+	SourceFileStorage *storage.SourceFileStorage
+	TrackStorage      *storage.TrackStorage
+	ThumbnailStorage  *storage.ThumbnailStorage
+
+	YtdlpMetadataStorage *storage.YtdlpMetadataStorage
+	MediaStorage         *storage.MediaStorage
+	StreamCacheStorage   *storage.StreamCacheStorage
+
 	YtdlpService *logic.YtdlpService
-
-	ListenBrainzClient *listenbrainz.ListenBrainzClient
-	LastFmClient       *lastfm.LastFmClient
-
-	LastFmService *logic.LastFmService
 
 	ThumbnailService *logic.ThumbnailService
 
@@ -62,17 +64,7 @@ type Context struct {
 	TrackService      *logic.TrackService
 	SourceFileService *logic.SourceFileService
 	SourceService     *logic.SourceService
-	TapeService       *logic.TapeService
 	AutoImportService *logic.AutoImportService
-
-	SearchService    *logic.SearchService
-	SongCacheService *logic.SongCacheService
-
-	SubsonicProviders []*logic.SubsonicNamedService
-	SubsonicMuxer     logic.SubsonicService
-	SubsonicService   logic.SubsonicService
-
-	ScrobbleService *logic.ScrobbleService
 }
 
 func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
@@ -100,9 +92,27 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		return nil, err
 	}
 
-	if context.TapeStorage, err = storage.NewTapeStorage(db); err != nil {
+	if err := db.Exec(`DROP VIEW IF EXISTS all_playlist_tracks`).Error; err != nil {
 		return nil, err
 	}
+	if err := db.Exec(`DROP VIEW IF EXISTS all_playlists`).Error; err != nil {
+		return nil, err
+	}
+	if err := db.Exec(`DROP VIEW IF EXISTS all_albums`).Error; err != nil {
+		return nil, err
+	}
+	if err := db.Exec(`DROP VIEW IF EXISTS all_tracks`).Error; err != nil {
+		return nil, err
+	}
+	if err := db.Exec(`DROP VIEW IF EXISTS all_artists`).Error; err != nil {
+		return nil, err
+	}
+	if err := db.Exec(`DROP VIEW IF EXISTS all_covers`).Error; err != nil {
+		return nil, err
+	}
+
+	context.Scheduling = scheduling.NewSchedulingModule(db, config.SchedulerDelay)
+
 	if context.SourceStorage, err = storage.NewSourceStorage(db); err != nil {
 		return nil, err
 	}
@@ -115,55 +125,11 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	if context.ThumbnailStorage, err = storage.NewThumbnailStorage(db); err != nil {
 		return nil, err
 	}
-	if context.PlaylistStorage, err = storage.NewPlaylistStorage(db); err != nil {
-		return nil, err
-	}
-	if context.AlbumStorage, err = storage.NewAlbumStorage(db); err != nil {
-		return nil, err
-	}
-	if context.TrackListensStorage, err = storage.NewTrackListensStorage(db); err != nil {
-		return nil, err
-	}
-	if context.CachedMuxSongStorage, err = storage.NewCachedMuxSongStorage(db); err != nil {
-		return nil, err
-	}
-	if context.CachedMuxAlbumStorage, err = storage.NewCachedMuxAlbumStorage(db); err != nil {
-		return nil, err
-	}
-	if context.CachedMuxArtistStorage, err = storage.NewCachedMuxArtistStorage(db); err != nil {
-		return nil, err
-	}
-	if context.MuxedSongListensStorage, err = storage.NewMuxedSongListensStorage(db); err != nil {
-		return nil, err
-	}
-	if context.ExternalPlaylistStorage, err = storage.NewExternalPlaylistStorage(db); err != nil {
-		return nil, err
-	}
-	if context.LastFmSessionStorage, err = storage.NewLastFmSessionStorage(db); err != nil {
-		return nil, err
-	}
 	if context.YtdlpMetadataStorage, err = storage.NewYtdlpMetadataStorage(db); err != nil {
 		return nil, err
 	}
 
 	if err = storage.Migrate(db); err != nil {
-		return nil, err
-	}
-
-	context.MediaStorage = storage.NewMediaStorage(
-		db,
-		config.MediaStorageDir,
-		context.TapeStorage,
-		context.PlaylistStorage,
-		context.AlbumStorage,
-	)
-
-	if context.StreamCacheStorage, err = storage.NewStreamCacheStorage(
-		path.Join(config.CacheDir, "stream"),
-		config.StreamCacheSize,
-		config.StreamCacheMinLifetime,
-		db,
-	); err != nil {
 		return nil, err
 	}
 
@@ -174,22 +140,11 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		config.YtdlpMetadataMaxParallelism,
 	)
 
-	if config.ListenBrainzToken != "" {
-		context.ListenBrainzClient = listenbrainz.NewListenBrainzClient(config.ListenBrainzToken)
-	}
-
-	if config.LastFmApiKey != "" && config.LastFmApiSecret != "" {
-		context.LastFmClient = lastfm.NewLastFmClient(config.LastFmApiKey, config.LastFmApiSecret)
-	}
-
-	context.LastFmService = logic.NewLastFmService(
-		context.LastFmClient,
-		context.LastFmSessionStorage,
-	)
-
-	context.ScrobbleService = logic.NewScrobbleService(
-		context.ListenBrainzClient,
-		context.LastFmService,
+	context.SourceFileService = logic.NewSourceFileService(
+		context.SourceFileStorage,
+		context.SourceStorage,
+		context.YtdlpService,
+		config.MediaStorageDir,
 	)
 
 	context.ThumbnailService = logic.NewThumbnailService(
@@ -197,15 +152,41 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		path.Join(config.MediaStorageDir, "thumbnails"),
 	)
 
+	if context.Users, err = users.NewUsersModule(db); err != nil {
+		return nil, err
+	}
+	context.Sources = sources.NewSourcesModule(context.SourceFileService, context.SourceStorage, config.DownloadNextSourceSchedule)
+	if context.Remotes, err = remotes.NewRemotesModule(
+		db,
+		context.Scheduling.TaskScheduler,
+		config.RemoteLibrarySyncSchedule,
+	); err != nil {
+		return nil, err
+	}
+	context.Tapes = tapes.NewTapesModule(db, context.TrackStorage)
+	context.Library = library.NewLibraryModule(db)
+
+	context.MediaStorage = storage.NewMediaStorage(db, config.MediaStorageDir)
+
+	if context.StreamCacheStorage, err = storage.NewStreamCacheStorage(
+		path.Join(config.CacheDir, "stream"),
+		config.StreamCacheSize,
+		config.StreamCacheMinLifetime,
+		db,
+	); err != nil {
+		return nil, err
+	}
+
+	context.ListenBrainz = listenbrainz.NewListenBrainzModule(db)
+
+	if context.LastFm, err = lastfm.NewLastFmModule(db, config.LastFmApiKey, config.LastFmApiSecret); err != nil {
+		return nil, err
+	}
+
 	context.TrackNormalizer = logic.NewTrackNormalizer()
 	context.TrackMatcher = logic.NewTrackMatcher()
 	context.TrackService = logic.NewTrackService(context.TrackStorage)
-	context.SourceFileService = logic.NewSourceFileService(
-		context.SourceFileStorage,
-		context.SourceStorage,
-		context.YtdlpService,
-		config.MediaStorageDir,
-	)
+
 	context.SourceService = logic.NewSourceService(
 		context.SourceStorage,
 		context.YtdlpService,
@@ -214,198 +195,81 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		context.ThumbnailService,
 		context.TrackNormalizer,
 	)
-	context.TapeService = logic.NewTapeService(context.TapeStorage, context.TrackStorage)
 	context.AutoImportService = logic.NewAutoImportService(
 		context.SourceService,
 		context.TrackService,
 		context.TrackMatcher,
 	)
 
-	context.SearchService = logic.NewSearchService(context.SourceStorage, context.TrackStorage)
-
-	internalSubsonic := logic.NewSubsonicNamedService(
-		"tapesonic",
-		logic.NewSubsonicInternalService(
-			context.TrackStorage,
-			context.AlbumStorage,
-			context.PlaylistStorage,
-			context.TrackListensStorage,
-			context.MediaStorage,
-			context.StreamCacheStorage,
-			context.Ffmpeg,
-			context.ThumbnailService,
-			util.TakeIf(context.ScrobbleService, config.ScrobbleMode == configPkg.ScrobbleTapesonic),
-			context.YtdlpService,
-		),
+	context.Scrobbling = scrobbling.NewScrobblingModule(
+		db,
+		context.ListenBrainz.ListenBrainzService,
+		context.LastFm.LastFmService,
+		context.Library.LibraryService,
+		context.Remotes.RemoteService,
 	)
-	context.SubsonicProviders = append(context.SubsonicProviders, internalSubsonic)
 
-	if config.SubsonicProxyUrl != "" {
-		externalSubsonic := logic.NewSubsonicNamedService(
-			"proxy",
-			logic.NewSubsonicExternalService(
-				client.NewSubsonicClient(
-					config.SubsonicProxyUrl,
-					config.SubsonicProxyUsername,
-					config.SubsonicProxyPassword,
-				),
-			),
-		)
-		context.SubsonicProviders = append(context.SubsonicProviders, externalSubsonic)
-	}
+	context.Media = media.NewMediaModule(
+		context.Remotes.RemoteService,
+		context.ThumbnailService,
+		context.MediaStorage,
+		context.StreamCacheStorage,
+		context.Ffmpeg,
+		context.YtdlpService,
+	)
 
-	context.SongCacheService = logic.NewSongCacheService(
-		context.SubsonicProviders,
-		context.CachedMuxSongStorage,
+	context.Search = search.NewSearchModule(
+		db,
+		context.Library.LibraryService,
+		context.SourceService,
+		context.TrackService,
+		context.AutoImportService,
 		context.TrackMatcher,
 	)
 
-	subsonicMux := logic.NewSubsonicMuxService(
-		context.MuxedSongListensStorage,
-		context.SongCacheService,
-		util.TakeIf(context.ScrobbleService, config.ScrobbleMode == configPkg.ScrobbleAll),
-	)
-	context.SubsonicMuxer = subsonicMux
-
-	for _, subsonicProvider := range context.SubsonicProviders {
-		subsonicMux.AddService(subsonicProvider)
-	}
-
-	context.SubsonicService = logic.NewSubsonicMainService(
-		subsonicMux,
-		context.SubsonicProviders,
-		context.CachedMuxSongStorage,
-		context.CachedMuxAlbumStorage,
-		context.CachedMuxArtistStorage,
-		context.ExternalPlaylistStorage,
+	context.Recommendations = recommendations.NewRecommendationModule(
+		db,
+		context.LastFm.LastFmRecommendationService,
+		context.ListenBrainz.ListenBrainzRecommendationService,
+		context.Search.SearchService,
+		context.Scheduling.TaskScheduler,
+		config.RecommendationPlaylistSyncSchedule,
 	)
 
-	if err = registerBackgroundTasks(&context); err != nil {
+	if err = prepareDatabase(&context); err != nil {
 		return nil, err
 	}
+
+	registerSchedulers(&context)
+	// todo: stop schedulers
 
 	return &context, nil
 }
 
-func registerBackgroundTasks(context *Context) error {
-	cron := cron.New(
-		cron.WithChain(cron.SkipIfStillRunning(cron.DefaultLogger)),
-		cron.WithSeconds(),
-	)
-
-	type backgroundTaskAndConfig struct {
-		task   tasks.BackgroundTask
-		config configPkg.BackgroundTaskConfig
+func prepareDatabase(context *Context) error {
+	if err := context.Scheduling.PrepareDatabase(); err != nil {
+		return err
 	}
-
-	scheduledTasks := []backgroundTaskAndConfig{}
-
-	scheduledTasks = append(
-		scheduledTasks,
-		backgroundTaskAndConfig{
-			task: tasks.NewDownloadSourcesTaskHandler(
-				context.SourceFileService,
-				context.SourceStorage,
-			),
-			config: context.Config.TasksDownloadSources,
-		},
-	)
-
-	if context.ListenBrainzClient != nil {
-		scheduledTasks = append(
-			scheduledTasks,
-			backgroundTaskAndConfig{
-				task: tasks.NewListenBrainzPlaylistSyncHandler(
-					context.ListenBrainzClient,
-					context.SongCacheService,
-					context.ExternalPlaylistStorage,
-				),
-				config: context.Config.TasksListenBrainzPlaylistSync,
-			},
-		)
-	} else {
-		slog.Info("Not registering ListenBrainz playlist sync task because ListenBrainz client is not configured")
+	if err := context.Tapes.PrepareDatabase(); err != nil {
+		return err
 	}
-
-	if context.LastFmClient != nil {
-		scheduledTasks = append(
-			scheduledTasks,
-			backgroundTaskAndConfig{
-				task: tasks.NewLastFmPlaylistSyncHandler(
-					context.LastFmClient,
-					context.LastFmService,
-					context.SongCacheService,
-					context.AutoImportService,
-					context.ExternalPlaylistStorage,
-					context.Config.LastFmTargetPlaylistSize,
-				),
-				config: context.Config.TasksLastFmPlaylistSync,
-			},
-		)
-	} else {
-		slog.Info("Not registering last.fm playlist sync task because last.fm client is not configured")
+	if err := context.Scrobbling.PrepareDatabase(); err != nil {
+		return err
 	}
-
-	scheduledTasks = append(
-		scheduledTasks,
-		backgroundTaskAndConfig{
-			task: tasks.NewSyncLibraryHandler(
-				context.SubsonicProviders,
-				context.CachedMuxSongStorage,
-				context.CachedMuxAlbumStorage,
-				context.CachedMuxArtistStorage,
-			),
-			config: context.Config.TasksSyncLibrary,
-		},
-	)
-
-	for _, scheduledTask := range scheduledTasks {
-		err := setupBackgroundTask(cron, scheduledTask.task, scheduledTask.config)
-		if err != nil {
-			return err
-		}
+	if err := context.Recommendations.PrepareDatabase(); err != nil {
+		return err
 	}
-
-	cron.Start()
-
+	if err := context.Library.PrepareDatabase(); err != nil {
+		return err
+	}
+	if err := context.ListenBrainz.PrepareDatabase(); err != nil {
+		return err
+	}
 	return nil
 }
 
-func setupBackgroundTask(cron *cron.Cron, task tasks.BackgroundTask, config configPkg.BackgroundTaskConfig) error {
-	if config.Cron == configPkg.CronDisabled {
-		slog.Info(fmt.Sprintf("Background task %s is disabled, skipping cron registration", task.Name()))
-		return nil
-	}
-
-	if config.MaxAttempts < 1 {
-		slog.Warn(fmt.Sprintf("Max attempts for background task %s is set to %d < 1, forcing to 1", task.Name(), config.MaxAttempts))
-		config.MaxAttempts = 1
-	}
-
-	_, err := cron.AddFunc(config.Cron, func() {
-		for retries := 0; retries < config.MaxAttempts; retries++ {
-			slog.Log(context.Background(), configPkg.LevelTrace, fmt.Sprintf("Running background task %s, attempt %d/%d", task.Name(), retries+1, config.MaxAttempts))
-
-			err := task.OnSchedule()
-			if err == nil {
-				slog.Log(context.Background(), configPkg.LevelTrace, fmt.Sprintf("Background task %s succeeded on attempt %d/%d", task.Name(), retries+1, config.MaxAttempts))
-				return
-			}
-
-			if retries == config.MaxAttempts-1 {
-				slog.Error(fmt.Sprintf("Background task %s failed after %d retries, giving up: %s", task.Name(), config.MaxAttempts, err.Error()))
-				return
-			}
-
-			slog.Warn(fmt.Sprintf("Attempt %d/%d for background task %s failed, will retry in %.0fs: %s", retries+1, config.MaxAttempts, task.Name(), config.RetryDelay.Seconds(), err.Error()))
-			time.Sleep(config.RetryDelay)
-		}
-	})
-
-	if err != nil {
-		return fmt.Errorf("failed to setup background task %s: %w", task.Name(), err)
-	}
-
-	slog.Info(fmt.Sprintf("Registered background task %s with cron=%s", task.Name(), config.Cron))
-	return nil
+func registerSchedulers(context *Context) {
+	context.Sources.RegisterSchedules(context.Scheduling.TaskScheduler)
+	context.Remotes.RegisterSchedules(context.Scheduling.TaskScheduler)
+	context.Recommendations.RegisterSchedules(context.Scheduling.TaskScheduler)
 }

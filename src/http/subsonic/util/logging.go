@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"tapesonic/subsonic"
 
 	"github.com/google/uuid"
 )
@@ -14,9 +15,9 @@ const (
 )
 
 var sensitiveFields = []string{
-	SUBSONIC_QUERY_PASSWORD,
-	SUBSONIC_QUERY_TOKEN,
-	SUBSONIC_QUERY_SALT,
+	subsonic.QUERY_PASSWORD,
+	subsonic.QUERY_TOKEN,
+	subsonic.QUERY_SALT,
 }
 
 func Logged(handler http.HandlerFunc) http.HandlerFunc {

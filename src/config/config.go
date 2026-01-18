@@ -8,15 +8,12 @@ import (
 	"strings"
 	"tapesonic/util"
 	"time"
+
+	"github.com/robfig/cron/v3"
 )
 
 const (
-	LevelTrace = slog.LevelDebug * 2
-
-	ScrobbleNone      = 0
-	ScrobbleTapesonic = 1
-	ScrobbleAll       = 2
-
+	LevelTrace   = slog.LevelDebug * 2
 	CronDisabled = "off"
 )
 
@@ -25,13 +22,13 @@ type TapesonicConfig struct {
 	DevMode  bool
 
 	ServerPort int
-	Username   string
-	Password   string
 
 	WebappDir       string
 	DataStorageDir  string
 	MediaStorageDir string
 	CacheDir        string
+
+	SchedulerDelay time.Duration
 
 	YtdlpPath  string
 	FfmpegPath string
@@ -39,31 +36,16 @@ type TapesonicConfig struct {
 	YtdlpMetadataMaxLifetime    time.Duration
 	YtdlpMetadataMaxParallelism int
 
-	TasksDownloadSources          BackgroundTaskConfig
-	TasksSyncLibrary              BackgroundTaskConfig
-	TasksListenBrainzPlaylistSync BackgroundTaskConfig
-	TasksLastFmPlaylistSync       BackgroundTaskConfig
-
-	ScrobbleMode int
-
-	SubsonicProxyUrl      string
-	SubsonicProxyUsername string
-	SubsonicProxyPassword string
-
 	StreamCacheSize        int64
 	StreamCacheMinLifetime time.Duration
-
-	ListenBrainzToken string
 
 	LastFmApiKey             string
 	LastFmApiSecret          string
 	LastFmTargetPlaylistSize int
-}
 
-type BackgroundTaskConfig struct {
-	Cron        string
-	RetryDelay  time.Duration
-	MaxAttempts int
+	RemoteLibrarySyncSchedule          cron.Schedule
+	RecommendationPlaylistSyncSchedule cron.Schedule
+	DownloadNextSourceSchedule         cron.Schedule
 }
 
 func NewConfig() (*TapesonicConfig, error) {
@@ -87,14 +69,19 @@ func NewConfig() (*TapesonicConfig, error) {
 		return nil, fmt.Errorf("TAPESONIC_PORT is not a number: %s", portText)
 	}
 
-	scrobbleMode := ScrobbleNone
-	switch strings.ToLower(getEnvOrDefault("TAPESONIC_SCROBBLE_MODE", "none")) {
-	case "none":
-		scrobbleMode = ScrobbleNone
-	case "tapesonic":
-		scrobbleMode = ScrobbleTapesonic
-	case "all":
-		scrobbleMode = ScrobbleAll
+	remoteLibrarySyncSchedule, err := parseCronSchedule(getEnvOrDefault("TAPESONIC_REMOTE_LIBRARY_SYNC_CRON", "0 0/15 * * * *"))
+	if err != nil {
+		return &TapesonicConfig{}, err
+	}
+
+	recommendationPlaylistSyncSchedule, err := parseCronSchedule(getEnvOrDefault("TAPESONIC_RECOMMENDATION_PLAYLIST_SYNC_CRON", "0 0 4 * * *"))
+	if err != nil {
+		return &TapesonicConfig{}, err
+	}
+
+	downloadSourceSchedule, err := parseCronSchedule(getEnvOrDefault("TAPESONIC_DOWNLOAD_NEXT_SOURCE_CRON", "0 * * * * *"))
+	if err != nil {
+		return &TapesonicConfig{}, err
 	}
 
 	config := &TapesonicConfig{
@@ -102,55 +89,33 @@ func NewConfig() (*TapesonicConfig, error) {
 		DevMode:  getEnvBoolOrDefault("TAPESONIC_DEV_MODE", false),
 
 		ServerPort: port,
-		Username:   os.Getenv("TAPESONIC_USERNAME"),
-		Password:   os.Getenv("TAPESONIC_PASSWORD"),
-
-		YtdlpPath:  getEnvOrDefault("TAPESONIC_YTDLP_PATH", "yt-dlp"),
-		FfmpegPath: getEnvOrDefault("TAPESONIC_FFMPEG_PATH", "ffmpeg"),
-
-		YtdlpMetadataMaxLifetime:    getEnvDurationOrDefault("TAPESONIC_YTDLP_METADATA_MAX_LIFETIME", 15*time.Minute),
-		YtdlpMetadataMaxParallelism: getEnvIntOrDefault("TAPESONIC_YTDLP_METADATA_MAX_PARALLELISM", 4),
 
 		WebappDir:       getEnvOrDefault("TAPESONIC_WEBAPP_DIR", "webapp"),
 		DataStorageDir:  getEnvOrDefault("TAPESONIC_DATA_STORAGE_DIR", "data"),
 		MediaStorageDir: getEnvOrDefault("TAPESONIC_MEDIA_STORAGE_DIR", "media"),
 		CacheDir:        getEnvOrDefault("TAPESONIC_CACHE_DIR", "cache"),
 
-		TasksDownloadSources:          getBackgroundTaskConfig("DOWNLOAD_SOURCES", "0 * * * * *", 15*time.Minute, 1),
-		TasksSyncLibrary:              getBackgroundTaskConfig("SYNC_LIBRARY", "0 */15 * * * *", 1*time.Minute, 5),
-		TasksListenBrainzPlaylistSync: getBackgroundTaskConfig("LISTENBRAINZ_PLAYLIST_SYNC", "0 0 4 * * *", 15*time.Minute, 5),
-		TasksLastFmPlaylistSync:       getBackgroundTaskConfig("LASTFM_PLAYLIST_SYNC", "0 0 4 * * *", 15*time.Minute, 5),
+		SchedulerDelay: getEnvDurationOrDefault("TAPESONIC_SCHEDULER_DELAY", 30*time.Second),
 
-		ScrobbleMode: scrobbleMode,
+		YtdlpPath:  getEnvOrDefault("TAPESONIC_YTDLP_PATH", "yt-dlp"),
+		FfmpegPath: getEnvOrDefault("TAPESONIC_FFMPEG_PATH", "ffmpeg"),
 
-		SubsonicProxyUrl:      os.Getenv("TAPESONIC_SUBSONIC_PROXY_URL"),
-		SubsonicProxyUsername: os.Getenv("TAPESONIC_SUBSONIC_PROXY_USERNAME"),
-		SubsonicProxyPassword: os.Getenv("TAPESONIC_SUBSONIC_PROXY_PASSWORD"),
+		YtdlpMetadataMaxLifetime:    getEnvDurationOrDefault("TAPESONIC_YTDLP_METADATA_MAX_LIFETIME", 15*time.Minute),
+		YtdlpMetadataMaxParallelism: getEnvIntOrDefault("TAPESONIC_YTDLP_METADATA_MAX_PARALLELISM", 6),
 
 		StreamCacheSize:        getEnvSizeOrDefault("TAPESONIC_STREAM_CACHE_SIZE", 512*1024*1024), // 512 MB
 		StreamCacheMinLifetime: getEnvDurationOrDefault("TAPESONIC_STREAM_CACHE_MIN_LIFETIME", 1*time.Hour),
 
-		ListenBrainzToken: os.Getenv("TAPESONIC_LISTENBRAINZ_TOKEN"),
-
 		LastFmApiKey:             os.Getenv("TAPESONIC_LASTFM_API_KEY"),
 		LastFmApiSecret:          os.Getenv("TAPESONIC_LASTFM_API_SECRET"),
 		LastFmTargetPlaylistSize: getEnvIntOrDefault("TAPESONIC_LASTFM_TARGET_PLAYLIST_SIZE", 40),
+
+		RemoteLibrarySyncSchedule:          remoteLibrarySyncSchedule,
+		RecommendationPlaylistSyncSchedule: recommendationPlaylistSyncSchedule,
+		DownloadNextSourceSchedule:         downloadSourceSchedule,
 	}
 
 	return config, nil
-}
-
-func getBackgroundTaskConfig(
-	name string,
-	defaultCron string,
-	defaultRetryDelay time.Duration,
-	defaultMaxAttempts int,
-) BackgroundTaskConfig {
-	return BackgroundTaskConfig{
-		Cron:        getEnvOrDefault(fmt.Sprintf("TAPESONIC_TASKS_%s_CRON", name), defaultCron),
-		RetryDelay:  getEnvDurationOrDefault(fmt.Sprintf("TAPESONIC_TASKS_%s_RETRY_DELAY", name), defaultRetryDelay),
-		MaxAttempts: getEnvIntOrDefault(fmt.Sprintf("TAPESONIC_TASKS_%s_MAX_ATTEMPTS", name), defaultMaxAttempts),
-	}
 }
 
 func getEnvOrDefault(name string, defaultValue string) string {
@@ -219,5 +184,20 @@ func getEnvDurationOrDefault(name string, defaultValue time.Duration) time.Durat
 		return defaultValue
 	} else {
 		return durationValue
+	}
+}
+
+func parseCronSchedule(value string) (cron.Schedule, error) {
+	if value == CronDisabled {
+		return nil, nil
+	}
+
+	parser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+
+	result, err := parser.Parse(value)
+	if err != nil {
+		return &cron.SpecSchedule{}, fmt.Errorf("invalid cron \"%s\": %w", value, err)
+	} else {
+		return result, nil
 	}
 }

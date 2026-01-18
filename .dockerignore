@@ -1,7 +1,17 @@
-.idea/
-.vscode/
-cache/
-data/
-media/
+.DS_Store
+
+/.idea/
+/.vscode/
+/cache/
+/data/
+/media/
+
+/webapp/node_modules
 
 __debug*
+
+.gitignore
+.dockerignore
+Dockerfile
+LICENSE
+README.md

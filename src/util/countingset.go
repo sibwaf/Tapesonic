@@ -12,14 +12,19 @@ func NewCountingSet[T comparable]() *CountingSet[T] {
 	}
 }
 
-func (s *CountingSet[T]) Add(item T) {
+func (s *CountingSet[T]) Add(item T) int {
 	s.data[item] += 1
 	s.size += 1
+	return s.data[item]
 }
 
 func (s *CountingSet[T]) Remove(item T) {
-	s.size -= 1
 	oldCount := s.data[item]
+	if oldCount == 0 {
+		return
+	}
+
+	s.size -= 1
 	if oldCount == 1 {
 		delete(s.data, item)
 	} else {

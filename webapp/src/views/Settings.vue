@@ -1,64 +1,105 @@
 <script setup lang="ts">
-import type { LastFmAuthLinkRs, LastFmSessionRs } from '@/api';
+import type { UserRq } from '@/api';
 import api from '@/api';
-import { onMounted, ref } from 'vue';
+import UserEditor, { type EditableUserProperties, userRsToEditableUserProperties } from '@/components/UserEditor.vue';
+import RemoteEditorList from '@/components/RemoteEditorList.vue';
+import symbols from '@/symbols';
+import { inject, ref, watch, Suspense, computed } from 'vue';
+import UserEditorList from '@/components/UserEditorList.vue';
+import LastFmSessionEditor from '@/components/LastFmSessionEditor.vue';
+import ListenBrainzSessionEditor from '@/components/ListenBrainzSessionEditor.vue';
+
+const { currentUser, updateCurrentUser, updateCurrentUserApiKey } = inject(symbols.currentUser)!;
+const editableCurrentUser = ref<EditableUserProperties | null>(null);
+
+watch(currentUser, (newValue) => {
+    if (newValue == null) {
+        editableCurrentUser.value = null;
+    } else {
+        editableCurrentUser.value = userRsToEditableUserProperties(newValue);
+    }
+}, { immediate: true });
 
 const isBusy = ref(false);
-const isLoaded = ref(false);
 
-const lastFmSession = ref<LastFmSessionRs | null>();
-const pendingLastFmAuth = ref<LastFmAuthLinkRs | null>();
-
-async function authorizeLastFm() {
+async function onUpdateCurrentUser(user: EditableUserProperties) {
     try {
         isBusy.value = true;
-        pendingLastFmAuth.value = null;
-        pendingLastFmAuth.value = await api.createLastFmAuthLink();
+
+        const rq: UserRq = {
+            Name: user.editedValue.name,
+            Role: null,
+            Password: user.editedValue.password,
+        };
+        if (!user.isPasswordEdited) {
+            rq.Password = null;
+        }
+
+        const rs = await api.patchUser(currentUser.value!.Id, rq)
+        updateCurrentUser(rs);
     } catch (e) {
-        console.error("Failed to get an authentication link for last.fm", e);
+        console.error("Failed to patch user", e);
     } finally {
         isBusy.value = false;
     }
 }
 
-async function createLastFmSession() {
+async function onRegenerateCurrentUserApiKey(userId: string) {
     try {
         isBusy.value = true;
-        lastFmSession.value = await api.createLastFmSession(pendingLastFmAuth.value!.Token);
+
+        const rs = await api.postUserApiKeys(userId);
+        updateCurrentUserApiKey(rs.ApiKey);
     } catch (e) {
-        console.error("Failed to create a last.fm session", e);
+        console.error("Failed to regenerate api key", e);
     } finally {
         isBusy.value = false;
     }
 }
 
-onMounted(async () => {
-    try {
-        isBusy.value = true;
-        lastFmSession.value = await api.getCurrentLastFmSession();
-    } catch (e) {
-        console.error("Failed to fetch current last.fm session", e);
-    } finally {
-        isBusy.value = false;
-        isLoaded.value = true;
+watch(computed(() => currentUser.value?.ApiKey), (apiKey) => {
+    const editableCurrentUserValue = editableCurrentUser.value;
+    if (apiKey != null && editableCurrentUserValue != null) {
+        editableCurrentUserValue.editedValue.apiKey = apiKey;
     }
 });
 </script>
 
 <template>
-    <div v-if="isLoaded">
-        <h2>last.fm</h2>
+    <Suspense>
+        <div v-if="currentUser != null">
+            <template v-if="editableCurrentUser">
+                <h2>Account</h2>
 
-        <div v-if="lastFmSession">Current user: {{ lastFmSession.Username }}</div>
-        <div v-else>Not authorized</div>
+                <UserEditor :user="editableCurrentUser" :disabled="isBusy" :allow-role-editing="false"
+                    :require-username="false" :require-password="false" @save="onUpdateCurrentUser(editableCurrentUser)"
+                    @regenerate-api-key="onRegenerateCurrentUserApiKey(currentUser.Id)" />
+            </template>
 
-        <button @click="authorizeLastFm" :disabled="isBusy">Connect to last.fm</button>
-        <ol v-if="pendingLastFmAuth">
-            <li><a :href="pendingLastFmAuth.Url" target="_blank">Authorize Tapesonic to access your last.fm account</a></li>
-            <li><button @click="createLastFmSession" :disabled="isBusy">Create session</button></li>
-        </ol>
-    </div>
-    <div v-else>
-        Loading...
-    </div>
+            <h2>ListenBrainz</h2>
+
+            <ListenBrainzSessionEditor />
+
+            <h2>last.fm</h2>
+
+            <LastFmSessionEditor />
+
+            <template v-if="currentUser?.Role == 'ADMIN'">
+                <h2>Users</h2>
+
+                <UserEditorList :current-user="currentUser" />
+            </template>
+
+            <h2>Remotes</h2>
+
+            <RemoteEditorList :allow-config-change="currentUser?.Role == 'ADMIN'" />
+        </div>
+        <div v-else>
+            Not authenticated?
+        </div>
+
+        <template #fallback>
+            Loading...
+        </template>
+    </Suspense>
 </template>

@@ -1,11 +1,11 @@
 .DS_Store
 
-.idea/
-.vscode/
-data/
-cache/
-media/
-webapp/node_modules/
-webapp/dist/
+/.idea/
+/.vscode/
+/data/
+/cache/
+/media/
+/webapp/node_modules/
+/webapp/dist/
 
 __debug*

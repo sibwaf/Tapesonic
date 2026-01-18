@@ -1,5 +1,44 @@
 <script setup lang="ts">
-import { RouterView } from "vue-router"
+import { provide, ref } from "vue";
+import { RouterView, useRouter } from "vue-router"
+import type { UserRs } from "@/api";
+import api from "@/api";
+import symbols from "@/symbols";
+
+const router = useRouter();
+
+const currentUser = ref<UserRs | null>(null);
+
+function updateCurrentUser(user: UserRs | null) {
+    currentUser.value = user;
+}
+
+function updateCurrentUserApiKey(apiKey: string) {
+    const currentUserValue = currentUser.value;
+    if (currentUserValue == null) {
+        return;
+    }
+
+    currentUserValue.ApiKey = apiKey;
+}
+
+provide(symbols.currentUser, { currentUser, updateCurrentUser, updateCurrentUserApiKey });
+
+router.beforeEach(async (to) => {
+    if (to.name == "setup") {
+        return true;
+    }
+
+    if (currentUser.value == null) {
+        try {
+            updateCurrentUser(await api.getCurrentUser());
+        } catch (e) {
+            console.log("Failed to retrieve current user", e)
+        }
+    }
+
+    return true;
+});
 </script>
 
 <template>
@@ -15,7 +54,9 @@ import { RouterView } from "vue-router"
     <span class="header-link">
         <RouterLink to="/tapes/new">New tape</RouterLink>
     </span>
+
     <hr>
+
     <RouterView />
 </template>
 

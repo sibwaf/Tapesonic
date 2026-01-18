@@ -1,11 +1,10 @@
 package storage
 
 import (
-	"time"
+	"tapesonic/util"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type Thumbnail struct {
@@ -16,8 +15,8 @@ type Thumbnail struct {
 	FilePath string
 	Format   string
 
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt util.TimestampWrapper
+	UpdatedAt util.TimestampWrapper
 }
 
 type ThumbnailStorage struct {
@@ -29,17 +28,23 @@ func NewThumbnailStorage(db *gorm.DB) (*ThumbnailStorage, error) {
 }
 
 func (s *ThumbnailStorage) Upsert(thumbnail Thumbnail) (Thumbnail, error) {
-	if thumbnail.Id == uuid.Nil {
-		thumbnail.Id = uuid.New()
+	query := `
+		INSERT INTO thumbnails (id, deduplication_id, file_path, format, created_at, updated_at)
+		VALUES (@id, @deduplicationId, @filePath, @format, @createdAt, @updatedAt)
+		ON CONFLICT (deduplication_id) DO UPDATE
+		SET file_path = excluded.file_path, format = excluded.format, updated_at = excluded.updated_at
+		RETURNING *
+	`
+	params := map[string]any{
+		"id":              thumbnail.Id,
+		"deduplicationId": thumbnail.DeduplicationId,
+		"filePath":        thumbnail.FilePath,
+		"format":          thumbnail.Format,
+		"createdAt":       thumbnail.CreatedAt,
+		"updatedAt":       thumbnail.UpdatedAt,
 	}
 
-	return thumbnail, s.db.Clauses(
-		clause.OnConflict{
-			Columns:   []clause.Column{{Name: "deduplication_id"}},
-			UpdateAll: true,
-		},
-		clause.Returning{},
-	).Create(&thumbnail).Error
+	return thumbnail, s.db.Raw(query, params).First(&thumbnail).Error
 }
 
 func (s *ThumbnailStorage) Search(sourceIds []uuid.UUID) ([]Thumbnail, error) {
