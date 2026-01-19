@@ -1,7 +1,7 @@
 package tapes
 
 import (
-	"tapesonic/storage"
+	"tapesonic/util"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -42,7 +42,7 @@ func (store *TapeStorage) Create(tape Tape) (Tape, error) {
 			"releasedAt":  tape.ReleasedAt,
 			"createdAt":   tape.CreatedAt,
 			"updatedAt":   tape.UpdatedAt,
-			"searchName":  storage.MakeTextSearchString(tape.Name),
+			"searchName":  util.MakeTextSearchString(tape.Name),
 		}
 
 		if err := tx.Raw(tapeSql, tapeParams).First(&tape).Error; err != nil {
@@ -90,7 +90,7 @@ func (store *TapeStorage) Update(tape Tape) (Tape, error) {
 			"artist":      tape.Artist,
 			"releasedAt":  tape.ReleasedAt,
 			"updatedAt":   tape.UpdatedAt,
-			"searchName":  storage.MakeTextSearchString(tape.Name),
+			"searchName":  util.MakeTextSearchString(tape.Name),
 		}
 
 		if err := tx.Raw(tapeSql, tapeParams).Find(&tape).Error; err != nil {

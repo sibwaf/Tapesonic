@@ -1,8 +1,8 @@
 package remotes
 
 import (
-	"tapesonic/storage"
 	"tapesonic/users"
+	"tapesonic/util"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -66,7 +66,7 @@ func (store *RemoteArtistStorage) Upsert(artist RemoteArtist, artistToUser Remot
 			"artistId":   artist.ArtistId,
 			"coverId":    artist.CoverId,
 			"name":       artist.Name,
-			"searchName": storage.MakeTextSearchString(artist.Name),
+			"searchName": util.MakeTextSearchString(artist.Name),
 		}
 		remoteArtistIdHolder := IdHolder{}
 		if err := tx.Raw(sql1, params1).First(&remoteArtistIdHolder).Error; err != nil {

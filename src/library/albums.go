@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"tapesonic/model"
-	"tapesonic/storage"
 	"tapesonic/util"
 	"time"
 
@@ -118,7 +117,7 @@ func (store *AlbumStorage) PrepareDatabase() error {
 }
 
 func (store *AlbumStorage) SearchAlbumsByQuery(userId uuid.UUID, query string, count int, offset int) ([]model.LibraryAlbum, error) {
-	filter := storage.MakeTextSearchCondition([]string{"all_albums.search_title"}, query)
+	filter := util.MakeTextSearchCondition([]string{"all_albums.search_title"}, query)
 	if filter == "" {
 		return []model.LibraryAlbum{}, nil
 	}

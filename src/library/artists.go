@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"tapesonic/model"
-	"tapesonic/storage"
+	"tapesonic/util"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -76,7 +76,7 @@ func (store *ArtistStorage) FindArtistById(userId uuid.UUID, artistId string) (*
 }
 
 func (store *ArtistStorage) SearchArtistsByQuery(userId uuid.UUID, query string, count int, offset int) ([]model.LibraryArtist, error) {
-	filter := storage.MakeTextSearchCondition([]string{"all_artists.search_name"}, query)
+	filter := util.MakeTextSearchCondition([]string{"all_artists.search_name"}, query)
 	if filter == "" {
 		return []model.LibraryArtist{}, nil
 	}

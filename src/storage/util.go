@@ -2,9 +2,6 @@ package storage
 
 import (
 	"errors"
-	"fmt"
-	"strings"
-	"tapesonic/util"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -41,49 +38,4 @@ func (db *DbHelper) ExclusiveTransaction(tx func(*gorm.DB) error) error {
 			return exclusiveTxNoLog.Exec("COMMIT").Error
 		}
 	})
-}
-
-func MakeTextSearchCondition(fields []string, query string) string {
-	terms := ExtractSearchTerms(query)
-	if len(terms) == 0 {
-		return ""
-	}
-
-	searchField := "''"
-	for _, field := range fields {
-		searchField = fmt.Sprintf("%s || ' ' || coalesce(%s, '')", searchField, field)
-	}
-
-	filter := []string{}
-	for _, term := range terms {
-		term = EscapeTextLiteralForLike(term, "\\")
-		filter = append(filter, fmt.Sprintf("%s LIKE '%% %s%%' ESCAPE '%s'", searchField, term, "\\"))
-	}
-
-	return strings.Join(filter, " AND ")
-}
-
-func MakeTextSearchString(raw string) string {
-	return strings.Join(ExtractSearchTerms(raw), " ")
-}
-
-func ExtractSearchTerms(query string) []string {
-	query, err := util.NormalizeUnicode(query)
-	if err != nil {
-		return []string{}
-	}
-
-	return util.SplitWords(query)
-}
-
-func EscapeTextLiteralForLike(str string, escape string) string {
-	str = EscapeTextLiteral(str)
-	str = strings.ReplaceAll(str, escape, escape+escape)
-	str = strings.ReplaceAll(str, "_", escape+"_")
-	str = strings.ReplaceAll(str, "%", escape+"%")
-	return str
-}
-
-func EscapeTextLiteral(str string) string {
-	return strings.ReplaceAll(str, "'", "''")
 }

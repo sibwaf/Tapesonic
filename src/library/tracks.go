@@ -5,7 +5,6 @@ import (
 	"slices"
 	"strings"
 	"tapesonic/model"
-	"tapesonic/storage"
 	"tapesonic/util"
 	"time"
 
@@ -106,7 +105,7 @@ func (store *TrackStorage) PrepareDatabase() error {
 }
 
 func (store *TrackStorage) SearchTracksByQuery(userId uuid.UUID, query string, count int, offset int) ([]model.LibraryTrack, error) {
-	filter := storage.MakeTextSearchCondition([]string{"all_tracks.search_artist", "all_tracks.search_title", "all_tracks.search_album"}, query)
+	filter := util.MakeTextSearchCondition([]string{"all_tracks.search_artist", "all_tracks.search_title", "all_tracks.search_album"}, query)
 	if filter == "" {
 		return []model.LibraryTrack{}, nil
 	}
@@ -116,9 +115,9 @@ func (store *TrackStorage) SearchTracksByQuery(userId uuid.UUID, query string, c
 
 func (store *TrackStorage) SearchTracksByFields(userId uuid.UUID, filter TrackFilter, count int, offset int) ([]model.LibraryTrack, error) {
 	conditions := []string{
-		storage.MakeTextSearchCondition([]string{"all_tracks.search_artist"}, filter.Artist),
-		storage.MakeTextSearchCondition([]string{"all_tracks.search_album"}, filter.Album),
-		storage.MakeTextSearchCondition([]string{"all_tracks.search_title"}, filter.Title),
+		util.MakeTextSearchCondition([]string{"all_tracks.search_artist"}, filter.Artist),
+		util.MakeTextSearchCondition([]string{"all_tracks.search_album"}, filter.Album),
+		util.MakeTextSearchCondition([]string{"all_tracks.search_title"}, filter.Title),
 	}
 	conditions = slices.DeleteFunc(conditions, func(condition string) bool { return condition == "" })
 

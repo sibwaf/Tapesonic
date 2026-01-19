@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"tapesonic/util"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -48,8 +49,8 @@ func (storage *TrackStorage) ReplaceTracksForSource(sourceId uuid.UUID, tracks [
 		for i := range tracks {
 			tracks[i].SourceId = sourceId
 			tracks[i].Source = nil
-			tracks[i].SearchArtist = MakeTextSearchString(tracks[i].Artist)
-			tracks[i].SearchTitle = MakeTextSearchString(tracks[i].Title)
+			tracks[i].SearchArtist = util.MakeTextSearchString(tracks[i].Artist)
+			tracks[i].SearchTitle = util.MakeTextSearchString(tracks[i].Title)
 		}
 
 		if err := tx.Clauses(clause.OnConflict{UpdateAll: true}, clause.Returning{}).Save(&tracks).Error; err != nil {

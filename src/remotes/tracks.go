@@ -1,8 +1,8 @@
 package remotes
 
 import (
-	"tapesonic/storage"
 	"tapesonic/users"
+	"tapesonic/util"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -82,7 +82,7 @@ func (store *RemoteTrackStorage) Upsert(track RemoteTrack, trackToUser RemoteTra
 			"coverId":     track.CoverId,
 			"title":       track.Title,
 			"durationMs":  track.DurationMs,
-			"searchTitle": storage.MakeTextSearchString(track.Title),
+			"searchTitle": util.MakeTextSearchString(track.Title),
 		}
 		remoteTrackIdHolder := IdHolder{}
 		if err := tx.Raw(sql1, params1).First(&remoteTrackIdHolder).Error; err != nil {

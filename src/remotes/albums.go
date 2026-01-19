@@ -1,7 +1,6 @@
 package remotes
 
 import (
-	"tapesonic/storage"
 	"tapesonic/users"
 	"tapesonic/util"
 
@@ -72,7 +71,7 @@ func (store *RemoteAlbumStorage) Upsert(album RemoteAlbum, albumToUser RemoteAlb
 			"title":       album.Title,
 			"addedAt":     album.AddedAt,
 			"releasedAt":  album.ReleasedAt,
-			"searchTitle": storage.MakeTextSearchString(album.Title),
+			"searchTitle": util.MakeTextSearchString(album.Title),
 		}
 		remoteAlbumIdHolder := IdHolder{}
 		if err := tx.Raw(sql1, params1).First(&remoteAlbumIdHolder).Error; err != nil {
