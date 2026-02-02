@@ -40,12 +40,12 @@ func (ms *MediaStorage) GetTrackSources(trackId uuid.UUID) (model.TrackSourceDes
 				source_files.codec AS local_codec,
 				sources.url AS remote_url,
 				sources.duration_ms AS source_duration_ms,
-				tracks.start_offset_ms AS start_offset_ms,
-				tracks.end_offset_ms AS end_offset_ms
-			FROM tracks
-			JOIN sources ON sources.id = tracks.source_id
+				source_tracks.start_offset_ms AS start_offset_ms,
+				source_tracks.end_offset_ms AS end_offset_ms
+			FROM source_tracks
+			JOIN sources ON sources.id = source_tracks.source_id
 			LEFT JOIN source_files ON source_files.source_id = sources.id
-			WHERE tracks.id = '%s'
+			WHERE source_tracks.id = '%s'
 		`,
 		trackId.String(),
 	)

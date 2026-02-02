@@ -2,19 +2,29 @@ package admin
 
 import (
 	"net/http"
-	"tapesonic/http/admin/responses"
 	"tapesonic/model"
 	"tapesonic/search"
 	"tapesonic/util"
 )
 
-func libraryToTrackRs(track model.LibraryTrack) responses.TrackRs {
+type TrackRs struct {
+	Id       string
+	SourceId string
+
+	Artist string
+	Title  string
+
+	StartOffsetMs int64
+	EndOffsetMs   int64
+}
+
+func libraryToTrackRs(track model.LibraryTrack) TrackRs {
 	sourceId := ""
 	if track.SourceId != nil {
 		sourceId = track.SourceId.String()
 	}
 
-	return responses.TrackRs{
+	return TrackRs{
 		Id:       track.Id,
 		SourceId: sourceId,
 

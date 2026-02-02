@@ -37,10 +37,10 @@ func (store *PlaylistStorage) PrepareDatabase() error {
 						users.id AS user_id,
 						tape_to_tracks.tape_id AS id,
 						count(*) AS track_count,
-						sum(tracks.end_offset_ms - tracks.start_offset_ms) AS total_duration_ms
-					FROM tracks
+						sum(source_tracks.end_offset_ms - source_tracks.start_offset_ms) AS total_duration_ms
+					FROM source_tracks
 					JOIN users ON 1 = 1
-					JOIN tape_to_tracks ON tracks.id = tape_to_tracks.track_id
+					JOIN tape_to_tracks ON source_tracks.id = tape_to_tracks.track_id
 					GROUP BY users.id, tape_to_tracks.tape_id
 				),
 				recommended_playlists_aggregate (user_id, id, track_count, total_duration_ms) AS (

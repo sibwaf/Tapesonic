@@ -46,10 +46,7 @@ type Context struct {
 	Search          *search.SearchModule
 	Recommendations *recommendations.RecommendationsModule
 
-	SourceStorage     *storage.SourceStorage
-	SourceFileStorage *storage.SourceFileStorage
-	TrackStorage      *storage.TrackStorage
-	ThumbnailStorage  *storage.ThumbnailStorage
+	ThumbnailStorage *storage.ThumbnailStorage
 
 	YtdlpMetadataStorage *storage.YtdlpMetadataStorage
 	MediaStorage         *storage.MediaStorage
@@ -58,13 +55,6 @@ type Context struct {
 	YtdlpService *logic.YtdlpService
 
 	ThumbnailService *logic.ThumbnailService
-
-	TrackNormalizer   *logic.TrackNormalizer
-	TrackMatcher      *logic.TrackMatcher
-	TrackService      *logic.TrackService
-	SourceFileService *logic.SourceFileService
-	SourceService     *logic.SourceService
-	AutoImportService *logic.AutoImportService
 }
 
 func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
@@ -113,15 +103,6 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 
 	context.Scheduling = scheduling.NewSchedulingModule(db, config.SchedulerDelay)
 
-	if context.SourceStorage, err = storage.NewSourceStorage(db); err != nil {
-		return nil, err
-	}
-	if context.SourceFileStorage, err = storage.NewSourceFileStorage(db); err != nil {
-		return nil, err
-	}
-	if context.TrackStorage, err = storage.NewTrackStorage(db); err != nil {
-		return nil, err
-	}
 	if context.ThumbnailStorage, err = storage.NewThumbnailStorage(db); err != nil {
 		return nil, err
 	}
@@ -140,13 +121,6 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		config.YtdlpMetadataMaxParallelism,
 	)
 
-	context.SourceFileService = logic.NewSourceFileService(
-		context.SourceFileStorage,
-		context.SourceStorage,
-		context.YtdlpService,
-		config.MediaStorageDir,
-	)
-
 	context.ThumbnailService = logic.NewThumbnailService(
 		context.ThumbnailStorage,
 		path.Join(config.MediaStorageDir, "thumbnails"),
@@ -155,7 +129,13 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	if context.Users, err = users.NewUsersModule(db); err != nil {
 		return nil, err
 	}
-	context.Sources = sources.NewSourcesModule(context.SourceFileService, context.SourceStorage, config.DownloadNextSourceSchedule)
+	context.Sources = sources.NewSourcesModule(
+		db,
+		context.YtdlpService,
+		context.ThumbnailService,
+		config.DownloadNextSourceSchedule,
+		config.MediaStorageDir,
+	)
 	if context.Remotes, err = remotes.NewRemotesModule(
 		db,
 		context.Scheduling.TaskScheduler,
@@ -163,7 +143,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	); err != nil {
 		return nil, err
 	}
-	context.Tapes = tapes.NewTapesModule(db, context.TrackStorage)
+	context.Tapes = tapes.NewTapesModule(db)
 	context.Library = library.NewLibraryModule(db)
 
 	context.MediaStorage = storage.NewMediaStorage(db, config.MediaStorageDir)
@@ -182,24 +162,6 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	if context.LastFm, err = lastfm.NewLastFmModule(db, config.LastFmApiKey, config.LastFmApiSecret); err != nil {
 		return nil, err
 	}
-
-	context.TrackNormalizer = logic.NewTrackNormalizer()
-	context.TrackMatcher = logic.NewTrackMatcher()
-	context.TrackService = logic.NewTrackService(context.TrackStorage)
-
-	context.SourceService = logic.NewSourceService(
-		context.SourceStorage,
-		context.YtdlpService,
-		context.SourceFileService,
-		context.TrackService,
-		context.ThumbnailService,
-		context.TrackNormalizer,
-	)
-	context.AutoImportService = logic.NewAutoImportService(
-		context.SourceService,
-		context.TrackService,
-		context.TrackMatcher,
-	)
 
 	context.Scrobbling = scrobbling.NewScrobblingModule(
 		db,
@@ -221,10 +183,8 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	context.Search = search.NewSearchModule(
 		db,
 		context.Library.LibraryService,
-		context.SourceService,
-		context.TrackService,
-		context.AutoImportService,
-		context.TrackMatcher,
+		context.Sources.SourceService,
+		context.Sources.ImportService,
 	)
 
 	context.Recommendations = recommendations.NewRecommendationModule(
@@ -248,6 +208,9 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 
 func prepareDatabase(context *Context) error {
 	if err := context.Scheduling.PrepareDatabase(); err != nil {
+		return err
+	}
+	if err := context.Sources.PrepareDatabase(); err != nil {
 		return err
 	}
 	if err := context.Tapes.PrepareDatabase(); err != nil {

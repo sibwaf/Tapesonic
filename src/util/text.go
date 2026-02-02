@@ -2,6 +2,7 @@ package util
 
 import (
 	"regexp"
+	"strings"
 	"unicode"
 
 	"golang.org/x/text/runes"
@@ -24,4 +25,21 @@ func SplitWords(input string) []string {
 	}
 
 	return words
+}
+
+func MatchText(expected string, actual string) bool {
+	expectedWords := SplitWords(expected)
+	actualWords := SplitWords(actual)
+
+	if len(expectedWords) != len(actualWords) {
+		return false
+	}
+
+	for i, expectedWord := range expectedWords {
+		if !strings.EqualFold(expectedWord, actualWords[i]) {
+			return false
+		}
+	}
+
+	return true
 }

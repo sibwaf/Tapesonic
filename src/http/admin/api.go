@@ -135,12 +135,6 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 
 	// todo: logging
 	rawHandlers := []PathHandler{
-		{Path: "/api/sources", Handler: handlers.NewSourcesHandler(appCtx.SourceService).Handle},
-		{Path: "/api/sources/{sourceId}", Handler: handlers.NewSourceHandler(appCtx.SourceService).Handle},
-		{Path: "/api/sources/{sourceId}/hierarchy", Handler: handlers.NewSourceHierarchyHandler(appCtx.SourceService).Handle},
-		{Path: "/api/sources/{sourceId}/tracks", Handler: handlers.NewSourceTracksHandler(appCtx.TrackService, appCtx.SourceService).Handle},
-		{Path: "/api/sources/{sourceId}/file", Handler: handlers.NewSourceFileHandler(appCtx.SourceFileService).Handle},
-
 		{Path: "/api/thumbnails", Handler: handlers.NewThumbnailsHandler(appCtx.ThumbnailService).Handle},
 	}
 
@@ -157,6 +151,13 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 	router.HandleFunc("/api/users/root", asHandlerFunc(PutUserRoot(appCtx.Users.UserService))).Methods("PUT")
 	router.HandleFunc("/api/users/{userId}", asHandlerFunc(PatchUser(auth, appCtx.Users.UserService))).Methods("PATCH")
 	router.HandleFunc("/api/users/{userId}/api-keys", asHandlerFunc(PostUserApiKeys(auth, appCtx.Users.UserService))).Methods("POST")
+
+	router.HandleFunc("/api/sources", asHandlerFunc(GetSources(auth, appCtx.Sources.SourceService))).Methods("GET")
+	router.HandleFunc("/api/sources/{sourceId}", asHandlerFunc(GetSource(auth, appCtx.Sources.SourceService))).Methods("GET")
+	router.HandleFunc("/api/sources/{sourceId}/hierarchy", asHandlerFunc(GetSourceHierarchy(auth, appCtx.Sources.SourceService))).Methods("GET")
+	router.HandleFunc("/api/sources/{sourceId}/tracks", asHandlerFunc(GetSourceTracks(auth, appCtx.Sources.SourceService))).Methods("GET")
+	router.HandleFunc("/api/sources/{sourceId}/tracks", asHandlerFunc(PutSourceTracks(auth, appCtx.Sources.SourceService))).Methods("PUT")
+	router.HandleFunc("/api/sources/{sourceId}/file", asHandlerFunc(DeleteSourceFile(auth, appCtx.Sources.SourceService))).Methods("DELETE")
 
 	router.HandleFunc("/api/remotes", asHandlerFunc(GetRemotes(auth, appCtx.Remotes.RemoteService))).Methods("GET")
 	router.HandleFunc("/api/remotes", asHandlerFunc(PostRemotes(auth, appCtx.Remotes.RemoteService))).Methods("POST")

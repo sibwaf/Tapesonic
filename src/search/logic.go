@@ -8,33 +8,33 @@ import (
 	"strings"
 
 	"tapesonic/library"
-	"tapesonic/logic"
 	"tapesonic/model"
+	"tapesonic/sources"
 
 	"github.com/google/uuid"
 )
 
 type SearchService struct {
-	library  *library.LibraryService
-	sources  *logic.SourceService
-	tracks   *logic.TrackService
-	importer *logic.AutoImportService
-	matcher  *logic.TrackMatcher
+	library      *library.LibraryService
+	sources      *sources.SourceService
+	rawImporter  *sources.ImportService
+	autoImporter *AutoImportService
+	matcher      *TrackMatcher
 }
 
 func newSearchService(
 	library *library.LibraryService,
-	sources *logic.SourceService,
-	tracks *logic.TrackService,
-	importer *logic.AutoImportService,
-	matcher *logic.TrackMatcher,
+	sources *sources.SourceService,
+	rawImporter *sources.ImportService,
+	autoImporter *AutoImportService,
+	matcher *TrackMatcher,
 ) *SearchService {
 	return &SearchService{
-		library:  library,
-		sources:  sources,
-		tracks:   tracks,
-		importer: importer,
-		matcher:  matcher,
+		library:      library,
+		sources:      sources,
+		rawImporter:  rawImporter,
+		autoImporter: autoImporter,
+		matcher:      matcher,
 	}
 }
 
@@ -44,12 +44,12 @@ func (svc *SearchService) FindTracksByQuery(userId uuid.UUID, query string) ([]m
 	}
 
 	if strings.HasPrefix(query, "http://") || strings.HasPrefix(query, "https://") {
-		source, err := svc.sources.AddSource(context.Background(), query, model.SOURCE_MANAGEMENT_POLICY_MANUAL)
+		source, err := svc.rawImporter.AddSource(context.Background(), query, sources.SOURCE_MANAGEMENT_POLICY_MANUAL)
 		if err != nil {
 			return []model.LibraryTrack{}, err
 		}
 
-		sourceTracks, err := svc.tracks.GetAllTracksBySource(source.Id)
+		sourceTracks, err := svc.sources.GetAllTracks(source.Id)
 		if err != nil {
 			return []model.LibraryTrack{}, err
 		}
@@ -81,7 +81,7 @@ func (svc *SearchService) FindTracksByQuery(userId uuid.UUID, query string) ([]m
 }
 
 func (svc *SearchService) FindTrack(userId uuid.UUID, track TrackForSearch) (*model.LibraryTrack, error) {
-	expected := logic.TrackForMatching{
+	expected := TrackForMatching{
 		Artist: track.Artist,
 		Title:  track.Title,
 	}
@@ -95,7 +95,7 @@ func (svc *SearchService) FindTrack(userId uuid.UUID, track TrackForSearch) (*mo
 	}
 
 	for _, url := range track.Urls {
-		importedTrack, err := svc.importer.ImportTrackFrom(context.Background(), url, expected.Artist, expected.Title)
+		importedTrack, err := svc.autoImporter.ImportTrackFrom(context.Background(), url, expected.Artist, expected.Title)
 		if err != nil {
 			return nil, err
 		}
@@ -119,14 +119,14 @@ func (svc *SearchService) findMatchInLibrary(userId uuid.UUID, track TrackForSea
 		return nil, err
 	}
 
-	expected := logic.TrackForMatching{
+	expected := TrackForMatching{
 		Artist: track.Artist,
 		Title:  track.Title,
 	}
 
 	var match *model.LibraryTrack = nil
 	for _, candidate := range candidates {
-		actual := logic.TrackForMatching{
+		actual := TrackForMatching{
 			Artist: candidate.ArtistName,
 			Title:  candidate.Title,
 		}

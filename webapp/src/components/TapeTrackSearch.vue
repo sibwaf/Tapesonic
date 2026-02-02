@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import api, { type TrackRs } from '@/api';
+import api, { type SourceTrackRs } from '@/api';
 import { computed, ref, toRaw } from 'vue';
 
 enum State {
@@ -13,7 +13,7 @@ enum State {
 }
 
 const emit = defineEmits<{
-    (e: "add-track", track: TrackRs): void
+    (e: "add-track", track: SourceTrackRs): void
 }>();
 
 const state = ref(State.WAITING);
@@ -21,7 +21,7 @@ const isBusy = computed(() => state.value == State.SEARCHING || state.value == S
 
 const query = ref("");
 
-const searchResult = ref<TrackRs[]>([]);
+const searchResult = ref<SourceTrackRs[]>([]);
 
 async function search() {
     try {
@@ -39,7 +39,7 @@ async function search() {
     }
 }
 
-function onAdd(track: TrackRs) {
+function onAdd(track: SourceTrackRs) {
     emit("add-track", toRaw(track));
 }
 

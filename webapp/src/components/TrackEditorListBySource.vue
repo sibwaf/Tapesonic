@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { ListSourceHierarchyRs, TrackRs } from "@/api";
+import type { SourceHierarchyListRs, SourceTrackRs } from "@/api";
 import TrackEditor from "@/components/TrackEditor.vue";
 import { type Editable } from "@/model/Editable";
 import { computed } from "vue";
 
 const props = defineProps<{
-    modelValue: Editable<TrackRs>[],
-    source: ListSourceHierarchyRs,
+    modelValue: Editable<SourceTrackRs>[],
+    source: SourceHierarchyListRs,
 }>();
 
 const tracksAreChanged = computed(() => props.modelValue.some(it => it.isEdited));

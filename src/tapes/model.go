@@ -2,12 +2,30 @@ package tapes
 
 import (
 	"tapesonic/model"
+	"tapesonic/sources"
 	"tapesonic/storage"
 	"tapesonic/users"
 	"tapesonic/util"
 
 	"github.com/google/uuid"
 )
+
+// internal
+
+type TrackForMetadataGuessing struct {
+	Id uuid.UUID
+
+	AlbumArtist        string
+	AlbumTitle         string
+	Artist             string
+	SourceTitle        string
+	SourceParentTitles []string `gorm:"serializer:json"`
+
+	ReleaseDate *util.TimestampWrapper
+	ThumbnailId *uuid.UUID
+}
+
+// database
 
 type Tape struct {
 	Id uuid.UUID
@@ -37,7 +55,7 @@ type TapeToTrack struct {
 	Tape   *Tape
 
 	TrackId uuid.UUID `gorm:"primaryKey"`
-	Track   *storage.Track
+	Track   *sources.SourceTrack
 
 	ListIndex int
 }

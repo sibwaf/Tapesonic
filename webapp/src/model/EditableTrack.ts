@@ -1,19 +1,19 @@
-import type { TrackRs } from "@/api";
+import type { SourceTrackRs } from "@/api";
 import type { Editable } from "@/model/Editable";
 
-export class EditableTrack implements Editable<TrackRs> {
+export class EditableTrack implements Editable<SourceTrackRs> {
 
-    private state: TrackRs;
+    private state: SourceTrackRs;
 
-    private static makeModified(track: TrackRs): TrackRs {
+    private static makeModified(track: SourceTrackRs): SourceTrackRs {
         return JSON.parse(JSON.stringify(track));
     }
 
-    public constructor(private readonly original: TrackRs) {
+    public constructor(private readonly original: SourceTrackRs) {
         this.state = EditableTrack.makeModified(original);
     }
 
-    public get editedValue(): TrackRs {
+    public get editedValue(): SourceTrackRs {
         return this.state;
     }
 

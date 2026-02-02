@@ -1,69 +1,28 @@
-package storage
+package sources
 
 import (
 	"errors"
 	"fmt"
 	"strings"
 	"tapesonic/model"
-	"tapesonic/util"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-type Source struct {
-	Id uuid.UUID
-
-	ExtractorKey string
-	ExtractedId  string
-	Url          string `gorm:"uniqueIndex"`
-
-	Title      string
-	Uploader   string
-	UploaderId string
-
-	AlbumArtist string
-	AlbumTitle  string
-	AlbumIndex  int
-	TrackArtist string
-	TrackTitle  string
-	DurationMs  int64
-
-	UploadedAt  util.TimestampWrapper
-	ReleaseDate *util.TimestampWrapper
-
-	ThumbnailId *uuid.UUID
-	Thumbnail   *Thumbnail
-
-	ManagementPolicy model.SourceManagementPolicy
-
-	CreatedAt util.TimestampWrapper
-	UpdatedAt util.TimestampWrapper
-}
-
-type SourceHierarchy struct {
-	ParentId uuid.UUID `gorm:"primaryKey"`
-	Parent   Source
-
-	ChildId uuid.UUID `gorm:"primaryKey"`
-	Child   Source
-
-	ListIndex int
-}
-
 type SourceStorage struct {
-	db *DbHelper
+	db *gorm.DB
 }
 
-func NewSourceStorage(db *gorm.DB) (*SourceStorage, error) {
-	if err := db.AutoMigrate(&Source{}, &SourceHierarchy{}); err != nil {
-		return nil, err
-	}
-
-	return &SourceStorage{db: NewDbHelper(db)}, nil
+func newSourceStorage(db *gorm.DB) *SourceStorage {
+	return &SourceStorage{db: db}
 }
 
-func (storage *SourceStorage) Upsert(source Source) (Source, error) {
+func (store *SourceStorage) PrepareDatabase() error {
+	return store.db.AutoMigrate(&Source{}, &SourceHierarchy{})
+}
+
+func (store *SourceStorage) Upsert(source Source) (Source, error) {
 	query := `
 		INSERT INTO sources (id, extractor_key, extracted_id, url, title, uploader, uploader_id, album_artist, album_title, album_index, track_artist, track_title, duration_ms, uploaded_at, release_date, thumbnail_id, management_policy, created_at, updated_at)
 		VALUES (@id, @extractorKey, @extractedId, @url, @title, @uploader, @uploaderId, @albumArtist, @albumTitle, @albumIndex, @trackArtist, @trackTitle, @durationMs, @uploadedAt, @releaseDate, @thumbnailId, @managementPolicy, @createdAt, @updatedAt)
@@ -110,11 +69,11 @@ func (storage *SourceStorage) Upsert(source Source) (Source, error) {
 		"updatedAt":        source.UpdatedAt,
 	}
 
-	return source, storage.db.Raw(query, params).First(&source).Error
+	return source, store.db.Raw(query, params).First(&source).Error
 }
 
-func (storage *SourceStorage) UpdateHierarchy(parentId uuid.UUID, childIds []uuid.UUID) error {
-	return storage.db.Transaction(func(tx *gorm.DB) error {
+func (store *SourceStorage) UpdateHierarchy(parentId uuid.UUID, childIds []uuid.UUID) error {
+	return store.db.Transaction(func(tx *gorm.DB) error {
 		items := []SourceHierarchy{}
 		for i, childId := range childIds {
 			items = append(items, SourceHierarchy{
@@ -135,36 +94,36 @@ func (storage *SourceStorage) UpdateHierarchy(parentId uuid.UUID, childIds []uui
 	})
 }
 
-func (storage *SourceStorage) GetHierarchy(id uuid.UUID) ([]SourceForHierarchy, error) {
-	query := fmt.Sprintf(
-		`
-			WITH RECURSIVE all_sources (id) AS (
-				VALUES ('%s')
-				UNION
-				SELECT ids.value
-				FROM source_hierarchies, json_each(json_array(source_hierarchies.parent_id, source_hierarchies.child_id)) ids
-				JOIN all_sources ON all_sources.id IN (source_hierarchies.parent_id, source_hierarchies.child_id)
-			)
-			SELECT
-				sources.id AS id,
-				source_hierarchies.parent_id AS parent_id,
-				coalesce(source_hierarchies.list_index, -1) AS list_index,
-				sources.url AS url,
-				sources.title AS title,
-				sources.uploader AS uploader,
-				sources.thumbnail_id AS thumbnail_id
-			FROM sources
-			JOIN all_sources ON sources.id = all_sources.id
-			LEFT JOIN source_hierarchies ON sources.id = source_hierarchies.child_id
-		`,
-		id,
-	)
+func (store *SourceStorage) GetHierarchy(id uuid.UUID) ([]SourceForHierarchy, error) {
+	query := `
+		WITH RECURSIVE all_sources (id) AS (
+			VALUES (@id)
+			UNION
+			SELECT ids.value
+			FROM source_hierarchies, json_each(json_array(source_hierarchies.parent_id, source_hierarchies.child_id)) ids
+			JOIN all_sources ON all_sources.id IN (source_hierarchies.parent_id, source_hierarchies.child_id)
+		)
+		SELECT
+			sources.id AS id,
+			source_hierarchies.parent_id AS parent_id,
+			coalesce(source_hierarchies.list_index, -1) AS list_index,
+			sources.url AS url,
+			sources.title AS title,
+			sources.uploader AS uploader,
+			sources.thumbnail_id AS thumbnail_id
+		FROM sources
+		JOIN all_sources ON sources.id = all_sources.id
+		LEFT JOIN source_hierarchies ON sources.id = source_hierarchies.child_id
+	`
+	params := map[string]any{
+		"id": id,
+	}
 
 	result := []SourceForHierarchy{}
-	return result, storage.db.Raw(query).Find(&result).Error
+	return result, store.db.Raw(query, params).Find(&result).Error
 }
 
-func (storage *SourceStorage) GetListForApi(managementPolicies []model.SourceManagementPolicy) ([]Source, error) {
+func (store *SourceStorage) GetListForApi(managementPolicies []SourceManagementPolicy) ([]Source, error) {
 	conditions := []string{"1 = 1"}
 	params := map[string]any{}
 
@@ -185,20 +144,35 @@ func (storage *SourceStorage) GetListForApi(managementPolicies []model.SourceMan
 
 	result := []Source{}
 	if len(params) > 0 {
-		return result, storage.db.Raw(sql, params).Find(&result).Error
+		return result, store.db.Raw(sql, params).Find(&result).Error
 	} else {
-		return result, storage.db.Raw(sql).Find(&result).Error
+		return result, store.db.Raw(sql).Find(&result).Error
 	}
 }
 
-func (storage *SourceStorage) GetById(id uuid.UUID) (Source, error) {
-	result := Source{Id: id}
-	return result, storage.db.Take(&result).Error
+func (store *SourceStorage) GetById(id uuid.UUID) (Source, error) {
+	sql := `
+		SELECT *
+		FROM sources
+		WHERE id = @id
+		LIMIT 1
+	`
+	params := map[string]any{
+		"id": id,
+	}
+
+	result := Source{}
+	err := store.db.Raw(sql, params).First(&result).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return result, model.ErrNotFound
+	} else {
+		return result, err
+	}
 }
 
-func (storage *SourceStorage) FindByUrl(url string) (*Source, error) {
+func (store *SourceStorage) FindByUrl(url string) (*Source, error) {
 	result := Source{}
-	if err := storage.db.Where("url = ?", url).Take(&result).Error; err != nil {
+	if err := store.db.Where("url = ?", url).Take(&result).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		} else {
@@ -208,16 +182,16 @@ func (storage *SourceStorage) FindByUrl(url string) (*Source, error) {
 	return &result, nil
 }
 
-func (storage *SourceStorage) GetManagementPolicyById(id uuid.UUID) (model.SourceManagementPolicy, error) {
-	result := model.SOURCE_MANAGEMENT_POLICY_MANUAL
-	return result, storage.db.Raw("SELECT management_policy FROM sources WHERE id = ?", id).Take(&result).Error
+func (store *SourceStorage) GetManagementPolicyById(id uuid.UUID) (SourceManagementPolicy, error) {
+	result := SOURCE_MANAGEMENT_POLICY_MANUAL
+	return result, store.db.Raw("SELECT management_policy FROM sources WHERE id = ?", id).Take(&result).Error
 }
 
-func (storage *SourceStorage) SetManagementPolicyById(id uuid.UUID, managementPolicy model.SourceManagementPolicy) error {
-	return storage.db.Exec("UPDATE sources SET management_policy = ? WHERE id = ?", managementPolicy, id).Error
+func (store *SourceStorage) SetManagementPolicyById(id uuid.UUID, managementPolicy SourceManagementPolicy) error {
+	return store.db.Exec("UPDATE sources SET management_policy = ? WHERE id = ?", managementPolicy, id).Error
 }
 
-func (storage *SourceStorage) FindNextForDownload() (*Source, error) {
+func (store *SourceStorage) FindNextForDownload() (*Source, error) {
 	sql := `
 		SELECT sources.*
 		FROM sources
@@ -227,9 +201,9 @@ func (storage *SourceStorage) FindNextForDownload() (*Source, error) {
 			AND source_files.id IS NULL
 			AND EXISTS (
 				SELECT 1
-				FROM tracks
-				JOIN tape_to_tracks ON tape_to_tracks.track_id = tracks.id
-				WHERE tracks.source_id = sources.id
+				FROM source_tracks
+				JOIN tape_to_tracks ON tape_to_tracks.track_id = source_tracks.id
+				WHERE source_tracks.source_id = sources.id
 				LIMIT 1
 			)
 		ORDER BY random()
@@ -237,7 +211,7 @@ func (storage *SourceStorage) FindNextForDownload() (*Source, error) {
 	`
 
 	result := Source{}
-	if err := storage.db.Raw(sql).Take(&result).Error; err != nil {
+	if err := store.db.Raw(sql).Take(&result).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		} else {

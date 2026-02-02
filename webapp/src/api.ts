@@ -47,47 +47,42 @@ export interface RemoteFullRs {
     Status: string;
 }
 
-export interface FullSourceRs {
+export interface SourceFullRs {
     Id: string;
 
     Url: string;
     Title: string;
     Uploader: string;
-
     AlbumArtist: string;
     AlbumTitle: string;
     AlbumIndex: number;
     TrackArtist: string;
     TrackTitle: string;
     DurationMs: number;
-
     ReleaseDate: string | null;
-
     ThumbnailId: string | null;
+    File: SourceFileRs | null;
 }
 
-export interface ListSourceRs {
+export interface SourceListRs {
     Id: string;
 
     Url: string;
     Title: string;
     Uploader: string;
-
     DurationMs: number;
-
     ThumbnailId: string | null;
+    File: SourceFileRs | null;
 }
 
-export interface ListSourceHierarchyRs {
+export interface SourceHierarchyListRs {
     Id: string;
     ParentId: string | null;
 
     Url: string;
     Title: string;
     Uploader: string;
-
     ListIndex: number;
-
     ThumbnailId: string | null;
 }
 
@@ -95,7 +90,7 @@ export interface SourceFileRs {
     Codec: string;
 }
 
-export interface TrackRs {
+export interface SourceTrackRs {
     Id: string;
     SourceId: string;
 
@@ -122,7 +117,7 @@ export interface Tape {
     Artist: string;
     ReleasedAt: string | null;
 
-    Tracks: TrackRs[];
+    Tracks: SourceTrackRs[];
 }
 
 export interface ListTape {
@@ -149,11 +144,6 @@ export interface GuessTapeMetadataRs {
     Artist: string;
     ReleasedAt: string | null;
     ThumbnailId: string | null;
-}
-
-export interface GetListSourceRs {
-    Source: ListSourceRs;
-    File: SourceFileRs | null;
 }
 
 export interface ListThumbnailRs {
@@ -317,42 +307,28 @@ export default {
         return await response.json();
     },
 
-    async addSource(url: string): Promise<FullSourceRs> {
-        const params = new URLSearchParams({ "url": url });
-        const response = await fetch(`/api/sources?${params}`, { method: "POST" });
-        return await response.json();
-    },
-    async listSources(): Promise<GetListSourceRs[]> {
+    async listSources(): Promise<SourceListRs[]> {
         const params = new URLSearchParams();
         params.append("managementPolicy", "MANUAL");
         const response = await fetch(`/api/sources?${params}`, { method: "GET" });
         return await response.json();
     },
-    async getSource(id: string): Promise<FullSourceRs> {
+    async getSource(id: string): Promise<SourceFullRs> {
         const response = await fetch(`/api/sources/${id}`, { method: "GET" });
         return await response.json();
     },
-    async getSourceHierarchy(id: string): Promise<ListSourceHierarchyRs[]> {
+    async getSourceHierarchy(id: string): Promise<SourceHierarchyListRs[]> {
         const response = await fetch(`/api/sources/${id}/hierarchy`, { method: "GET" });
         return await response.json();
     },
-    async getSourceTracks(id: string, recursive: boolean): Promise<TrackRs[]> {
+    async getSourceTracks(id: string, recursive: boolean): Promise<SourceTrackRs[]> {
         const params = new URLSearchParams({ "recursive": `${recursive}` });
         const response = await fetch(`/api/sources/${id}/tracks?${params}`, { method: "GET" });
         return await response.json();
     },
-    async replaceSourceTracks(id: string, tracks: TrackRs[]): Promise<TrackRs[]> {
+    async replaceSourceTracks(id: string, tracks: SourceTrackRs[]): Promise<SourceTrackRs[]> {
         const response = await fetch(`/api/sources/${id}/tracks`, { method: "PUT", body: JSON.stringify(tracks) });
         return await response.json();
-    },
-    async getSourceFile(sourceId: string): Promise<SourceFileRs | null> {
-        const response = await fetch(`/api/sources/${sourceId}/file`, { method: "GET" });
-        const body = await response.text();
-        if (body == "") {
-            return null;
-        } else {
-            return JSON.parse(body);
-        }
     },
     async deleteSourceFile(sourceId: string): Promise<void> {
         const response = await fetch(`/api/sources/${sourceId}/file`, { method: "DELETE" });
@@ -383,7 +359,7 @@ export default {
         return await response.json();
     },
 
-    async searchTracks(query: string): Promise<TrackRs[]> {
+    async searchTracks(query: string): Promise<SourceTrackRs[]> {
         const params = new URLSearchParams({ "q": query });
         const response = await fetch(`/api/tracks?${params}`, { method: "GET" });
         return await response.json();

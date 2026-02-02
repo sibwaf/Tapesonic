@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type GuessTapeMetadataRs, type Tape, TapeType, type TrackRs } from '@/api';
+import { type GuessTapeMetadataRs, type Tape, TapeType, type SourceTrackRs } from '@/api';
 import api from '@/api';
 import util from '@/util';
 import TapeTrackSearch from '@/components/TapeTrackSearch.vue';
@@ -55,7 +55,7 @@ function onClearReleaseDate(tape: Tape) {
     tape.ReleasedAt = null;
 }
 
-function onAddTrack(tape: Tape, track: TrackRs) {
+function onAddTrack(tape: Tape, track: SourceTrackRs) {
     tape.Tracks.push(track);
 }
 

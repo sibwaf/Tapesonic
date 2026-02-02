@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"tapesonic/model"
-	"tapesonic/storage"
+	"tapesonic/sources"
 	"tapesonic/users"
 	"tapesonic/util"
 	"time"
@@ -13,21 +13,18 @@ import (
 )
 
 type TapeService struct {
-	tapes  *TapeStorage
-	tracks *storage.TrackStorage
+	tapes *TapeStorage
 }
 
 func newTapeService(
 	tapes *TapeStorage,
-	tracks *storage.TrackStorage,
 ) *TapeService {
 	return &TapeService{
-		tapes:  tapes,
-		tracks: tracks,
+		tapes: tapes,
 	}
 }
 
-func (s *TapeService) Create(user users.User, tape Tape) (Tape, []storage.Track, error) {
+func (s *TapeService) Create(user users.User, tape Tape) (Tape, []sources.SourceTrack, error) {
 	tape.Id = uuid.New()
 	tape.CreatedById = user.Id
 	tape.CreatedAt = util.NewTimestampWrapper(time.Now())
@@ -36,28 +33,28 @@ func (s *TapeService) Create(user users.User, tape Tape) (Tape, []storage.Track,
 	tape, err := s.tapes.Create(tape)
 
 	if err != nil {
-		return Tape{}, []storage.Track{}, err
+		return Tape{}, []sources.SourceTrack{}, err
 	}
 
-	tracks, err := s.tracks.GetTracksByTape(tape.Id)
+	tracks, err := s.tapes.GetTracksById(tape.Id)
 	if err != nil {
-		return Tape{}, []storage.Track{}, err
+		return Tape{}, []sources.SourceTrack{}, err
 	}
 
 	return tape, tracks, nil
 }
 
-func (s *TapeService) Update(tape Tape) (Tape, []storage.Track, error) {
+func (s *TapeService) Update(tape Tape) (Tape, []sources.SourceTrack, error) {
 	tape.UpdatedAt = util.NewTimestampWrapper(time.Now())
 
 	tape, err := s.tapes.Update(tape)
 	if err != nil {
-		return Tape{}, []storage.Track{}, err
+		return Tape{}, []sources.SourceTrack{}, err
 	}
 
-	tracks, err := s.tracks.GetTracksByTape(tape.Id)
+	tracks, err := s.tapes.GetTracksById(tape.Id)
 	if err != nil {
-		return Tape{}, []storage.Track{}, err
+		return Tape{}, []sources.SourceTrack{}, err
 	}
 
 	return tape, tracks, nil
@@ -71,15 +68,15 @@ func (s *TapeService) GetList() ([]Tape, error) {
 	return s.tapes.GetAllTapes()
 }
 
-func (s *TapeService) GetById(id uuid.UUID) (Tape, []storage.Track, error) {
+func (s *TapeService) GetById(id uuid.UUID) (Tape, []sources.SourceTrack, error) {
 	tape, err := s.tapes.GetTape(id)
 	if err != nil {
-		return Tape{}, []storage.Track{}, err
+		return Tape{}, []sources.SourceTrack{}, err
 	}
 
-	tracks, err := s.tracks.GetTracksByTape(id)
+	tracks, err := s.tapes.GetTracksById(id)
 	if err != nil {
-		return Tape{}, []storage.Track{}, err
+		return Tape{}, []sources.SourceTrack{}, err
 	}
 
 	return tape, tracks, nil
@@ -94,7 +91,7 @@ type TapeMetadata struct {
 }
 
 func (s *TapeService) GuessTapeMetadata(trackIds []uuid.UUID) (TapeMetadata, error) {
-	tracks, err := s.tracks.GetTracksForTapeMetadataGuessing(trackIds)
+	tracks, err := s.tapes.GetTracksForMetadataGuessing(trackIds)
 	if err != nil {
 		return TapeMetadata{}, err
 	}

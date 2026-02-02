@@ -44,13 +44,13 @@ func (store *AlbumStorage) PrepareDatabase() error {
 						users.id AS user_id,
 						tape_to_tracks.tape_id AS id,
 						count(*) AS track_count,
-						sum(tracks.end_offset_ms - tracks.start_offset_ms) AS total_duration_ms,
+						sum(source_tracks.end_offset_ms - source_tracks.start_offset_ms) AS total_duration_ms,
 						max(listen_stats.last_listened_at) AS last_listened_at,
-						sum((tracks.end_offset_ms - tracks.start_offset_ms) * listen_stats.listen_count) AS total_listened_ms
-					FROM tracks
+						sum((source_tracks.end_offset_ms - source_tracks.start_offset_ms) * listen_stats.listen_count) AS total_listened_ms
+					FROM source_tracks
 					JOIN users ON 1 = 1
-					JOIN tape_to_tracks ON tracks.id = tape_to_tracks.track_id
-					LEFT JOIN listen_stats ON tracks.id = listen_stats.track_id AND users.id = listen_stats.user_id
+					JOIN tape_to_tracks ON source_tracks.id = tape_to_tracks.track_id
+					LEFT JOIN listen_stats ON source_tracks.id = listen_stats.track_id AND users.id = listen_stats.user_id
 					GROUP BY users.id, tape_to_tracks.tape_id
 				),
 				remote_albums_aggregate (user_id, id, track_count, total_duration_ms, last_listened_at, total_listened_ms) AS (

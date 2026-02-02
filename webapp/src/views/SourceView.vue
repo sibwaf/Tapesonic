@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api, { type ListSourceHierarchyRs, type FullSourceRs, type TrackRs, type SourceFileRs } from "@/api";
+import api, { type SourceHierarchyListRs, type SourceFullRs, type SourceTrackRs, type SourceFileRs } from "@/api";
 import TrackEditorList from "@/components/TrackEditorList.vue";
 import Tree from "@/components/Tree.vue";
 import type { Editable } from "@/model/Editable";
@@ -21,17 +21,16 @@ const state = ref(State.LOADING);
 const route = useRoute();
 const sourceId = computed(() => route.params.sourceId as string);
 
-const source = ref<FullSourceRs | null>(null);
-const hierarchy = ref<TreeNode<ListSourceHierarchyRs>[]>([]);
-const tracks = ref<TrackRs[]>([]);
-const file = ref<SourceFileRs | null>(null);
+const source = ref<SourceFullRs | null>(null);
+const hierarchy = ref<TreeNode<SourceHierarchyListRs>[]>([]);
+const tracks = ref<SourceTrackRs[]>([]);
 
-const editedTracks = ref<Editable<TrackRs>[]>([]);
+const editedTracks = ref<Editable<SourceTrackRs>[]>([]);
 const editedTrackSourceIds = computed(() => new Set(editedTracks.value.filter(it => it.isEdited).map(it => it.editedValue.SourceId)));
 
-function buildHierarchyTree(items: ListSourceHierarchyRs[]): TreeNode<ListSourceHierarchyRs>[] {
-    const lookup = new Map<string, TreeNode<ListSourceHierarchyRs>>();
-    const roots: TreeNode<ListSourceHierarchyRs>[] = [];
+function buildHierarchyTree(items: SourceHierarchyListRs[]): TreeNode<SourceHierarchyListRs>[] {
+    const lookup = new Map<string, TreeNode<SourceHierarchyListRs>>();
+    const roots: TreeNode<SourceHierarchyListRs>[] = [];
 
     const remaining = [...items];
     let lastRemainingCount = remaining.length + 1;
@@ -74,7 +73,7 @@ function buildHierarchyTree(items: ListSourceHierarchyRs[]): TreeNode<ListSource
 }
 
 const orderedSourceHierarchy = computed(() => {
-    function addAll(node: TreeNode<ListSourceHierarchyRs>, collector: ListSourceHierarchyRs[]) {
+    function addAll(node: TreeNode<SourceHierarchyListRs>, collector: SourceHierarchyListRs[]) {
         if (collector.includes(node.value)) {
             return;
         }
@@ -85,7 +84,7 @@ const orderedSourceHierarchy = computed(() => {
         }
     }
 
-    const result: ListSourceHierarchyRs[] = [];
+    const result: SourceHierarchyListRs[] = [];
     for (const node of hierarchy.value) {
         addAll(node, result)
     }
@@ -133,7 +132,10 @@ async function deleteFile() {
             return;
         }
 
-        file.value = null;
+        const sourceValue = source.value;
+        if (sourceValue != null) {
+            sourceValue.File = null;
+        }
     } catch (e) {
         console.error(e);
     } finally {
@@ -151,12 +153,10 @@ watch(sourceId, (newSourceId) => {
             const sourceAsync = api.getSource(newSourceId);
             const hierarchyAsync = api.getSourceHierarchy(newSourceId);
             const tracksAsync = api.getSourceTracks(newSourceId, true);
-            const fileAsync = api.getSourceFile(newSourceId);
 
             const sourceResult = await sourceAsync;
             const hierarchyResult = buildHierarchyTree(await hierarchyAsync);
             const tracksResult = await tracksAsync;
-            const fileResult = await fileAsync;
 
             if (sourceId.value != newSourceId) {
                 return;
@@ -165,7 +165,6 @@ watch(sourceId, (newSourceId) => {
             source.value = sourceResult;
             hierarchy.value = hierarchyResult;
             tracks.value = tracksResult;
-            file.value = fileResult;
 
             resetTracks();
 
@@ -197,8 +196,8 @@ watch(sourceId, (newSourceId) => {
             <a :href="source.Url" target="_blank">Original URL</a>
         </div>
         <div v-if="source.DurationMs > 0">
-            <template v-if="file">
-                Downloaded: {{ file.Codec }}
+            <template v-if="source.File">
+                Downloaded: {{ source.File.Codec }}
                 <button @click="deleteFile" :disabled="state != State.IDLE">Delete media</button>
             </template>
             <template v-else>

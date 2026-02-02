@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"tapesonic/model"
-	"tapesonic/storage"
+	"tapesonic/sources"
 	"tapesonic/tapes"
 	"tapesonic/util"
 	"time"
@@ -68,7 +68,7 @@ type TapeRsTrack struct {
 	EndOffsetMs   int64
 }
 
-func tapeToTapeFullRs(tape tapes.Tape, tracks []storage.Track) TapeFullRs {
+func tapeToTapeFullRs(tape tapes.Tape, tracks []sources.SourceTrack) TapeFullRs {
 	tracksRs := []TapeRsTrack{}
 	for _, track := range tracks {
 		trackRs := TapeRsTrack{

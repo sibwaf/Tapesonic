@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api, { TapeType, type GuessTapeMetadataRs, type ListThumbnailRs, type Tape, type TrackRs } from '@/api';
+import api, { TapeType, type GuessTapeMetadataRs, type ListThumbnailRs, type Tape, type SourceTrackRs } from '@/api';
 import DateEditor from '@/components/DateEditor.vue';
 import TapeTrackSearch from '@/components/TapeTrackSearch.vue';
 import Thumbnail from '@/components/Thumbnail.vue';
@@ -58,12 +58,12 @@ async function goForward() {
     }
 }
 
-const tracks = ref<TrackRs[]>([]);
+const tracks = ref<SourceTrackRs[]>([]);
 const trackIds = computed(() => tracks.value.map(it => it.Id));
 const sourceIds = computed(() => tracks.value.map(it => it.SourceId));
 const uniqueSourceIds = computed(() => [...new Set(sourceIds.value)]);
 
-function addTrack(track: TrackRs) {
+function addTrack(track: SourceTrackRs) {
     tracks.value.push(track);
 }
 

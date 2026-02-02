@@ -45,30 +45,30 @@ func (store *TrackStorage) PrepareDatabase() error {
 			) AS
 
 			SELECT
-				tracks.id AS id,
+				source_tracks.id AS id,
 				sources.id AS source_id,
 				NULL AS remote_id,
 				NULL AS remote_track_id,
-				tracks.artist AS artist,
+				source_tracks.artist AS artist,
 				NULL AS artist_id,
 				tapes.name AS album,
 				tapes.id AS album_id,
 				tapes.released_at AS album_released_at,
 				tape_to_tracks.list_index AS album_track_index,
-				tracks.title AS title,
+				source_tracks.title AS title,
 				coalesce(tapes.thumbnail_id, sources.thumbnail_id) AS cover_id,
-				tracks.end_offset_ms - tracks.start_offset_ms AS duration_ms,
+				source_tracks.end_offset_ms - source_tracks.start_offset_ms AS duration_ms,
 				listen_stats.last_listened_at AS played_at,
-				tracks.search_artist AS search_artist,
+				source_tracks.search_artist AS search_artist,
 				tapes.search_name AS search_album,
-				tracks.search_title AS search_title,
+				source_tracks.search_title AS search_title,
 				users.id AS user_id
-			FROM tracks
+			FROM source_tracks
 			JOIN users ON 1 = 1
-			LEFT JOIN tape_to_tracks ON tracks.id = tape_to_tracks.track_id
+			LEFT JOIN tape_to_tracks ON source_tracks.id = tape_to_tracks.track_id
 			LEFT JOIN tapes ON tape_to_tracks.tape_id = tapes.id AND tapes.type = '%s'
-			LEFT JOIN sources ON tracks.source_id = sources.id
-			LEFT JOIN listen_stats ON tracks.id = listen_stats.track_id AND users.id = listen_stats.user_id
+			LEFT JOIN sources ON source_tracks.source_id = sources.id
+			LEFT JOIN listen_stats ON source_tracks.id = listen_stats.track_id AND users.id = listen_stats.user_id
 
 			UNION ALL
 

@@ -1,9 +1,9 @@
-package logic
+package sources
 
 import (
 	"context"
 	"fmt"
-	"tapesonic/model"
+	"tapesonic/logic"
 	"tapesonic/storage"
 	"tapesonic/util"
 	"tapesonic/ytdlp"
@@ -13,46 +13,41 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type SourceService struct {
-	storage *storage.SourceStorage
-
-	ytdlp      *YtdlpService
-	files      *SourceFileService
-	tracks     *TrackService
-	thumbnails *ThumbnailService
-
+type ImportService struct {
+	sources    *SourceStorage
+	tracks     *TrackStorage
 	normalizer *TrackNormalizer
+	ytdlp      *logic.YtdlpService
+	thumbnails *logic.ThumbnailService
 }
 
-func NewSourceService(
-	storage *storage.SourceStorage,
-	ytdlp *YtdlpService,
-	files *SourceFileService,
-	tracks *TrackService,
-	thumbnails *ThumbnailService,
+func newImportService(
+	sources *SourceStorage,
+	tracks *TrackStorage,
 	normalizer *TrackNormalizer,
-) *SourceService {
-	return &SourceService{
-		storage:    storage,
-		ytdlp:      ytdlp,
-		files:      files,
+	ytdlp *logic.YtdlpService,
+	thumbnails *logic.ThumbnailService,
+) *ImportService {
+	return &ImportService{
+		sources:    sources,
 		tracks:     tracks,
-		thumbnails: thumbnails,
 		normalizer: normalizer,
+		ytdlp:      ytdlp,
+		thumbnails: thumbnails,
 	}
 }
 
-func (s *SourceService) AddSource(ctx context.Context, url string, managementPolicy model.SourceManagementPolicy) (storage.Source, error) {
+func (s *ImportService) AddSource(ctx context.Context, url string, managementPolicy SourceManagementPolicy) (Source, error) {
 	result, err := s.addSourceRecursive(ctx, url, managementPolicy, uuid.Nil)
 	return result.Source, err
 }
 
 type SourceAndMetadata struct {
-	Source   storage.Source
+	Source   Source
 	Metadata ytdlp.YtdlpFile
 }
 
-func (s *SourceService) addSourceRecursive(ctx context.Context, url string, managementPolicy model.SourceManagementPolicy, parentId uuid.UUID) (SourceAndMetadata, error) {
+func (s *ImportService) addSourceRecursive(ctx context.Context, url string, managementPolicy SourceManagementPolicy, parentId uuid.UUID) (SourceAndMetadata, error) {
 	metadata, err := s.ytdlp.GetMetadata(ctx, url)
 	if err != nil {
 		return SourceAndMetadata{}, err
@@ -69,12 +64,12 @@ func (s *SourceService) addSourceRecursive(ctx context.Context, url string, mana
 	}
 
 	// this really needs SELECT FOR UPDATE in a transaction, but oh well
-	existingSource, err := s.storage.FindByUrl(metadata.WebpageUrl)
+	existingSource, err := s.sources.FindByUrl(metadata.WebpageUrl)
 	if err != nil {
 		return SourceAndMetadata{}, err
 	}
 
-	source := storage.Source{
+	source := Source{
 		Id: uuid.New(),
 
 		ExtractorKey: metadata.ExtractorKey,
@@ -104,13 +99,13 @@ func (s *SourceService) addSourceRecursive(ctx context.Context, url string, mana
 	}
 
 	// never override MANUAL management policy
-	if existingSource == nil || existingSource.ManagementPolicy != model.SOURCE_MANAGEMENT_POLICY_MANUAL {
+	if existingSource == nil || existingSource.ManagementPolicy != SOURCE_MANAGEMENT_POLICY_MANUAL {
 		source.ManagementPolicy = managementPolicy
 	} else {
 		source.ManagementPolicy = existingSource.ManagementPolicy
 	}
 
-	source, err = s.storage.Upsert(source)
+	source, err = s.sources.Upsert(source)
 	if err != nil {
 		return SourceAndMetadata{}, err
 	}
@@ -145,7 +140,7 @@ func (s *SourceService) addSourceRecursive(ctx context.Context, url string, mana
 			childIds[i] = child.Source.Id
 		}
 
-		if err := s.storage.UpdateHierarchy(source.Id, childIds); err != nil {
+		if err := s.sources.UpdateHierarchy(source.Id, childIds); err != nil {
 			return SourceAndMetadata{Source: source, Metadata: metadata}, fmt.Errorf("failed to update hierarchy: %w", err)
 		}
 
@@ -183,9 +178,9 @@ func (s *SourceService) addSourceRecursive(ctx context.Context, url string, mana
 			return SourceAndMetadata{Source: source, Metadata: metadata}, fmt.Errorf("failed to normalize tracks: %w", err)
 		}
 
-		tracksBySource := map[uuid.UUID][]storage.Track{}
+		tracksBySource := map[uuid.UUID][]SourceTrack{}
 		for _, trackProperties := range tracks {
-			track := storage.Track{
+			track := SourceTrack{
 				SourceId:      trackProperties.SourceId,
 				Artist:        trackProperties.Artist,
 				Title:         trackProperties.Title,
@@ -194,7 +189,7 @@ func (s *SourceService) addSourceRecursive(ctx context.Context, url string, mana
 			}
 
 			if _, ok := tracksBySource[track.SourceId]; !ok {
-				tracksBySource[track.SourceId] = []storage.Track{track}
+				tracksBySource[track.SourceId] = []SourceTrack{track}
 			} else {
 				tracksBySource[track.SourceId] = append(tracksBySource[track.SourceId], track)
 			}
@@ -219,7 +214,7 @@ func parseDateOrNull(str string) *time.Time {
 	}
 }
 
-func extractTrackProperties(source storage.Source) TrackProperties {
+func extractTrackProperties(source Source) TrackProperties {
 	return TrackProperties{
 		SourceId:      source.Id,
 		RawTitle:      source.Title,
@@ -232,90 +227,28 @@ func extractTrackProperties(source storage.Source) TrackProperties {
 	}
 }
 
-func (s *SourceService) initializeTracksFor(sourceId uuid.UUID, tracks []storage.Track, managementPolicy model.SourceManagementPolicy) ([]storage.Track, error) {
-	currentManagementPolicy, err := s.storage.GetManagementPolicyById(sourceId)
+func (s *ImportService) initializeTracksFor(sourceId uuid.UUID, tracks []SourceTrack, managementPolicy SourceManagementPolicy) ([]SourceTrack, error) {
+	currentManagementPolicy, err := s.sources.GetManagementPolicyById(sourceId)
 	if err != nil {
-		return tracks, fmt.Errorf("failed to get current source management policy: %w", err)
+		return tracks, err
 	}
 
-	if currentManagementPolicy == model.SOURCE_MANAGEMENT_POLICY_MANUAL && managementPolicy != model.SOURCE_MANAGEMENT_POLICY_MANUAL {
-		return s.tracks.GetDirectTracksBySource(sourceId)
+	existingTracks, err := s.tracks.GetDirectTracksBySource(sourceId)
+	if err != nil {
+		return tracks, err
 	}
 
-	if managementPolicy == model.SOURCE_MANAGEMENT_POLICY_MANUAL && currentManagementPolicy != managementPolicy {
-		if err := s.storage.SetManagementPolicyById(sourceId, managementPolicy); err != nil {
-			return tracks, fmt.Errorf("failed to update source management policy: %w", err)
+	if currentManagementPolicy == SOURCE_MANAGEMENT_POLICY_MANUAL && managementPolicy != SOURCE_MANAGEMENT_POLICY_MANUAL {
+		return existingTracks, nil
+	}
+
+	if len(existingTracks) > 0 {
+		return existingTracks, nil
+	} else {
+		for i := range tracks {
+			tracks[i].Id = uuid.New()
 		}
+
+		return s.tracks.ReplaceTracksForSource(sourceId, tracks)
 	}
-
-	return s.tracks.InitializeTracksFor(sourceId, tracks)
-}
-
-func (s *SourceService) ReplaceTracksFor(sourceId uuid.UUID, tracks []storage.Track, managementPolicy model.SourceManagementPolicy) ([]storage.Track, error) {
-	currentManagementPolicy, err := s.storage.GetManagementPolicyById(sourceId)
-	if err != nil {
-		return tracks, fmt.Errorf("failed to get current source management policy: %w", err)
-	}
-
-	if currentManagementPolicy == model.SOURCE_MANAGEMENT_POLICY_MANUAL && managementPolicy != model.SOURCE_MANAGEMENT_POLICY_MANUAL {
-		return s.tracks.GetDirectTracksBySource(sourceId)
-	}
-
-	if managementPolicy == model.SOURCE_MANAGEMENT_POLICY_MANUAL && currentManagementPolicy != managementPolicy {
-		if err := s.storage.SetManagementPolicyById(sourceId, managementPolicy); err != nil {
-			return tracks, fmt.Errorf("failed to update source management policy: %w", err)
-		}
-	}
-
-	return s.tracks.ReplaceBySource(sourceId, tracks)
-}
-
-type ListSourceForApi struct {
-	Source storage.Source
-	File   *storage.SourceFile
-}
-
-func (s *SourceService) GetListForApi(managementPolicies []model.SourceManagementPolicy) ([]ListSourceForApi, error) {
-	sources, err := s.storage.GetListForApi(managementPolicies)
-	if err != nil {
-		return []ListSourceForApi{}, err
-	}
-
-	sourceIds := []uuid.UUID{}
-	for _, source := range sources {
-		sourceIds = append(sourceIds, source.Id)
-	}
-
-	files, err := s.files.FindBySourceIds(sourceIds)
-	if err != nil {
-		return []ListSourceForApi{}, err
-	}
-
-	fileLookup := map[uuid.UUID]storage.SourceFile{}
-	for _, file := range files {
-		fileLookup[file.SourceId] = file
-	}
-
-	result := []ListSourceForApi{}
-	for _, source := range sources {
-		dto := ListSourceForApi{Source: source}
-		if file, ok := fileLookup[source.Id]; ok {
-			dto.File = &file
-		}
-		result = append(result, dto)
-	}
-
-	return result, nil
-}
-
-func (s *SourceService) GetHierarchy(id uuid.UUID) ([]storage.SourceForHierarchy, error) {
-	return s.storage.GetHierarchy(id)
-}
-
-func (s *SourceService) GetById(id uuid.UUID) (storage.Source, error) {
-	return s.storage.GetById(id)
-}
-
-func (s *SourceService) FindByUrl(url string) (*storage.Source, error) {
-	return s.storage.FindByUrl(url)
 }

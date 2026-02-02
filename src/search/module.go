@@ -2,7 +2,7 @@ package search
 
 import (
 	"tapesonic/library"
-	"tapesonic/logic"
+	"tapesonic/sources"
 
 	"gorm.io/gorm"
 )
@@ -14,12 +14,12 @@ type SearchModule struct {
 func NewSearchModule(
 	db *gorm.DB,
 	library *library.LibraryService,
-	sources *logic.SourceService,
-	tracks *logic.TrackService,
-	importer *logic.AutoImportService,
-	trackMatcher *logic.TrackMatcher,
+	sources *sources.SourceService,
+	importer *sources.ImportService,
 ) *SearchModule {
-	service := newSearchService(library, sources, tracks, importer, trackMatcher)
+	trackMatcher := newTrackMatcher()
+	autoImporter := newAutoImportService(importer, sources, trackMatcher)
+	service := newSearchService(library, sources, importer, autoImporter, trackMatcher)
 
 	return &SearchModule{
 		SearchService: service,

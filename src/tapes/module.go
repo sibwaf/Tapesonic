@@ -1,8 +1,6 @@
 package tapes
 
 import (
-	"tapesonic/storage"
-
 	"gorm.io/gorm"
 )
 
@@ -13,10 +11,9 @@ type TapesModule struct {
 
 func NewTapesModule(
 	db *gorm.DB,
-	tracks *storage.TrackStorage,
 ) *TapesModule {
 	storage := newTapeStorage(db)
-	service := newTapeService(storage, tracks)
+	service := newTapeService(storage)
 
 	return &TapesModule{
 		storage:     storage,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api, { type GetListSourceRs } from "@/api";
+import api, { type SourceListRs } from "@/api";
 import Thumbnail from "@/components/Thumbnail.vue";
 import { ref } from "vue";
 
@@ -11,7 +11,7 @@ enum State {
 
 const state = ref(State.LOADING);
 
-const sources = ref<GetListSourceRs[]>([]);
+const sources = ref<SourceListRs[]>([]);
 
 (async () => {
     try {
@@ -41,21 +41,21 @@ const sources = ref<GetListSourceRs[]>([]);
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="{ Source, File } in sources" :key="Source.Id">
+                <tr v-for="source in sources" :key="source.Id">
                     <td>
-                        <Thumbnail size="6em" :id="Source.ThumbnailId" />
+                        <Thumbnail size="6em" :id="source.ThumbnailId" />
                     </td>
                     <td>
-                        {{ Source.Title }}
+                        {{ source.Title }}
                     </td>
                     <td>
-                        {{ Source.Uploader }}
+                        {{ source.Uploader }}
                     </td>
                     <td>
-                        {{ Source.DurationMs > 0 ? (File?.Codec ?? "none") : "n/a" }}
+                        {{ source.DurationMs > 0 ? (source.File?.Codec ?? "none") : "n/a" }}
                     </td>
                     <td>
-                        <RouterLink :to="`/sources/${Source.Id}`">Edit</RouterLink>
+                        <RouterLink :to="`/sources/${source.Id}`">Edit</RouterLink>
                     </td>
                 </tr>
             </tbody>

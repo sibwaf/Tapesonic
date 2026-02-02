@@ -1,6 +1,7 @@
 package tapes
 
 import (
+	"tapesonic/sources"
 	"tapesonic/util"
 
 	"github.com/google/uuid"
@@ -123,4 +124,45 @@ func (store *TapeStorage) GetAllTapes() ([]Tape, error) {
 func (store *TapeStorage) GetTape(id uuid.UUID) (Tape, error) {
 	result := Tape{Id: id}
 	return result, store.db.Find(&result).Error
+}
+
+func (store *TapeStorage) GetTracksById(tapeId uuid.UUID) ([]sources.SourceTrack, error) {
+	query := `
+		SELECT source_tracks.*
+		FROM source_tracks
+		JOIN tape_to_tracks ON tape_to_tracks.track_id = source_tracks.id
+		WHERE tape_to_tracks.tape_id = ?
+		ORDER BY tape_to_tracks.list_index
+	`
+
+	tracks := []sources.SourceTrack{}
+	return tracks, store.db.Raw(query, tapeId).Find(&tracks).Error
+}
+
+func (store *TapeStorage) GetTracksForMetadataGuessing(ids []uuid.UUID) ([]TrackForMetadataGuessing, error) {
+	query := `
+		SELECT
+			source_tracks.id AS "id",
+			source_tracks.artist AS "artist",
+			sources.title AS "source_title",
+			(
+				SELECT json_group_array(parents.title)
+				FROM sources parents
+				JOIN source_hierarchies ON parents.id = source_hierarchies.parent_id
+				WHERE source_hierarchies.child_id = sources.id
+			) AS "source_parent_titles",
+			sources.album_artist AS "album_artist",
+			sources.album_title AS "album_title",
+			sources.release_date AS "release_date",
+			sources.thumbnail_id AS "thumbnail_id"
+		FROM source_tracks
+		JOIN sources ON source_tracks.source_id = sources.id
+		WHERE source_tracks.id IN @ids
+	`
+	params := map[string]any{
+		"ids": ids,
+	}
+
+	tracks := []TrackForMetadataGuessing{}
+	return tracks, store.db.Raw(query, params).Find(&tracks).Error
 }

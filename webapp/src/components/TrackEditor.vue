@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { TrackRs } from "@/api";
+import type { SourceTrackRs } from "@/api";
 import { type Editable } from "@/model/Editable";
 import util from "@/util";
 import { computed } from "vue";
 
-const props = defineProps<{ modelValue: Editable<TrackRs> }>();
+const props = defineProps<{ modelValue: Editable<SourceTrackRs> }>();
 
 const startText = computed({
     get(): string {
