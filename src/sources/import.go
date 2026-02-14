@@ -13,14 +13,14 @@ import (
 type ImportService struct {
 	sources    *SourceStorage
 	tracks     *TrackStorage
-	ytdlp      *logic.YtdlpService
+	ytdlp      *ytdlp.YtdlpService
 	thumbnails *logic.ThumbnailService
 }
 
 func newImportService(
 	sources *SourceStorage,
 	tracks *TrackStorage,
-	ytdlp *logic.YtdlpService,
+	ytdlp *ytdlp.YtdlpService,
 	thumbnails *logic.ThumbnailService,
 ) *ImportService {
 	return &ImportService{

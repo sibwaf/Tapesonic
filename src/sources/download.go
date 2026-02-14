@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
-	"tapesonic/logic"
 	"tapesonic/util"
+	"tapesonic/ytdlp"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,7 +14,7 @@ import (
 type downloadService struct {
 	sources *SourceStorage
 	files   *FileStorage
-	ytdlp   *logic.YtdlpService
+	ytdlp   *ytdlp.YtdlpService
 
 	baseDir string
 }
@@ -22,7 +22,7 @@ type downloadService struct {
 func newDownloadService(
 	sources *SourceStorage,
 	files *FileStorage,
-	ytdlp *logic.YtdlpService,
+	ytdlp *ytdlp.YtdlpService,
 	baseDir string,
 ) *downloadService {
 	return &downloadService{

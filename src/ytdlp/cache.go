@@ -1,4 +1,4 @@
-package storage
+package ytdlp
 
 import (
 	"errors"
@@ -8,25 +8,16 @@ import (
 	"gorm.io/gorm"
 )
 
-type YtdlpMetadataCacheItem struct {
-	Url string `gorm:"uniqueIndex"`
-
-	Metadata string
-
-	CreatedAt util.TimestampWrapper
-	UpdatedAt util.TimestampWrapper
-}
-
 type YtdlpMetadataStorage struct {
-	db *DbHelper
+	db *gorm.DB
 }
 
-func NewYtdlpMetadataStorage(db *gorm.DB) (*YtdlpMetadataStorage, error) {
-	if err := db.AutoMigrate(&YtdlpMetadataCacheItem{}); err != nil {
-		return nil, err
-	}
+func newYtdlpMetadataStorage(db *gorm.DB) *YtdlpMetadataStorage {
+	return &YtdlpMetadataStorage{db: db}
+}
 
-	return &YtdlpMetadataStorage{db: NewDbHelper(db)}, nil
+func (s *YtdlpMetadataStorage) PrepareDatabase() error {
+	return s.db.AutoMigrate(&YtdlpMetadataCacheItem{})
 }
 
 func (s *YtdlpMetadataStorage) Upsert(url string, metadata string) error {

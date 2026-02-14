@@ -44,7 +44,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	ytdlpVersion, err := appCtx.Ytdlp.GetCurrentVersion()
+	ytdlpVersion, err := appCtx.Ytdlp.YtdlpService.GetCurrentVersion()
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to determine yt-dlp version: %s", err.Error()))
 		os.Exit(3)

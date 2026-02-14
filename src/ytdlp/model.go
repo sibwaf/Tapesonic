@@ -1,10 +1,26 @@
 package ytdlp
 
-import "errors"
+import (
+	"errors"
+	"tapesonic/util"
+)
 
 var (
 	ErrNotAvailable = errors.New("url not available")
 )
+
+// database
+
+type YtdlpMetadataCacheItem struct {
+	Url string `gorm:"uniqueIndex"`
+
+	Metadata string
+
+	CreatedAt util.TimestampWrapper
+	UpdatedAt util.TimestampWrapper
+}
+
+// api
 
 type YtdlpFile struct {
 	Id         string  `json:"id"`

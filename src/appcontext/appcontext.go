@@ -31,7 +31,7 @@ type Context struct {
 	Config     *configPkg.TapesonicConfig
 	Scheduling *scheduling.SchedulingModule
 
-	Ytdlp  *ytdlp.Ytdlp
+	Ytdlp  *ytdlp.YtdlpModule
 	Ffmpeg *ffmpeg.Ffmpeg
 
 	Users           *users.UsersModule
@@ -48,11 +48,8 @@ type Context struct {
 
 	ThumbnailStorage *storage.ThumbnailStorage
 
-	YtdlpMetadataStorage *storage.YtdlpMetadataStorage
-	MediaStorage         *storage.MediaStorage
-	StreamCacheStorage   *storage.StreamCacheStorage
-
-	YtdlpService *logic.YtdlpService
+	MediaStorage       *storage.MediaStorage
+	StreamCacheStorage *storage.StreamCacheStorage
 
 	ThumbnailService *logic.ThumbnailService
 }
@@ -61,8 +58,6 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	var err error
 	context := Context{
 		Config: config,
-
-		Ytdlp:  ytdlp.NewYtdlp(config.YtdlpPath),
 		Ffmpeg: ffmpeg.NewFfmpeg(config.FfmpegPath),
 	}
 
@@ -106,17 +101,14 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	if context.ThumbnailStorage, err = storage.NewThumbnailStorage(db); err != nil {
 		return nil, err
 	}
-	if context.YtdlpMetadataStorage, err = storage.NewYtdlpMetadataStorage(db); err != nil {
-		return nil, err
-	}
 
 	if err = storage.Migrate(db); err != nil {
 		return nil, err
 	}
 
-	context.YtdlpService = logic.NewYtdlpService(
-		context.Ytdlp,
-		context.YtdlpMetadataStorage,
+	context.Ytdlp = ytdlp.NewYtdlpModule(
+		db,
+		config.YtdlpPath,
 		config.YtdlpMetadataMaxLifetime,
 		config.YtdlpMetadataMaxParallelism,
 	)
@@ -131,7 +123,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	}
 	context.Sources = sources.NewSourcesModule(
 		db,
-		context.YtdlpService,
+		context.Ytdlp.YtdlpService,
 		context.ThumbnailService,
 		config.DownloadNextSourceSchedule,
 		config.MediaStorageDir,
@@ -177,7 +169,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		context.MediaStorage,
 		context.StreamCacheStorage,
 		context.Ffmpeg,
-		context.YtdlpService,
+		context.Ytdlp.YtdlpService,
 	)
 
 	context.Search = search.NewSearchModule(
@@ -208,6 +200,9 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 
 func prepareDatabase(context *Context) error {
 	if err := context.Scheduling.PrepareDatabase(); err != nil {
+		return err
+	}
+	if err := context.Ytdlp.PrepareDatabase(); err != nil {
 		return err
 	}
 	if err := context.Sources.PrepareDatabase(); err != nil {

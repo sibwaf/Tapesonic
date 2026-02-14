@@ -9,13 +9,13 @@ import (
 	"slices"
 	"syscall"
 	"tapesonic/ffmpeg"
-	"tapesonic/logic"
 	"tapesonic/model"
 	"tapesonic/remotes"
 	"tapesonic/storage"
 	"tapesonic/subsonic"
 	"tapesonic/users"
 	"tapesonic/util"
+	"tapesonic/ytdlp"
 
 	"github.com/google/uuid"
 )
@@ -28,7 +28,7 @@ type StreamService struct {
 	media   *storage.MediaStorage
 	cache   *storage.StreamCacheStorage
 	ffmpeg  *ffmpeg.Ffmpeg
-	ytdlp   *logic.YtdlpService
+	ytdlp   *ytdlp.YtdlpService
 }
 
 func newStreamService(
@@ -36,7 +36,7 @@ func newStreamService(
 	media *storage.MediaStorage,
 	cache *storage.StreamCacheStorage,
 	ffmpeg *ffmpeg.Ffmpeg,
-	ytdlp *logic.YtdlpService,
+	ytdlp *ytdlp.YtdlpService,
 ) *StreamService {
 	return &StreamService{
 		remotes: remotes,

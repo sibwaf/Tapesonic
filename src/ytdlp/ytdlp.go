@@ -17,7 +17,7 @@ type Ytdlp struct {
 	path string
 }
 
-func NewYtdlp(path string) *Ytdlp {
+func newYtdlp(path string) *Ytdlp {
 	return &Ytdlp{
 		path: path,
 	}

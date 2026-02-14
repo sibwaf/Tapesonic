@@ -5,6 +5,7 @@ import (
 	"tapesonic/logic"
 	"tapesonic/remotes"
 	"tapesonic/storage"
+	"tapesonic/ytdlp"
 )
 
 type MediaModule struct {
@@ -18,7 +19,7 @@ func NewMediaModule(
 	media *storage.MediaStorage,
 	cache *storage.StreamCacheStorage,
 	ffmpeg *ffmpeg.Ffmpeg,
-	ytdlp *logic.YtdlpService,
+	ytdlp *ytdlp.YtdlpService,
 ) *MediaModule {
 	return &MediaModule{
 		Covers:  newCoverService(remotes, thumbnails),

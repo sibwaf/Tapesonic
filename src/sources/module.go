@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"tapesonic/logic"
 	"tapesonic/scheduling"
+	"tapesonic/ytdlp"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -26,7 +27,7 @@ type SourcesModule struct {
 
 func NewSourcesModule(
 	db *gorm.DB,
-	ytdlp *logic.YtdlpService,
+	ytdlp *ytdlp.YtdlpService,
 	thumbnails *logic.ThumbnailService,
 	sourceDownloadCron cron.Schedule,
 	mediaDir string,

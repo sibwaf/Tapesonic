@@ -1,47 +1,49 @@
-package logic
+package ytdlp
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"tapesonic/storage"
-	"tapesonic/ytdlp"
 	"time"
 
 	"golang.org/x/sync/semaphore"
 )
 
 type YtdlpService struct {
-	ytdlp       *ytdlp.Ytdlp
-	storage     *storage.YtdlpMetadataStorage
+	ytdlp       *Ytdlp
+	cache       *YtdlpMetadataStorage
 	maxLifetime time.Duration
 	semaphore   *semaphore.Weighted
 }
 
-func NewYtdlpService(
-	ytdlp *ytdlp.Ytdlp,
-	storage *storage.YtdlpMetadataStorage,
+func newYtdlpService(
+	ytdlp *Ytdlp,
+	cache *YtdlpMetadataStorage,
 	maxLifetime time.Duration,
 	maxParallelism int,
 ) *YtdlpService {
 	return &YtdlpService{
 		ytdlp:       ytdlp,
-		storage:     storage,
+		cache:       cache,
 		maxLifetime: maxLifetime,
 		semaphore:   semaphore.NewWeighted(int64(maxParallelism)),
 	}
 }
 
+func (svc *YtdlpService) GetCurrentVersion() (string, error) {
+	return svc.ytdlp.GetCurrentVersion()
+}
+
 type metadataOrErr struct {
-	metadata ytdlp.YtdlpFile
+	metadata YtdlpFile
 	err      error
 }
 
-func (svc *YtdlpService) GetMetadata(ctx context.Context, url string) (ytdlp.YtdlpFile, error) {
-	cached, err := svc.storage.Find(url, time.Now().Add(-svc.maxLifetime))
+func (svc *YtdlpService) GetMetadata(ctx context.Context, url string) (YtdlpFile, error) {
+	cached, err := svc.cache.Find(url, time.Now().Add(-svc.maxLifetime))
 	if cached != nil && err == nil {
-		var metadata ytdlp.YtdlpFile
+		var metadata YtdlpFile
 		err = json.Unmarshal([]byte(cached.Metadata), &metadata)
 		if err == nil {
 			slog.Debug(fmt.Sprintf("Returning cached metadata for %s", url))
@@ -69,33 +71,33 @@ func (svc *YtdlpService) GetMetadata(ctx context.Context, url string) (ytdlp.Ytd
 
 	result := <-resultChannel
 	if result.err != nil {
-		return ytdlp.YtdlpFile{}, result.err
+		return YtdlpFile{}, result.err
 	}
 
 	serialized, err := json.Marshal(result.metadata)
 	if err != nil {
 		slog.Warn(fmt.Sprintf("Failed to save metadata for %s to cache: %s", url, err))
-	} else if err := svc.storage.Upsert(url, string(serialized)); err != nil {
+	} else if err := svc.cache.Upsert(url, string(serialized)); err != nil {
 		slog.Warn(fmt.Sprintf("Failed to save metadata for %s to cache: %s", url, err))
 	}
 
 	return result.metadata, nil
 }
 
-func (svc *YtdlpService) GetStreamInfo(ctx context.Context, url string, format string) (ytdlp.YtdlpFormat, error) {
+func (svc *YtdlpService) GetStreamInfo(ctx context.Context, url string, format string) (YtdlpFormat, error) {
 	metadata, err := svc.GetMetadata(ctx, url)
 	if err != nil {
-		return ytdlp.YtdlpFormat{}, err
+		return YtdlpFormat{}, err
 	}
 
 	metadataStr, err := json.Marshal(metadata)
 	if err != nil {
-		return ytdlp.YtdlpFormat{}, err
+		return YtdlpFormat{}, err
 	}
 
 	return svc.ytdlp.GetFormatFromMetadata(string(metadataStr), format)
 }
 
-func (svc *YtdlpService) Download(url string, format string, downloadDir string) (ytdlp.YtdlpFile, error) {
+func (svc *YtdlpService) Download(url string, format string, downloadDir string) (YtdlpFile, error) {
 	return svc.ytdlp.Download(url, format, downloadDir)
 }
