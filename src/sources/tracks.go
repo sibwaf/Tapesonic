@@ -21,24 +21,27 @@ func (storage *TrackStorage) PrepareDatabase() error {
 }
 
 func (storage *TrackStorage) ReplaceTracksForSource(sourceId uuid.UUID, tracks []SourceTrack) ([]SourceTrack, error) {
-	return tracks, storage.db.Transaction(func(tx *gorm.DB) error {
+	result := make([]SourceTrack, len(tracks))
+	return result, storage.db.Transaction(func(tx *gorm.DB) error {
 		upsertSql := `
 			INSERT INTO source_tracks (id, source_id, start_offset_ms, end_offset_ms, artist, title, search_artist, search_title)
 			VALUES (@id, @sourceId, @startOffsetMs, @endOffsetMs, @artist, @title, @searchArtist, @searchTitle)
 			ON CONFLICT (id) DO UPDATE
 			SET
+				source_id = excluded.source_id,
 				start_offset_ms = excluded.start_offset_ms,
 				end_offset_ms = excluded.end_offset_ms,
 				artist = excluded.artist,
 				title = excluded.title,
 				search_artist = excluded.search_artist,
 				search_title = excluded.search_title
+			RETURNING *
 		`
 
-		for _, track := range tracks {
+		for i, track := range tracks {
 			upsertParams := map[string]any{
 				"id":            track.Id,
-				"sourceId":      track.SourceId,
+				"sourceId":      sourceId,
 				"startOffsetMs": track.StartOffsetMs,
 				"endOffsetMs":   track.EndOffsetMs,
 				"artist":        track.Artist,
@@ -47,8 +50,10 @@ func (storage *TrackStorage) ReplaceTracksForSource(sourceId uuid.UUID, tracks [
 				"searchTitle":   util.MakeTextSearchString(track.Title),
 			}
 
-			if err := tx.Exec(upsertSql, upsertParams).Error; err != nil {
+			if err := tx.Raw(upsertSql, upsertParams).Take(&track).Error; err != nil {
 				return err
+			} else {
+				result[i] = track
 			}
 		}
 

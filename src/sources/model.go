@@ -3,6 +3,7 @@ package sources
 import (
 	"tapesonic/storage"
 	"tapesonic/util"
+	"tapesonic/ytdlp"
 
 	"github.com/google/uuid"
 )
@@ -32,6 +33,27 @@ type SourceForHierarchy struct {
 	ListIndex int
 
 	ThumbnailId *uuid.UUID
+}
+
+type AnalyzedSourceTree struct {
+	Metadata ytdlp.YtdlpFile
+	Source   Source
+	Children []AnalyzedSourceTree
+	Tracks   []TrackProperties
+}
+
+type SourceTree struct {
+	Source   Source
+	Children []SourceTree
+	Tracks   []SourceTrack
+}
+
+func (node SourceTree) CollectTracks() []SourceTrack {
+	result := append([]SourceTrack{}, node.Tracks...)
+	for _, child := range node.Children {
+		result = append(result, child.CollectTracks()...)
+	}
+	return result
 }
 
 type TrackProperties struct {

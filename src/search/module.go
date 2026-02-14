@@ -17,9 +17,10 @@ func NewSearchModule(
 	sources *sources.SourceService,
 	importer *sources.ImportService,
 ) *SearchModule {
+	trackNormalizer := NewTrackNormalizer()
 	trackMatcher := newTrackMatcher()
-	autoImporter := newAutoImportService(importer, sources, trackMatcher)
-	service := newSearchService(library, sources, importer, autoImporter, trackMatcher)
+	autoImporter := newAutoImportService(importer, sources, trackNormalizer, trackMatcher)
+	service := newSearchService(library, sources, autoImporter, trackMatcher)
 
 	return &SearchModule{
 		SearchService: service,

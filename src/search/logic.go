@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -10,31 +11,29 @@ import (
 	"tapesonic/library"
 	"tapesonic/model"
 	"tapesonic/sources"
+	"tapesonic/ytdlp"
 
 	"github.com/google/uuid"
 )
 
 type SearchService struct {
-	library      *library.LibraryService
-	sources      *sources.SourceService
-	rawImporter  *sources.ImportService
-	autoImporter *AutoImportService
-	matcher      *TrackMatcher
+	library  *library.LibraryService
+	sources  *sources.SourceService
+	importer *AutoImportService
+	matcher  *TrackMatcher
 }
 
 func newSearchService(
 	library *library.LibraryService,
 	sources *sources.SourceService,
-	rawImporter *sources.ImportService,
-	autoImporter *AutoImportService,
+	importer *AutoImportService,
 	matcher *TrackMatcher,
 ) *SearchService {
 	return &SearchService{
-		library:      library,
-		sources:      sources,
-		rawImporter:  rawImporter,
-		autoImporter: autoImporter,
-		matcher:      matcher,
+		library:  library,
+		sources:  sources,
+		importer: importer,
+		matcher:  matcher,
 	}
 }
 
@@ -44,19 +43,14 @@ func (svc *SearchService) FindTracksByQuery(userId uuid.UUID, query string) ([]m
 	}
 
 	if strings.HasPrefix(query, "http://") || strings.HasPrefix(query, "https://") {
-		source, err := svc.rawImporter.AddSource(context.Background(), query, sources.SOURCE_MANAGEMENT_POLICY_MANUAL)
-		if err != nil {
-			return []model.LibraryTrack{}, err
-		}
-
-		sourceTracks, err := svc.sources.GetAllTracks(source.Id)
+		tree, err := svc.importer.ImportTree(context.Background(), query, sources.SOURCE_MANAGEMENT_POLICY_MANUAL)
 		if err != nil {
 			return []model.LibraryTrack{}, err
 		}
 
 		ordering := map[string]int{}
 		allIds := []string{}
-		for i, child := range sourceTracks {
+		for i, child := range tree.CollectTracks() {
 			idStr := child.Id.String()
 			ordering[idStr] = i
 			allIds = append(allIds, idStr)
@@ -95,12 +89,14 @@ func (svc *SearchService) FindTrack(userId uuid.UUID, track TrackForSearch) (*mo
 	}
 
 	for _, url := range track.Urls {
-		importedTrack, err := svc.autoImporter.ImportTrackFrom(context.Background(), url, expected.Artist, expected.Title)
-		if err != nil {
-			return nil, err
-		}
-		if importedTrack == nil {
+		importedTrack, err := svc.importer.ImportSingleTrack(context.Background(), url, expected.Artist, expected.Title)
+		if errors.Is(err, ytdlp.ErrNotAvailable) {
+			slog.Warn(fmt.Sprintf("Failed to import track from %s: URL not available", url))
 			continue
+		} else if errors.Is(err, ErrMetadataMismatch) {
+			continue
+		} else if err != nil {
+			return nil, err
 		}
 
 		track, err := svc.library.GetTrackById(userId, importedTrack.Id.String())

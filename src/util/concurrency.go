@@ -8,18 +8,24 @@ import (
 )
 
 func ParallelMap[T any, R any](items []T, mapper func(item T) (R, error)) ([]R, error) {
-	return ParallelMapContext(context.Background(), items, mapper)
+	return ParallelMapContext(
+		context.Background(),
+		items,
+		func(_ context.Context, item T) (R, error) {
+			return mapper(item)
+		},
+	)
 }
 
-func ParallelMapContext[T any, R any](ctx context.Context, items []T, mapper func(item T) (R, error)) ([]R, error) {
-	wg, _ := errgroup.WithContext(ctx)
+func ParallelMapContext[T any, R any](ctx context.Context, items []T, mapper func(ctx context.Context, item T) (R, error)) ([]R, error) {
+	wg, nestedCtx := errgroup.WithContext(ctx)
 
 	results := make([]R, len(items))
 
 	for i, item := range items {
 		i, item := i, item
 		wg.Go(func() error {
-			mapped, err := mapper(item)
+			mapped, err := mapper(nestedCtx, item)
 			results[i] = mapped
 			return err
 		})

@@ -35,13 +35,11 @@ func NewSourcesModule(
 	tracks := newTrackStorage(db)
 	files := newFileStorage(db)
 
-	normalizer := NewTrackNormalizer()
-
 	downloads := newDownloadService(sources, files, ytdlp, mediaDir)
 
 	return &SourcesModule{
 		SourceService: newSourceService(sources, tracks, files, mediaDir),
-		ImportService: newImportService(sources, tracks, normalizer, ytdlp, thumbnails),
+		ImportService: newImportService(sources, tracks, ytdlp, thumbnails),
 
 		sources: sources,
 		tracks:  tracks,

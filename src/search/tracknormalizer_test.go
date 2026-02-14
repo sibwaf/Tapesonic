@@ -1,6 +1,7 @@
-package sources_test
+package search_test
 
 import (
+	"tapesonic/search"
 	"tapesonic/sources"
 	"testing"
 )
@@ -11,7 +12,7 @@ type artistAndTitle struct {
 }
 
 func TestNormalize_YoutubePlaylistAlbum(t *testing.T) {
-	svc := sources.NewTrackNormalizer()
+	svc := search.NewTrackNormalizer()
 
 	raw := []sources.TrackProperties{
 		{RawTitle: "Artist 1 - Song 1", ParentTitle: "Artist 1 - Album Title", Uploader: "Uploader"},
@@ -35,7 +36,7 @@ func TestNormalize_YoutubePlaylistAlbum(t *testing.T) {
 }
 
 func TestNormalize_YoutubePlaylistAlbum_WithMetadata(t *testing.T) {
-	svc := sources.NewTrackNormalizer()
+	svc := search.NewTrackNormalizer()
 
 	raw := []sources.TrackProperties{
 		{RawTitle: "Song 1", ParentTitle: "Album Name", Artist: "Artist 1", Title: "Song 1", Uploader: "Artist 1 - Topic"},
@@ -59,7 +60,7 @@ func TestNormalize_YoutubePlaylistAlbum_WithMetadata(t *testing.T) {
 }
 
 func TestNormalize_YoutubeVideoMixtape(t *testing.T) {
-	svc := sources.NewTrackNormalizer()
+	svc := search.NewTrackNormalizer()
 
 	raw := []sources.TrackProperties{
 		{RawTitle: "Artist 1 - Song 1", ParentTitle: "Mixtape Name", Uploader: "Uploader"},
@@ -83,7 +84,7 @@ func TestNormalize_YoutubeVideoMixtape(t *testing.T) {
 }
 
 func TestNormalize_BandcampAlbumFromArtist(t *testing.T) {
-	svc := sources.NewTrackNormalizer()
+	svc := search.NewTrackNormalizer()
 
 	raw := []sources.TrackProperties{
 		{RawTitle: "Artist 1 - Song 1", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Song 1", AlbumArtist: "Artist 1", Uploader: "Artist 1"},
@@ -107,7 +108,7 @@ func TestNormalize_BandcampAlbumFromArtist(t *testing.T) {
 }
 
 func TestNormalize_BandcampCompilationFromLabel(t *testing.T) {
-	svc := sources.NewTrackNormalizer()
+	svc := search.NewTrackNormalizer()
 
 	raw := []sources.TrackProperties{
 		{RawTitle: "Artist 1 - Artist 1 - Song 1", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Artist 1 - Song 1", AlbumArtist: "Label Name", Uploader: "Artist 1"},
@@ -131,7 +132,7 @@ func TestNormalize_BandcampCompilationFromLabel(t *testing.T) {
 }
 
 func TestNormalize_RemoveJunkPrefixForSingleTracks(t *testing.T) {
-	svc := sources.NewTrackNormalizer()
+	svc := search.NewTrackNormalizer()
 
 	type inputAndOutput struct {
 		input  sources.TrackProperties
@@ -156,7 +157,7 @@ func TestNormalize_RemoveJunkPrefixForSingleTracks(t *testing.T) {
 }
 
 func TestNormalize_RemoveJunkSuffixForSingleTracks(t *testing.T) {
-	svc := sources.NewTrackNormalizer()
+	svc := search.NewTrackNormalizer()
 
 	type inputAndOutput struct {
 		input  sources.TrackProperties
@@ -265,7 +266,7 @@ func TestNormalize_RemoveJunkSuffixForSingleTracks(t *testing.T) {
 }
 
 func TestNormalize_KeepAllowedSuffixForSingleTracks(t *testing.T) {
-	svc := sources.NewTrackNormalizer()
+	svc := search.NewTrackNormalizer()
 
 	type inputAndOutput struct {
 		input  sources.TrackProperties

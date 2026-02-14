@@ -1,9 +1,10 @@
-package sources
+package search
 
 import (
 	"fmt"
 	"regexp"
 	"strings"
+	"tapesonic/sources"
 	"tapesonic/util"
 )
 
@@ -37,6 +38,7 @@ var removeAlbumIndexPrefixRegex = regexp.MustCompile("^\\d+\\s+-\\s+")
 var removeJunkSuffixRegex = buildJunkSuffixRegex(
 	"official lyric video",
 	"official music video",
+	"offical music video",
 	"official audio",
 	"official video",
 	"official visualizer",
@@ -57,8 +59,29 @@ var removeJunkSuffixRegex = buildJunkSuffixRegex(
 	"lyric video",
 )
 
-func (normalizer *TrackNormalizer) Normalize(tracks []TrackProperties) ([]TrackProperties, error) {
-	result := make([]TrackProperties, len(tracks))
+func (normalizer *TrackNormalizer) NormalizeTree(node sources.AnalyzedSourceTree) (sources.AnalyzedSourceTree, error) {
+	children := []sources.AnalyzedSourceTree{}
+	for _, child := range node.Children {
+		child, err := normalizer.NormalizeTree(child)
+		if err != nil {
+			return sources.AnalyzedSourceTree{}, err
+		}
+
+		children = append(children, child)
+	}
+	node.Children = children
+
+	tracks, err := normalizer.Normalize(node.Tracks)
+	if err != nil {
+		return sources.AnalyzedSourceTree{}, err
+	}
+	node.Tracks = tracks
+
+	return node, nil
+}
+
+func (normalizer *TrackNormalizer) Normalize(tracks []sources.TrackProperties) ([]sources.TrackProperties, error) {
+	result := make([]sources.TrackProperties, len(tracks))
 	copy(result, tracks)
 
 	requireGuessingIndices := []int{}
@@ -71,7 +94,7 @@ func (normalizer *TrackNormalizer) Normalize(tracks []TrackProperties) ([]TrackP
 		if artist != "" {
 			removeArtistFromTitleRegex, err := regexp.Compile(fmt.Sprintf("^%s\\s+-\\s+(.+)", regexp.QuoteMeta(artist)))
 			if err != nil {
-				return []TrackProperties{}, fmt.Errorf("failed to compile regex for artist removal: %w", err)
+				return []sources.TrackProperties{}, fmt.Errorf("failed to compile regex for artist removal: %w", err)
 			}
 
 			if match := removeArtistFromTitleRegex.FindStringSubmatch(title); match != nil {

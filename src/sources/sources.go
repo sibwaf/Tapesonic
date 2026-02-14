@@ -73,23 +73,26 @@ func (store *SourceStorage) Upsert(source Source) (Source, error) {
 }
 
 func (store *SourceStorage) UpdateHierarchy(parentId uuid.UUID, childIds []uuid.UUID) error {
+	sql := `
+		INSERT INTO source_hierarchies (parent_id, child_id, list_index)
+		VALUES (@parentId, @childId, @listIndex)
+		ON CONFLICT DO UPDATE
+		SET list_index = excluded.list_index
+	`
+
 	return store.db.Transaction(func(tx *gorm.DB) error {
-		items := []SourceHierarchy{}
 		for i, childId := range childIds {
-			items = append(items, SourceHierarchy{
-				ParentId:  parentId,
-				ChildId:   childId,
-				ListIndex: i,
-			})
-		}
+			params := map[string]any{
+				"parentId":  parentId,
+				"childId":   childId,
+				"listIndex": i,
+			}
 
-		if err := tx.Where("parent_id = ?", parentId.String()).Delete(&SourceHierarchy{}).Error; err != nil {
-			return err
+			err := store.db.Exec(sql, params).Error
+			if err != nil {
+				return err
+			}
 		}
-		if err := tx.Create(items).Error; err != nil {
-			return err
-		}
-
 		return nil
 	})
 }
