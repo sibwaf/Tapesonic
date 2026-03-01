@@ -60,7 +60,12 @@ function onAddAll() {
         <template v-else-if="state == State.SEARCH_DONE">
             <div v-if="searchResult.length > 0">
                 <div v-for="track in searchResult" :key="track.Id">
-                    <button @click="onAdd(track)">Add</button> {{ track.Artist }} - {{ track.Title }}
+                    <button @click="onAdd(track)">Add</button>
+                    <span>
+                        <span v-if="track.Artist">{{ track.Artist.Name }}</span>
+                        <span v-if="track.Artist && track.Title">&ensp;-&ensp;</span>
+                        <span v-if="track.Title">{{ track.Title }}</span>
+                    </span>
                 </div>
                 <button @click="onAddAll">Add all</button>
             </div>

@@ -1,6 +1,7 @@
 package remotes
 
 import (
+	"tapesonic/artists"
 	"tapesonic/users"
 	"tapesonic/util"
 
@@ -18,7 +19,11 @@ type RemoteArtist struct {
 
 	CoverId string
 
-	Name string
+	Name          string
+	MusicBrainzId string
+
+	TapesonicArtistId *uuid.UUID
+	TapesonicArtist   *artists.Artist
 
 	SearchName string
 
@@ -47,29 +52,26 @@ func newRemoteArtistStorage(db *gorm.DB) (*RemoteArtistStorage, error) {
 	return &RemoteArtistStorage{db: db}, nil
 }
 
-func (store *RemoteArtistStorage) Upsert(artist RemoteArtist, artistToUser RemoteArtistToUser) error {
-	return store.db.Transaction(func(tx *gorm.DB) error {
-		type IdHolder struct {
-			Id uuid.UUID
-		}
-
+func (store *RemoteArtistStorage) Upsert(artist RemoteArtist, artistToUser RemoteArtistToUser) (RemoteArtist, error) {
+	result := RemoteArtist{}
+	return result, store.db.Transaction(func(tx *gorm.DB) error {
 		sql1 := `
-			INSERT INTO remote_artists (id, remote_id, artist_id, cover_id, name, search_name)
-			VALUES (@id, @remoteId, @artistId, @coverId, @name, @searchName)
+			INSERT INTO remote_artists (id, remote_id, artist_id, cover_id, name, music_brainz_id, search_name)
+			VALUES (@id, @remoteId, @artistId, @coverId, @name, @musicBrainzId, @searchName)
 			ON CONFLICT (remote_id, artist_id) DO UPDATE
-			SET cover_id = excluded.cover_id, name = excluded.name, search_name = excluded.search_name
-			RETURNING id
+			SET cover_id = excluded.cover_id, name = excluded.name, music_brainz_id = excluded.music_brainz_id, search_name = excluded.search_name
+			RETURNING id, remote_id, artist_id, cover_id, name, music_brainz_id, tapesonic_artist_id
 		`
 		params1 := map[string]any{
-			"id":         artist.Id,
-			"remoteId":   artist.RemoteId,
-			"artistId":   artist.ArtistId,
-			"coverId":    artist.CoverId,
-			"name":       artist.Name,
-			"searchName": util.MakeTextSearchString(artist.Name),
+			"id":            artist.Id,
+			"remoteId":      artist.RemoteId,
+			"artistId":      artist.ArtistId,
+			"coverId":       artist.CoverId,
+			"name":          artist.Name,
+			"musicBrainzId": artist.MusicBrainzId,
+			"searchName":    util.MakeTextSearchString(artist.Name),
 		}
-		remoteArtistIdHolder := IdHolder{}
-		if err := tx.Raw(sql1, params1).First(&remoteArtistIdHolder).Error; err != nil {
+		if err := tx.Raw(sql1, params1).First(&result).Error; err != nil {
 			return err
 		}
 
@@ -80,7 +82,7 @@ func (store *RemoteArtistStorage) Upsert(artist RemoteArtist, artistToUser Remot
 			SET sync_tag = excluded.sync_tag
 		`
 		params2 := map[string]any{
-			"remoteArtistId": remoteArtistIdHolder.Id,
+			"remoteArtistId": result.Id,
 			"userId":         artistToUser.UserId,
 			"syncTag":        artistToUser.SyncTag,
 		}
@@ -90,6 +92,19 @@ func (store *RemoteArtistStorage) Upsert(artist RemoteArtist, artistToUser Remot
 
 		return nil
 	})
+}
+
+func (store *RemoteArtistStorage) LinkToTapesonicArtist(remoteArtistId uuid.UUID, tapesonicArtistId uuid.UUID) error {
+	sql := `
+		UPDATE remote_artists
+		SET tapesonic_artist_id = @tapesonicArtistId
+		WHERE id = @remoteArtistId
+	`
+	params := map[string]any{
+		"remoteArtistId":    remoteArtistId,
+		"tapesonicArtistId": tapesonicArtistId,
+	}
+	return store.db.Exec(sql, params).Error
 }
 
 func (store *RemoteArtistStorage) DeleteUserBindingsBySyncTag(userId uuid.UUID, syncTag string) error {

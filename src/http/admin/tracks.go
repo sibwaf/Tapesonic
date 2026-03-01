@@ -7,33 +7,37 @@ import (
 	"tapesonic/util"
 )
 
+type TrackRsArtist struct {
+	Id   string
+	Name string
+}
+
 type TrackRs struct {
 	Id       string
 	SourceId string
 
-	Artist string
+	Artist *TrackRsArtist
 	Title  string
-
-	StartOffsetMs int64
-	EndOffsetMs   int64
 }
 
 func libraryToTrackRs(track model.LibraryTrack) TrackRs {
-	sourceId := ""
+	trackRs := TrackRs{
+		Id:    track.Id,
+		Title: track.Title,
+	}
+
 	if track.SourceId != nil {
-		sourceId = track.SourceId.String()
+		trackRs.SourceId = track.SourceId.String()
 	}
 
-	return TrackRs{
-		Id:       track.Id,
-		SourceId: sourceId,
-
-		Artist: track.ArtistName,
-		Title:  track.Title,
-
-		StartOffsetMs: -1,
-		EndOffsetMs:   -1,
+	if track.ArtistId != "" {
+		trackRs.Artist = &TrackRsArtist{
+			Id:   track.ArtistId,
+			Name: track.ArtistName,
+		}
 	}
+
+	return trackRs
 }
 
 func GetTracks(auth *authenticator, search *search.SearchService) WebappHandler {

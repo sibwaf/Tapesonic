@@ -1,0 +1,97 @@
+export enum TapeType {
+    Album = "album",
+    Playlist = "playlist",
+}
+
+export interface TapeRsArtist {
+    Id: string;
+    Name: string;
+}
+
+export interface TapeRsTrack {
+    Id: string;
+    SourceId: string;
+
+    Artist: TapeRsArtist | null;
+    Title: string;
+
+    StartOffsetMs: number;
+    EndOffsetMs: number;
+}
+
+export interface TapeListRs {
+    Id: string;
+    Name: string;
+    Type: TapeType;
+
+    ThumbnailId: string | null;
+
+    Artist: TapeRsArtist | null;
+    ReleasedAt: string | null;
+
+    CreatedAt: string;
+}
+
+export interface TapeFullRs {
+    Id: string;
+    Name: string;
+    Type: TapeType;
+
+    ThumbnailId: string | null;
+
+    Artist: TapeRsArtist | null;
+    ReleasedAt: string | null;
+
+    Tracks: TapeRsTrack[];
+}
+
+export interface TapeRq {
+    Name: string;
+    Type: string;
+
+    ThumbnailId: string | null;
+
+    ArtistId: string | null;
+    ReleasedAt: string | null;
+
+    TrackIds: string[];
+}
+
+export interface GuessTapeMetadataRq {
+    TrackIds: string[];
+}
+
+export interface GuessTapeMetadataRs {
+    Name: string;
+    Type: TapeType;
+
+    Artist: TapeRsArtist | null;
+    ReleasedAt: string | null;
+    ThumbnailId: string | null;
+}
+
+export default {
+    async createTape(tape: TapeRq): Promise<TapeFullRs> {
+        const response = await fetch(`/api/tapes`, { method: "POST", body: JSON.stringify(tape) });
+        return await response.json();
+    },
+    async updateTape(id: string, tape: TapeRq): Promise<TapeFullRs> {
+        const response = await fetch(`/api/tapes/${id}`, { method: "PUT", body: JSON.stringify(tape) });
+        return await response.json();
+    },
+    async deleteTape(id: string): Promise<void> {
+        await fetch(`/api/tapes/${id}`, { method: "DELETE" });
+    },
+    async listTapes(): Promise<TapeListRs[]> {
+        const response = await fetch(`/api/tapes`, { method: "GET" });
+        return await response.json();
+    },
+    async getTape(id: string): Promise<TapeFullRs> {
+        const response = await fetch(`/api/tapes/${id}`, { method: "GET" });
+        return await response.json();
+    },
+    async guessTapeMetadata(rq: GuessTapeMetadataRq): Promise<GuessTapeMetadataRs> {
+        const response = await fetch(`/api/tapes/guess-metadata`, { method: "POST", body: JSON.stringify(rq) });
+        return await response.json();
+    },
+}

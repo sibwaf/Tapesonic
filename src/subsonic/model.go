@@ -219,8 +219,9 @@ type IndexId3 struct {
 }
 
 type ArtistId3 struct {
-	Id   string `json:"id" xml:"id,attr"`
-	Name string `json:"name" xml:"name,attr"`
+	Id            string `json:"id" xml:"id,attr"`
+	Name          string `json:"name" xml:"name,attr"`
+	MusicBrainzId string `json:"musicBrainzId" xml:"musicBrainzId,attr"`
 
 	CoverArt       string `json:"coverArt" xml:"coverArt,attr"`
 	ArtistImageUrl string `json:"artistImageUrl" xml:"artistImageUrl,attr"`

@@ -1,6 +1,7 @@
 package remotes
 
 import (
+	"tapesonic/artists"
 	"tapesonic/scheduling"
 	"time"
 
@@ -17,6 +18,7 @@ type RemotesModule struct {
 func NewRemotesModule(
 	db *gorm.DB,
 	taskScheduler *scheduling.TaskScheduler,
+	artists *artists.ArtistService,
 	librarySyncCron cron.Schedule,
 ) (*RemotesModule, error) {
 	remoteStorage, err := newRemoteStorage(db)
@@ -49,6 +51,7 @@ func NewRemotesModule(
 	service := newRemoteService(remoteStorage, planner)
 
 	subsonicSync := newSubsonicSyncService(
+		artists,
 		remoteStorage,
 		coverStorage,
 		artistStorage,

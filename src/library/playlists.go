@@ -169,32 +169,15 @@ func (store *PlaylistStorage) GetPlaylistById(userId uuid.UUID, playlistId strin
 	return result, err
 }
 
-func (store *PlaylistStorage) GetTracksByPlaylistId(userId uuid.UUID, playlistId string) ([]model.LibraryTrack, error) {
+func (store *PlaylistStorage) GetTrackIdsByPlaylistId(playlistId string) ([]uuid.UUID, error) {
 	sql := `
-		SELECT
-			all_tracks.id AS "id",
-			all_tracks.source_id AS "source_id",
-			all_tracks.remote_id AS "remote_id",
-			all_tracks.remote_track_id AS "remote_track_id",
-			all_tracks.title AS "title",
-			all_tracks.artist_id AS "artist_id",
-			all_tracks.artist AS "artist_name",
-			all_tracks.album_id AS "album_id",
-			all_tracks.album AS "album_name",
-			all_tracks.album_track_index AS "album_track_index",
-			all_tracks.cover_id AS "cover_id",
-			all_tracks.duration_ms * 1000 * 1000 AS "duration",
-			all_tracks.played_at AS "played_at"
+		SELECT all_playlist_tracks.track_id
 		FROM all_playlist_tracks
-		JOIN all_tracks ON all_playlist_tracks.track_id = all_tracks.id
-		WHERE all_tracks.user_id = @userId AND all_playlist_tracks.playlist_id = @playlistId
+		WHERE all_playlist_tracks.playlist_id = @playlistId
 		ORDER BY all_playlist_tracks.track_index ASC
 	`
-	params := map[string]any{
-		"userId":     userId,
-		"playlistId": playlistId,
-	}
+	params := map[string]any{"playlistId": playlistId}
 
-	result := []model.LibraryTrack{}
+	result := []uuid.UUID{}
 	return result, store.db.Raw(sql, params).Find(&result).Error
 }

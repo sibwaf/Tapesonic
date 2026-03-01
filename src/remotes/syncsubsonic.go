@@ -3,6 +3,7 @@ package remotes
 import (
 	"fmt"
 	"log/slog"
+	"tapesonic/artists"
 	"tapesonic/model"
 	"tapesonic/subsonic"
 	"tapesonic/util"
@@ -19,6 +20,8 @@ const (
 )
 
 type SubsonicSyncService struct {
+	allArtists *artists.ArtistService
+
 	remotes *RemoteStorage
 	covers  *RemoteCoverStorage
 	artists *RemoteArtistStorage
@@ -27,6 +30,7 @@ type SubsonicSyncService struct {
 }
 
 func newSubsonicSyncService(
+	allArtists *artists.ArtistService,
 	remotes *RemoteStorage,
 	covers *RemoteCoverStorage,
 	artists *RemoteArtistStorage,
@@ -34,11 +38,12 @@ func newSubsonicSyncService(
 	tracks *RemoteTrackStorage,
 ) *SubsonicSyncService {
 	return &SubsonicSyncService{
-		remotes: remotes,
-		covers:  covers,
-		artists: artists,
-		albums:  albums,
-		tracks:  tracks,
+		allArtists: allArtists,
+		remotes:    remotes,
+		covers:     covers,
+		artists:    artists,
+		albums:     albums,
+		tracks:     tracks,
 	}
 }
 
@@ -136,19 +141,37 @@ func (svc *SubsonicSyncService) upsertArtist(artist subsonic.ArtistId3, remoteId
 		}
 	}
 
-	return svc.artists.Upsert(
+	upsertedArtist, err := svc.artists.Upsert(
 		RemoteArtist{
-			Id:       uuid.New(),
-			RemoteId: remoteId,
-			ArtistId: artist.Id,
-			CoverId:  artist.CoverArt,
-			Name:     artist.Name,
+			Id:            uuid.New(),
+			RemoteId:      remoteId,
+			ArtistId:      artist.Id,
+			CoverId:       artist.CoverArt,
+			Name:          artist.Name,
+			MusicBrainzId: artist.MusicBrainzId,
 		},
 		RemoteArtistToUser{
 			UserId:  userId,
 			SyncTag: syncTag,
 		},
 	)
+	if err != nil {
+		return err
+	}
+
+	if upsertedArtist.TapesonicArtistId == nil {
+		libraryArtist, err := svc.allArtists.FindMatchOrCreate(upsertedArtist.Name, upsertedArtist.MusicBrainzId)
+		if err != nil {
+			return err
+		}
+
+		err = svc.artists.LinkToTapesonicArtist(upsertedArtist.Id, libraryArtist.Id)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (svc *SubsonicSyncService) upsertAlbum(album subsonic.AlbumId3, remoteId uuid.UUID, userId uuid.UUID, syncTag string) error {

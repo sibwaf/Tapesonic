@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 
+	"tapesonic/artists"
 	configPkg "tapesonic/config"
 	"tapesonic/ffmpeg"
 	"tapesonic/lastfm"
@@ -35,6 +36,7 @@ type Context struct {
 	Ffmpeg *ffmpeg.Ffmpeg
 
 	Users           *users.UsersModule
+	Artists         *artists.ArtistsModule
 	Sources         *sources.SourcesModule
 	Remotes         *remotes.RemotesModule
 	Tapes           *tapes.TapesModule
@@ -121,6 +123,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	if context.Users, err = users.NewUsersModule(db); err != nil {
 		return nil, err
 	}
+	context.Artists = artists.NewArtistsModule(db)
 	context.Sources = sources.NewSourcesModule(
 		db,
 		context.Ytdlp.YtdlpService,
@@ -131,11 +134,12 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	if context.Remotes, err = remotes.NewRemotesModule(
 		db,
 		context.Scheduling.TaskScheduler,
+		context.Artists.ArtistService,
 		config.RemoteLibrarySyncSchedule,
 	); err != nil {
 		return nil, err
 	}
-	context.Tapes = tapes.NewTapesModule(db)
+	context.Tapes = tapes.NewTapesModule(db, context.Artists.ArtistService)
 	context.Library = library.NewLibraryModule(db)
 
 	context.MediaStorage = storage.NewMediaStorage(db, config.MediaStorageDir)
@@ -174,6 +178,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 
 	context.Search = search.NewSearchModule(
 		db,
+		context.Artists.ArtistService,
 		context.Library.LibraryService,
 		context.Sources.SourceService,
 		context.Sources.ImportService,
@@ -203,6 +208,9 @@ func prepareDatabase(context *Context) error {
 		return err
 	}
 	if err := context.Ytdlp.PrepareDatabase(); err != nil {
+		return err
+	}
+	if err := context.Artists.PrepareDatabase(); err != nil {
 		return err
 	}
 	if err := context.Sources.PrepareDatabase(); err != nil {

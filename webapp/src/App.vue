@@ -46,6 +46,9 @@ router.beforeEach(async (to) => {
         <RouterLink to="/">Home</RouterLink>
     </span>
     <span class="header-link">
+        <RouterLink to="/artists">Artists</RouterLink>
+    </span>
+    <span class="header-link">
         <RouterLink to="/sources">Sources</RouterLink>
     </span>
     <span class="header-link">
@@ -61,6 +64,8 @@ router.beforeEach(async (to) => {
 </template>
 
 <style>
+@import "primeicons/primeicons.css";
+
 .header-link {
     padding: 0.25em;
 }

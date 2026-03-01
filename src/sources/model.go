@@ -1,6 +1,7 @@
 package sources
 
 import (
+	"tapesonic/artists"
 	"tapesonic/storage"
 	"tapesonic/util"
 	"tapesonic/ytdlp"
@@ -45,11 +46,11 @@ type AnalyzedSourceTree struct {
 type SourceTree struct {
 	Source   Source
 	Children []SourceTree
-	Tracks   []SourceTrack
+	Tracks   []SavedSourceTrack
 }
 
-func (node SourceTree) CollectTracks() []SourceTrack {
-	result := append([]SourceTrack{}, node.Tracks...)
+func (node SourceTree) CollectTracks() []SavedSourceTrack {
+	result := append([]SavedSourceTrack{}, node.Tracks...)
 	for _, child := range node.Children {
 		result = append(result, child.CollectTracks()...)
 	}
@@ -59,15 +60,32 @@ func (node SourceTree) CollectTracks() []SourceTrack {
 type TrackProperties struct {
 	SourceId uuid.UUID
 
+	Uploader string
+
 	RawTitle    string
 	ParentTitle string
+
+	RawAlbumArtist string
+	RawTrackArtist string
+	RawTrackTitle  string
+
+	ArtistId *uuid.UUID
 
 	Artist string
 	Title  string
 
-	AlbumArtist string
+	StartOffsetMs int64
+	EndOffsetMs   int64
+}
 
-	Uploader string
+type SavedSourceTrack struct {
+	Id       uuid.UUID
+	SourceId uuid.UUID
+
+	ArtistId   *uuid.UUID
+	ArtistName string
+
+	Title string
 
 	StartOffsetMs int64
 	EndOffsetMs   int64
@@ -124,11 +142,12 @@ type SourceTrack struct {
 	StartOffsetMs int64
 	EndOffsetMs   int64
 
-	Artist string
-	Title  string
+	ArtistId *uuid.UUID
+	Artist   *artists.Artist
 
-	SearchArtist string
-	SearchTitle  string
+	Title string
+
+	SearchTitle string
 }
 
 type SourceFile struct {

@@ -90,60 +90,41 @@ export interface SourceFileRs {
     Codec: string;
 }
 
+export interface SourceTrackRsArtist {
+    Id: string;
+    Name: string;
+}
+
 export interface SourceTrackRs {
     Id: string;
     SourceId: string;
 
-    Artist: string;
+    Artist: SourceTrackRsArtist | null;
     Title: string;
 
     StartOffsetMs: number;
     EndOffsetMs: number;
 }
 
-export enum TapeType {
-    Album = "album",
-    Playlist = "playlist",
+export interface SourceTrackRq {
+    Id: string | null;
+    ArtistId: string | null;
+    Title: string;
+    StartOffsetMs: number;
+    EndOffsetMs: number;
 }
 
-export interface Tape {
+export interface TrackRsArtist {
     Id: string;
-
     Name: string;
-    Type: TapeType;
-
-    ThumbnailId: string | null;
-
-    Artist: string;
-    ReleasedAt: string | null;
-
-    Tracks: SourceTrackRs[];
 }
 
-export interface ListTape {
+export interface TrackRs {
     Id: string;
+    SourceId: string;
 
-    Name: string;
-    Type: TapeType;
-
-    ThumbnailId: string | null;
-
-    Artist: string;
-    ReleasedAt: string | null;
-
-    CreatedAt: string;
-}
-
-export interface GuessTapeMetadataRq {
-    TrackIds: string[];
-}
-
-export interface GuessTapeMetadataRs {
-    Name: string;
-    Type: TapeType;
-    Artist: string;
-    ReleasedAt: string | null;
-    ThumbnailId: string | null;
+    Artist: TrackRsArtist | null;
+    Title: string;
 }
 
 export interface ListThumbnailRs {
@@ -326,36 +307,12 @@ export default {
         const response = await fetch(`/api/sources/${id}/tracks?${params}`, { method: "GET" });
         return await response.json();
     },
-    async replaceSourceTracks(id: string, tracks: SourceTrackRs[]): Promise<SourceTrackRs[]> {
+    async replaceSourceTracks(id: string, tracks: SourceTrackRq[]): Promise<SourceTrackRs[]> {
         const response = await fetch(`/api/sources/${id}/tracks`, { method: "PUT", body: JSON.stringify(tracks) });
         return await response.json();
     },
     async deleteSourceFile(sourceId: string): Promise<void> {
         const response = await fetch(`/api/sources/${sourceId}/file`, { method: "DELETE" });
-        return await response.json();
-    },
-
-    async createTape(tape: Tape): Promise<Tape> {
-        const response = await fetch(`/api/tapes`, { method: "POST", body: JSON.stringify(tape) });
-        return await response.json();
-    },
-    async updateTape(id: string, tape: Tape): Promise<Tape> {
-        const response = await fetch(`/api/tapes/${id}`, { method: "PUT", body: JSON.stringify(tape) });
-        return await response.json();
-    },
-    async deleteTape(id: string): Promise<void> {
-        await fetch(`/api/tapes/${id}`, { method: "DELETE" });
-    },
-    async listTapes(): Promise<ListTape[]> {
-        const response = await fetch(`/api/tapes`, { method: "GET" });
-        return await response.json();
-    },
-    async getTape(id: string): Promise<Tape> {
-        const response = await fetch(`/api/tapes/${id}`, { method: "GET" });
-        return await response.json();
-    },
-    async guessTapeMetadata(rq: GuessTapeMetadataRq): Promise<GuessTapeMetadataRs> {
-        const response = await fetch(`/api/tapes/guess-metadata`, { method: "POST", body: JSON.stringify(rq) });
         return await response.json();
     },
 

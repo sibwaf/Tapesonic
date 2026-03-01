@@ -1,151 +1,178 @@
 <script setup lang="ts">
-import { type GuessTapeMetadataRs, type Tape, TapeType, type SourceTrackRs } from '@/api';
-import api from '@/api';
+import tapes, { type GuessTapeMetadataRs, type TapeFullRs, type TapeRq, TapeType, type TapeRsTrack, type TapeRsArtist } from '@/api/tapes';
+import api, { type SourceTrackRs } from '@/api';
 import util from '@/util';
 import TapeTrackSearch from '@/components/TapeTrackSearch.vue';
 import ThumbnailSelector from '@/components/ThumbnailSelector.vue';
 import { computed, ref, toRaw, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import DateEditor from '@/components/DateEditor.vue';
-
-enum State {
-    LOADING,
-    LOADING_OK,
-    LOADING_ERROR,
-    SAVING,
-    SAVING_OK,
-    SAVING_ERROR,
-    DELETING,
-    DELETING_OK,
-    DELETING_ERROR,
-}
+import ArtistSelector, { Artist } from '@/components/ArtistSelector.vue';
 
 const router = useRouter();
 const route = useRoute();
-const tapeId = computed(() => route.params.tapeId as string);
-const isNewTape = computed(() => tapeId.value == "new");
 
-const tape = ref<Tape | null>(null);
-const editedTape = ref<Tape | null>(null);
+const tape = ref<TapeFullRs | null>(null);
+
+const name = ref("");
+const type = ref(TapeType.Album);
+const artist = ref<Artist | null>(null);
+const releasedAt = ref<string | null>(null);
+const thumbnailId = ref<string | null>(null);
+const tracks = ref<TapeRsTrack[]>([]);
 
 const guessedMetadata = ref<GuessTapeMetadataRs | null>(null);
 const thumbnailIds = ref<string[]>([]);
 
-const sourceIds = computed(() => editedTape.value?.Tracks?.map(it => it.SourceId) ?? []);
-const uniqueSourceIds = computed(() => [...new Set<string>(sourceIds.value)]);
+const sourceIds = computed(() => tracks.value.map(it => it.SourceId));
+const uniqueSourceIds = computed(() => [...new Set<string>(sourceIds.value)].sort());
 
-const trackIds = computed(() => editedTape.value?.Tracks?.map(it => it.Id));
+const trackIds = computed(() => tracks.value.map(it => it.Id));
+const trackArtists = computed(() => tracks.value.map(it => it.Artist != null ? new Artist(it.Artist.Id, it.Artist.Name) : null).filter(it => it != null));
 
 const albumTrackIds = computed(() => {
-    const editedTapeValue = editedTape.value;
-    if (editedTapeValue == null || editedTapeValue.Type != TapeType.Album) {
+    if (type.value == TapeType.Album) {
+        return trackIds.value;
+    } else {
         return null;
     }
-
-    return trackIds.value;
 });
 
-const state = ref(State.LOADING);
+const isEdited = computed(() => {
+    const tapeValue = tape.value;
+    if (tapeValue == null) {
+        return false;
+    }
 
-const isEdited = computed(() => JSON.stringify(tape.value) != JSON.stringify(editedTape.value));
+    return name.value != tapeValue.Name
+        || type.value != tapeValue.Type
+        || artist.value?.id != tapeValue.Artist?.Id
+        || releasedAt.value != tapeValue.ReleasedAt
+        || thumbnailId.value != tapeValue.ThumbnailId
+        || JSON.stringify(trackIds.value) != JSON.stringify(tapeValue.Tracks.map(it => it.Id));
+});
 
-const isBusy = computed(() => [State.LOADING, State.SAVING, State.DELETING].includes(state.value));
+const isBusy = ref(false);
 
-function onClearReleaseDate(tape: Tape) {
-    tape.ReleasedAt = null;
+function onAddTrack(track: SourceTrackRs) {
+    let artist: TapeRsArtist | null = null;
+    if (track.Artist != null) {
+        artist = {
+            Id: track.Artist.Id,
+            Name: track.Artist.Name,
+        };
+    }
+
+    tracks.value.push({
+        Id: track.Id,
+        SourceId: track.SourceId,
+        Artist: artist,
+        Title: track.Title,
+        StartOffsetMs: track.StartOffsetMs,
+        EndOffsetMs: track.EndOffsetMs,
+    });
 }
 
-function onAddTrack(tape: Tape, track: SourceTrackRs) {
-    tape.Tracks.push(track);
-}
-
-function onRemoveTrackAt(tape: Tape, index: number) {
-    tape.Tracks.splice(index, 1);
-}
-
-function onApplyGuessedMetadata(tape: Tape, guessedMetadata: GuessTapeMetadataRs) {
+function onApplyGuessedMetadata(guessedMetadata: GuessTapeMetadataRs) {
     if (guessedMetadata.Artist) {
-        tape.Artist = guessedMetadata.Artist;
+        artist.value = {
+            id: guessedMetadata.Artist.Id,
+            name: guessedMetadata.Artist.Name,
+        };
     }
     if (guessedMetadata.Name) {
-        tape.Name = guessedMetadata.Name;
+        name.value = guessedMetadata.Name;
     }
     if (guessedMetadata.ReleasedAt) {
-        tape.ReleasedAt = guessedMetadata.ReleasedAt;
+        releasedAt.value = guessedMetadata.ReleasedAt;
     }
 }
 
 function onReset() {
-    if (tape.value != null) {
-        editedTape.value = structuredClone(toRaw(tape.value));
+    const tapeValue = tape.value;
+    if (tapeValue == null) {
+        return;
+    }
+
+    name.value = tapeValue.Name;
+    type.value = tapeValue.Type;
+    releasedAt.value = tapeValue.ReleasedAt;
+    thumbnailId.value = tapeValue.ThumbnailId;
+    tracks.value = [...tapeValue.Tracks];
+
+    const tapeArtist = tapeValue.Artist;
+    if (tapeArtist != null) {
+        artist.value = new Artist(tapeArtist.Id, tapeArtist.Name);
     } else {
-        editedTape.value = {
-            Id: "00000000-0000-0000-0000-000000000000",
-            Name: "New tape",
-            Type: TapeType.Album,
-            ThumbnailId: null,
-            Tracks: [],
-            Artist: "",
-            ReleasedAt: null,
-        };
+        artist.value = null;
     }
 }
 
 async function onSave() {
+    const tapeValue = tape.value;
+    if (tapeValue == null) {
+        return;
+    }
+
     try {
-        state.value = State.SAVING;
+        isBusy.value = true;
 
-        const wasNewTape = isNewTape.value;
+        const tapeRq: TapeRq = {
+            Name: name.value,
+            Type: type.value,
+            ThumbnailId: thumbnailId.value,
+            ArtistId: artist.value?.id ?? null,
+            ReleasedAt: releasedAt.value,
+            TrackIds: tracks.value.map(it => it.Id),
+        };
 
-        const response = wasNewTape
-            ? await api.createTape(editedTape.value!)
-            : await api.updateTape(tapeId.value, editedTape.value!);
-
-        tape.value = structuredClone(response);
+        tape.value = await tapes.updateTape(tapeValue.Id, tapeRq);
         onReset();
-
-        if (wasNewTape) {
-            router.push({ path: `/tapes/${response.Id}`, force: true });
-        }
-
-        state.value = State.SAVING_OK;
     } catch (e) {
-        state.value = State.SAVING_ERROR;
         console.error("Failed to save tape", e);
+    } finally {
+        isBusy.value = false;
     }
 }
 
 async function onDelete() {
-    try {
-        state.value = State.DELETING;
+    const tapeValue = tape.value;
+    if (tapeValue == null) {
+        return;
+    }
 
-        await api.deleteTape(tapeId.value);
+    try {
+        isBusy.value = true;
+
+        await tapes.deleteTape(tapeValue.Id);
 
         router.push({ path: `/` });
-
-        state.value = State.DELETING_OK;
     } catch (e) {
-        state.value = State.DELETING_ERROR;
         console.error("Failed to delete tape", e);
+    } finally {
+        isBusy.value = false;
     }
 }
 
 watch(albumTrackIds, async (trackIds) => {
     guessedMetadata.value = null;
 
-    if (trackIds == null) {
+    if (trackIds == null || trackIds.length == 0) {
         return;
     }
 
     try {
-        guessedMetadata.value = await api.guessTapeMetadata({ TrackIds: trackIds });
+        guessedMetadata.value = await tapes.guessTapeMetadata({ TrackIds: trackIds });
     } catch (e) {
         console.error("Failed to guess metadata", e);
     }
-});
+}, { immediate: true });
 
 watch(uniqueSourceIds, async (sourceIds) => {
-    // todo: do not trigger if actual ids didn't change
+    if (sourceIds.length == 0) {
+        thumbnailIds.value = [];
+        return;
+    }
 
     try {
         const thumbnails = await api.searchThumbnails(sourceIds);
@@ -153,36 +180,30 @@ watch(uniqueSourceIds, async (sourceIds) => {
     } catch (e) {
         console.error("Failed to fetch thumbnails", e);
     }
-});
+}, { immediate: true });
 
-if (isNewTape.value) {
-    state.value = State.LOADING_OK;
-    onReset();
-} else {
-    (async () => {
-        try {
-            state.value = State.LOADING;
+(async () => {
+    try {
+        isBusy.value = true;
 
-            tape.value = await api.getTape(tapeId.value);
-
-            state.value = State.LOADING_OK;
-        } catch (e) {
-            state.value = State.LOADING_ERROR;
-            console.error(e);
-        }
-
+        tape.value = await tapes.getTape(route.params.tapeId as string);
         onReset();
-    })();
-}
+    } catch (e) {
+        console.error("Failed to load tape", e);
+    } finally {
+        isBusy.value = false;
+    }
+})();
 </script>
 
 <template>
-    <template v-if="state == State.LOADING"> Loading... </template>
-    <template v-else-if="state == State.LOADING_ERROR"> Failed to load tape {{ tapeId }} </template>
-    <template v-else-if="editedTape">
+    <div v-if="tape == null">
+        Loading...
+    </div>
+    <div v-else>
         <div>
-            <button v-for="tapeType in [TapeType.Album, TapeType.Playlist]" :disabled="editedTape.Type == tapeType"
-                @click="editedTape.Type = tapeType">
+            <button v-for="tapeType in [TapeType.Album, TapeType.Playlist]" :disabled="type == tapeType"
+                @click="type = tapeType">
                 {{ tapeType }}
             </button>
         </div>
@@ -191,9 +212,9 @@ if (isNewTape.value) {
                 <tr>
                     <th></th>
                     <th></th>
-                    <th v-if="editedTape.Type == TapeType.Album">
+                    <th v-if="type == TapeType.Album">
                         Guessed
-                        <button @click="onApplyGuessedMetadata(editedTape, guessedMetadata!!)"
+                        <button @click="onApplyGuessedMetadata(guessedMetadata!!)"
                             :disabled="guessedMetadata == null">Apply all</button>
                     </th>
                 </tr>
@@ -202,35 +223,35 @@ if (isNewTape.value) {
                 <tr>
                     <td>Name</td>
                     <td>
-                        <input type="text" v-model="editedTape.Name">
+                        <input type="text" v-model="name">
                     </td>
-                    <td v-if="editedTape.Type == TapeType.Album">
+                    <td v-if="type == TapeType.Album">
                         <input type="text" disabled="true" :value="guessedMetadata?.Name ?? ''">
-                        <button v-if="guessedMetadata?.Name"
-                            @click="editedTape.Name = guessedMetadata.Name">Apply</button>
+                        <button v-if="guessedMetadata?.Name" @click="name = guessedMetadata.Name">Apply</button>
                     </td>
                 </tr>
-                <tr v-if="editedTape.Type == TapeType.Album">
+                <tr v-if="type == TapeType.Album">
                     <td>Artist</td>
                     <td>
-                        <input type="text" v-model="editedTape.Artist">
+                        <ArtistSelector v-model="artist" :suggestions="trackArtists" />
                     </td>
                     <td>
-                        <input type="text" disabled="true" :value="guessedMetadata?.Artist ?? ''">
+                        <input type="text" disabled="true" :value="guessedMetadata?.Artist?.Name ?? ''">
                         <button v-if="guessedMetadata?.Artist"
-                            @click="editedTape.Artist = guessedMetadata.Artist">Apply</button>
+                            @click="artist = { id: guessedMetadata.Artist.Id, name: guessedMetadata.Artist.Name }">Apply</button>
                     </td>
                 </tr>
-                <tr v-if="editedTape.Type == TapeType.Album">
+                <tr v-if="type == TapeType.Album">
                     <td>Release date</td>
                     <td>
-                        <DateEditor v-model="editedTape.ReleasedAt"/>
-                        <button @click="onClearReleaseDate(editedTape)">Clear</button>
+                        <DateEditor v-model="releasedAt" />
+                        <button @click="releasedAt = null">Clear</button>
                     </td>
                     <td>
-                        <input type="date" disabled="true" :value="util.timestampToDate(guessedMetadata?.ReleasedAt ?? '')">
+                        <input type="date" disabled="true"
+                            :value="util.timestampToDate(guessedMetadata?.ReleasedAt ?? '')">
                         <button v-if="guessedMetadata?.ReleasedAt"
-                            @click="editedTape.ReleasedAt = guessedMetadata.ReleasedAt">Apply</button>
+                            @click="releasedAt = guessedMetadata.ReleasedAt">Apply</button>
                     </td>
                 </tr>
             </tbody>
@@ -238,21 +259,16 @@ if (isNewTape.value) {
         <div>
             <button :disabled="isBusy || !isEdited" @click="onSave">Save</button>
             <button :disabled="isBusy || !isEdited" @click="onReset">Reset</button>
-            <button v-if="!isNewTape" :disabled="isBusy" @click="onDelete">Delete</button>
-
-            <div v-if="state == State.SAVING">Saving...</div>
-            <div v-else-if="state == State.SAVING_ERROR">Failed to save</div>
-            <div v-else-if="state == State.DELETING">Deleting...</div>
-            <div v-else-if="state == State.DELETING_ERROR">Failed to delete</div>
+            <button v-if="tape != null" :disabled="isBusy" @click="onDelete">Delete</button>
         </div>
 
         <hr>
 
-        <TapeTrackSearch @add-track="onAddTrack(editedTape, $event)" />
+        <TapeTrackSearch @add-track="onAddTrack($event)" />
 
         <hr>
 
-        <ThumbnailSelector :thumbnail-ids="thumbnailIds" size="12em" v-model="editedTape.ThumbnailId" />
+        <ThumbnailSelector :thumbnail-ids="thumbnailIds" size="12em" v-model="thumbnailId" />
 
         <div>
             <table>
@@ -265,17 +281,16 @@ if (isNewTape.value) {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="track, index in editedTape.Tracks" :key="track.Id">
+                    <tr v-for="track, index in tracks" :key="track.Id">
                         <td>
-                            <button @click="onRemoveTrackAt(editedTape, index)">Remove</button>
+                            <button @click="tracks.splice(index, 1)">Remove</button>
                         </td>
-                        <td>{{ track.Artist }}</td>
+                        <td>{{ track.Artist?.Name ?? "" }}</td>
                         <td></td>
                         <td>{{ track.Title }}</td>
                     </tr>
                 </tbody>
             </table>
         </div>
-    </template>
-    <template v-else> Unknown state {{ state }} </template>
+    </div>
 </template>

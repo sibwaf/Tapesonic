@@ -49,8 +49,8 @@ func (store *TrackStorage) PrepareDatabase() error {
 				sources.id AS source_id,
 				NULL AS remote_id,
 				NULL AS remote_track_id,
-				source_tracks.artist AS artist,
-				NULL AS artist_id,
+				artists.name AS artist,
+				artists.id AS artist_id,
 				tapes.name AS album,
 				tapes.id AS album_id,
 				tapes.released_at AS album_released_at,
@@ -59,12 +59,13 @@ func (store *TrackStorage) PrepareDatabase() error {
 				coalesce(tapes.thumbnail_id, sources.thumbnail_id) AS cover_id,
 				source_tracks.end_offset_ms - source_tracks.start_offset_ms AS duration_ms,
 				listen_stats.last_listened_at AS played_at,
-				source_tracks.search_artist AS search_artist,
+				artists.search_name AS search_artist,
 				tapes.search_name AS search_album,
 				source_tracks.search_title AS search_title,
 				users.id AS user_id
 			FROM source_tracks
 			JOIN users ON 1 = 1
+			LEFT JOIN artists ON source_tracks.artist_id = artists.id
 			LEFT JOIN tape_to_tracks ON source_tracks.id = tape_to_tracks.track_id
 			LEFT JOIN tapes ON tape_to_tracks.tape_id = tapes.id AND tapes.type = '%s'
 			LEFT JOIN sources ON source_tracks.source_id = sources.id
@@ -77,8 +78,8 @@ func (store *TrackStorage) PrepareDatabase() error {
 				NULL AS source_id,
 				remote_tracks.remote_id AS remote_id,
 				remote_tracks.track_id AS remote_track_id,
-				remote_artists.name AS artist,
-				remote_artists.id AS artist_id,
+				artists.name AS artist,
+				artists.id AS artist_id,
 				remote_albums.title AS album,
 				remote_albums.id AS album_id,
 				remote_albums.released_at AS album_released_at,
@@ -87,13 +88,14 @@ func (store *TrackStorage) PrepareDatabase() error {
 				remote_covers.id AS cover_id,
 				remote_tracks.duration_ms AS duration_ms,
 				listen_stats.last_listened_at AS played_at,
-				remote_artists.search_name AS search_artist,
+				artists.search_name AS search_artist,
 				remote_albums.search_title AS search_album,
 				remote_tracks.search_title AS search_title,
 				remote_track_to_users.user_id AS user_id
 			FROM remote_tracks
 			JOIN remote_track_to_users ON remote_tracks.id = remote_track_to_users.remote_track_id
 			LEFT JOIN remote_artists ON remote_tracks.remote_id = remote_artists.remote_id AND remote_tracks.artist_id = remote_artists.artist_id
+			LEFT JOIN artists ON remote_artists.tapesonic_artist_id = artists.id
 			LEFT JOIN remote_albums ON remote_tracks.remote_id = remote_albums.remote_id AND remote_tracks.album_id = remote_albums.album_id
 			LEFT JOIN remote_covers ON remote_tracks.remote_id = remote_covers.remote_id AND remote_tracks.cover_id = remote_covers.cover_id
 			LEFT JOIN listen_stats ON remote_tracks.id = listen_stats.track_id AND remote_track_to_users.user_id = listen_stats.user_id

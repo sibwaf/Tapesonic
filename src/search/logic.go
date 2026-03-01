@@ -8,9 +8,11 @@ import (
 	"slices"
 	"strings"
 
+	"tapesonic/artists"
 	"tapesonic/library"
 	"tapesonic/model"
 	"tapesonic/sources"
+	"tapesonic/util"
 	"tapesonic/ytdlp"
 
 	"github.com/google/uuid"
@@ -18,6 +20,7 @@ import (
 
 type SearchService struct {
 	library  *library.LibraryService
+	artists  *artists.ArtistService
 	sources  *sources.SourceService
 	importer *AutoImportService
 	matcher  *TrackMatcher
@@ -25,12 +28,14 @@ type SearchService struct {
 
 func newSearchService(
 	library *library.LibraryService,
+	artists *artists.ArtistService,
 	sources *sources.SourceService,
 	importer *AutoImportService,
 	matcher *TrackMatcher,
 ) *SearchService {
 	return &SearchService{
 		library:  library,
+		artists:  artists,
 		sources:  sources,
 		importer: importer,
 		matcher:  matcher,
@@ -75,11 +80,6 @@ func (svc *SearchService) FindTracksByQuery(userId uuid.UUID, query string) ([]m
 }
 
 func (svc *SearchService) FindTrack(userId uuid.UUID, track TrackForSearch) (*model.LibraryTrack, error) {
-	expected := TrackForMatching{
-		Artist: track.Artist,
-		Title:  track.Title,
-	}
-
 	match, err := svc.findMatchInLibrary(userId, track)
 	if err != nil {
 		return nil, err
@@ -88,10 +88,16 @@ func (svc *SearchService) FindTrack(userId uuid.UUID, track TrackForSearch) (*mo
 		return match, nil
 	}
 
+	trackForImport := TrackForImport{
+		ArtistMusicBrainzId: track.ArtistMusicBrainzId,
+		Artist:              track.Artist,
+		Title:               track.Title,
+	}
+
 	for _, url := range track.Urls {
-		importedTrack, err := svc.importer.ImportSingleTrack(context.Background(), url, expected.Artist, expected.Title)
+		importedTrack, err := svc.importer.ImportSingleTrack(context.Background(), url, trackForImport)
 		if errors.Is(err, ytdlp.ErrNotAvailable) {
-			slog.Warn(fmt.Sprintf("Failed to import track from %s: URL not available", url))
+			slog.Debug(fmt.Sprintf("Failed to import track from %s: URL not available", url))
 			continue
 		} else if errors.Is(err, ErrMetadataMismatch) {
 			continue
@@ -115,19 +121,19 @@ func (svc *SearchService) findMatchInLibrary(userId uuid.UUID, track TrackForSea
 		return nil, err
 	}
 
-	expected := TrackForMatching{
-		Artist: track.Artist,
-		Title:  track.Title,
+	artists, err := svc.artists.FindAllMatches(track.Artist, track.ArtistMusicBrainzId)
+	if err != nil {
+		return nil, err
+	}
+
+	allowedArtistIds := []string{}
+	for _, artist := range artists {
+		allowedArtistIds = append(allowedArtistIds, artist.Id.String())
 	}
 
 	var match *model.LibraryTrack = nil
 	for _, candidate := range candidates {
-		actual := TrackForMatching{
-			Artist: candidate.ArtistName,
-			Title:  candidate.Title,
-		}
-
-		if !svc.matcher.Match(expected, actual) {
+		if !slices.Contains(allowedArtistIds, candidate.ArtistId) || !util.MatchText(track.Title, candidate.Title) {
 			continue
 		}
 

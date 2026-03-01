@@ -182,26 +182,39 @@ func GetSourceHierarchy(auth *authenticator, sources *sources.SourceService) Web
 	}
 }
 
+type SourceTrackRsArtist struct {
+	Id   uuid.UUID
+	Name string
+}
+
 type SourceTrackRs struct {
 	Id       uuid.UUID
 	SourceId uuid.UUID
 
-	Artist string
+	Artist *SourceTrackRsArtist
 	Title  string
 
 	StartOffsetMs int64
 	EndOffsetMs   int64
 }
 
-func toSourceTrackRs(track sources.SourceTrack) SourceTrackRs {
-	return SourceTrackRs{
+func toSourceTrackRs(track sources.SavedSourceTrack) SourceTrackRs {
+	trackRs := SourceTrackRs{
 		Id:            track.Id,
 		SourceId:      track.SourceId,
-		Artist:        track.Artist,
 		Title:         track.Title,
 		StartOffsetMs: track.StartOffsetMs,
 		EndOffsetMs:   track.EndOffsetMs,
 	}
+
+	if track.ArtistId != nil {
+		trackRs.Artist = &SourceTrackRsArtist{
+			Id:   *track.ArtistId,
+			Name: track.ArtistName,
+		}
+	}
+
+	return trackRs
 }
 
 func GetSourceTracks(auth *authenticator, sourcesSvc *sources.SourceService) WebappHandler {
@@ -218,7 +231,7 @@ func GetSourceTracks(auth *authenticator, sourcesSvc *sources.SourceService) Web
 
 		recursive := util.StringToBoolOrDefault(r.URL.Query().Get("recursive"), false)
 
-		var tracks []sources.SourceTrack
+		var tracks []sources.SavedSourceTrack
 		if recursive {
 			tracks, err = sourcesSvc.GetAllTracks(sourceId)
 		} else {
@@ -236,8 +249,8 @@ func GetSourceTracks(auth *authenticator, sourcesSvc *sources.SourceService) Web
 type SourceTrackRq struct {
 	Id *uuid.UUID
 
-	Artist string
-	Title  string
+	ArtistId *uuid.UUID
+	Title    string
 
 	StartOffsetMs int64
 	EndOffsetMs   int64
@@ -245,7 +258,7 @@ type SourceTrackRq struct {
 
 func sourceTrackRqToTrack(rq SourceTrackRq) sources.SourceTrack {
 	track := sources.SourceTrack{
-		Artist:        rq.Artist,
+		ArtistId:      rq.ArtistId,
 		Title:         rq.Title,
 		StartOffsetMs: rq.StartOffsetMs,
 		EndOffsetMs:   rq.EndOffsetMs,
@@ -277,12 +290,12 @@ func PutSourceTracks(auth *authenticator, sourcesSvc *sources.SourceService) Web
 
 		tracks := util.Map(rq, sourceTrackRqToTrack)
 
-		tracks, err = sourcesSvc.ReplaceTracks(sourceId, tracks, sources.SOURCE_MANAGEMENT_POLICY_MANUAL)
+		savedTracks, err := sourcesSvc.ReplaceTracks(sourceId, tracks, sources.SOURCE_MANAGEMENT_POLICY_MANUAL)
 		if err != nil {
 			return nil, err
 		}
 
-		return util.Map(tracks, toSourceTrackRs), nil
+		return util.Map(savedTracks, toSourceTrackRs), nil
 	}
 }
 

@@ -70,8 +70,8 @@ func (store *AlbumStorage) PrepareDatabase() error {
 
 			SELECT
 				tapes.id AS id,
-				NULL AS artist_id,
-				tapes.artist AS artist,
+				artists.id AS artist_id,
+				artists.name AS artist,
 				tapes.name AS title,
 				tapes.thumbnail_id AS cover_id,
 				tapes_aggregate.track_count AS track_count,
@@ -85,14 +85,15 @@ func (store *AlbumStorage) PrepareDatabase() error {
 			FROM tapes
 			JOIN users ON 1 = 1
 			LEFT JOIN tapes_aggregate ON tapes.id = tapes_aggregate.id AND users.id = tapes_aggregate.user_id
+			LEFT JOIN artists ON tapes.artist_id = artists.id
 			WHERE tapes.type = '%s'
 
 			UNION ALL
 
 			SELECT
 				remote_albums.id AS id,
-				remote_artists.id AS artist_id,
-				remote_artists.name AS artist,
+				artists.id AS artist_id,
+				artists.name AS artist,
 				remote_albums.title AS title,
 				remote_covers.id AS cover_id,
 				remote_albums_aggregate.track_count AS track_count,
@@ -108,6 +109,7 @@ func (store *AlbumStorage) PrepareDatabase() error {
 			LEFT JOIN remote_albums_aggregate ON remote_albums.id = remote_albums_aggregate.id AND remote_album_to_users.user_id = remote_albums_aggregate.user_id
 			LEFT JOIN remote_covers ON remote_albums.remote_id = remote_covers.remote_id AND remote_albums.cover_id = remote_covers.cover_id
 			LEFT JOIN remote_artists ON remote_albums.remote_id = remote_artists.remote_id AND remote_albums.artist_id = remote_artists.artist_id
+			LEFT JOIN artists ON remote_artists.tapesonic_artist_id = artists.id
 			WHERE remote_albums_aggregate.track_count > 0
 		`,
 		model.TAPE_TYPE_ALBUM,

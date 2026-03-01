@@ -2,7 +2,6 @@ package admin
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"tapesonic/model"
 	"tapesonic/sources"
@@ -14,6 +13,11 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type TapeRsArtist struct {
+	Id   uuid.UUID
+	Name string
+}
+
 type TapeListRs struct {
 	Id   uuid.UUID
 	Name string
@@ -21,25 +25,30 @@ type TapeListRs struct {
 
 	ThumbnailId *uuid.UUID
 
-	Artist     string
+	Artist     *TapeRsArtist
 	ReleasedAt *time.Time
 
 	CreatedAt time.Time
 }
 
-func tapeToTapeListRs(tape tapes.Tape) TapeListRs {
-	return TapeListRs{
-		Id:   tape.Id,
-		Name: tape.Name,
-		Type: tape.Type,
-
+func tapeToTapeListRs(tape tapes.SavedTape) TapeListRs {
+	tapeRs := TapeListRs{
+		Id:          tape.Id,
+		Name:        tape.Name,
+		Type:        tape.Type,
 		ThumbnailId: tape.ThumbnailId,
-
-		Artist:     tape.Artist,
-		ReleasedAt: tape.ReleasedAt.UnwrapNullable(),
-
-		CreatedAt: tape.CreatedAt.Unwrap(),
+		ReleasedAt:  tape.ReleasedAt.UnwrapNullable(),
+		CreatedAt:   tape.CreatedAt.Unwrap(),
 	}
+
+	if tape.ArtistId != nil {
+		tapeRs.Artist = &TapeRsArtist{
+			Id:   *tape.ArtistId,
+			Name: tape.ArtistName,
+		}
+	}
+
+	return tapeRs
 }
 
 type TapeFullRs struct {
@@ -49,7 +58,7 @@ type TapeFullRs struct {
 
 	ThumbnailId *uuid.UUID
 
-	Artist     string
+	Artist     *TapeRsArtist
 	ReleasedAt *time.Time
 
 	CreatedAt time.Time
@@ -61,41 +70,52 @@ type TapeRsTrack struct {
 	Id       uuid.UUID
 	SourceId uuid.UUID
 
-	Artist string
+	Artist *TapeRsArtist
 	Title  string
 
 	StartOffsetMs int64
 	EndOffsetMs   int64
 }
 
-func tapeToTapeFullRs(tape tapes.Tape, tracks []sources.SourceTrack) TapeFullRs {
+func toTapeFullRs(tape tapes.SavedTape, tracks []sources.SavedSourceTrack) TapeFullRs {
 	tracksRs := []TapeRsTrack{}
 	for _, track := range tracks {
 		trackRs := TapeRsTrack{
 			Id:            track.Id,
-			Artist:        track.Artist,
-			Title:         track.Title,
 			SourceId:      track.SourceId,
+			Title:         track.Title,
 			StartOffsetMs: track.StartOffsetMs,
 			EndOffsetMs:   track.EndOffsetMs,
 		}
+
+		if track.ArtistId != nil {
+			trackRs.Artist = &TapeRsArtist{
+				Id:   *track.ArtistId,
+				Name: track.ArtistName,
+			}
+		}
+
 		tracksRs = append(tracksRs, trackRs)
 	}
 
-	return TapeFullRs{
-		Id:   tape.Id,
-		Name: tape.Name,
-		Type: tape.Type,
-
+	tapeRs := TapeFullRs{
+		Id:          tape.Id,
+		Name:        tape.Name,
+		Type:        tape.Type,
 		ThumbnailId: tape.ThumbnailId,
-
-		Artist:     tape.Artist,
-		ReleasedAt: tape.ReleasedAt.UnwrapNullable(),
-
-		CreatedAt: tape.CreatedAt.Unwrap(),
-
-		Tracks: tracksRs,
+		ReleasedAt:  tape.ReleasedAt.UnwrapNullable(),
+		CreatedAt:   tape.CreatedAt.Unwrap(),
+		Tracks:      tracksRs,
 	}
+
+	if tape.ArtistId != nil {
+		tapeRs.Artist = &TapeRsArtist{
+			Id:   *tape.ArtistId,
+			Name: tape.ArtistName,
+		}
+	}
+
+	return tapeRs
 }
 
 func GetTapes(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
@@ -115,36 +135,30 @@ func GetTapes(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
 }
 
 type TapeRq struct {
-	Id   uuid.UUID
 	Name string
 	Type string
 
 	ThumbnailId *uuid.UUID
 
-	Artist     string
+	ArtistId   *uuid.UUID
 	ReleasedAt *time.Time
 
-	Tracks []TapeRqTrack
-}
-
-type TapeRqTrack struct {
-	Id uuid.UUID
+	TrackIds []uuid.UUID
 }
 
 func tapeRqToTape(tapeRq TapeRq) tapes.Tape {
-	tapeToTracks := []tapes.TapeToTrack{}
-	for _, track := range tapeRq.Tracks {
-		tapeToTracks = append(tapeToTracks, tapes.TapeToTrack{TrackId: track.Id})
+	tapeTracks := []tapes.TapeToTrack{}
+	for _, trackId := range tapeRq.TrackIds {
+		tapeTracks = append(tapeTracks, tapes.TapeToTrack{TrackId: trackId})
 	}
 
 	return tapes.Tape{
-		Id:          tapeRq.Id,
 		Name:        tapeRq.Name,
 		Type:        tapeRq.Type,
 		ThumbnailId: tapeRq.ThumbnailId,
-		Artist:      tapeRq.Artist,
+		ArtistId:    tapeRq.ArtistId,
 		ReleasedAt:  util.NewTimestampWrapperOrNull(tapeRq.ReleasedAt),
-		Tracks:      tapeToTracks,
+		Tracks:      tapeTracks,
 	}
 }
 
@@ -162,12 +176,12 @@ func PostTapes(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
 
 		tape := tapeRqToTape(tapeRq)
 
-		tape, tracks, err := tapes.Create(user, tape)
+		savedTape, savedTracks, err := tapes.Create(user, tape)
 		if err != nil {
 			return nil, err
 		}
 
-		return tapeToTapeFullRs(tape, tracks), nil
+		return toTapeFullRs(savedTape, savedTracks), nil
 	}
 }
 
@@ -188,7 +202,7 @@ func GetTape(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
 			return nil, err
 		}
 
-		return tapeToTapeFullRs(tape, tracks), nil
+		return toTapeFullRs(tape, tracks), nil
 	}
 }
 
@@ -208,18 +222,15 @@ func PutTape(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
 		if err := json.NewDecoder(r.Body).Decode(&tapeRq); err != nil {
 			return nil, err
 		}
-		if tapeRq.Id != id {
-			return nil, fmt.Errorf("tapeId mismatch: tapeId=%s, tape.id=%s", id, tapeRq.Id)
-		}
 
 		tape := tapeRqToTape(tapeRq)
 
-		tape, tracks, err := tapes.Update(tape)
+		savedTape, savedTracks, err := tapes.Update(id, tape)
 		if err != nil {
 			return nil, err
 		}
 
-		return tapeToTapeFullRs(tape, tracks), nil
+		return toTapeFullRs(savedTape, savedTracks), nil
 	}
 }
 
@@ -246,7 +257,7 @@ type GuessTapeMetadataRq struct {
 type GuessTapeMetadataRs struct {
 	Name        string
 	Type        model.TapeType
-	Artist      string
+	Artist      *TapeRsArtist
 	ReleasedAt  *time.Time
 	ThumbnailId *uuid.UUID
 }
@@ -268,12 +279,20 @@ func PostTapesGuessMetadata(auth *authenticator, tapes *tapes.TapeService) Webap
 			return nil, err
 		}
 
-		return GuessTapeMetadataRs{
+		rs := GuessTapeMetadataRs{
 			Name:        guessedMetadata.Name,
 			Type:        guessedMetadata.Type,
-			Artist:      guessedMetadata.Artist,
 			ReleasedAt:  guessedMetadata.ReleasedAt,
 			ThumbnailId: guessedMetadata.ThumbnailId,
-		}, nil
+		}
+
+		if guessedMetadata.ArtistId != nil {
+			rs.Artist = &TapeRsArtist{
+				Id:   *guessedMetadata.ArtistId,
+				Name: guessedMetadata.ArtistName,
+			}
+		}
+
+		return rs, nil
 	}
 }

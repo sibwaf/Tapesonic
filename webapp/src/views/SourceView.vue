@@ -96,7 +96,16 @@ async function saveTracks() {
         const tracksValue = tracks.value;
 
         for (const sourceId of editedTrackSourceIds.value) {
-            const request = editedTracks.value.map(it => it.editedValue).filter(it => it.SourceId == sourceId);
+            const request = editedTracks.value
+                .filter(it => it.editedValue.SourceId == sourceId)
+                .map(it => ({
+                    Id: it.editedValue.Id,
+                    ArtistId: it.editedValue.Artist?.Id ?? null,
+                    Title: it.editedValue.Title,
+                    StartOffsetMs: it.editedValue.StartOffsetMs,
+                    EndOffsetMs: it.editedValue.EndOffsetMs,
+                }));
+
             const response = await api.replaceSourceTracks(sourceId, request);
 
             for (let i = 0; i < tracksValue.length; i++) {

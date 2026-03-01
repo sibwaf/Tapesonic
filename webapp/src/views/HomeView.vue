@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { type ListTape } from "@/api";
-import api from '@/api';
+import tapeApi, { type TapeListRs } from "@/api/tapes";
 import TapeGrid from "@/components/TapeGrid.vue";
 
 enum State {
@@ -11,13 +10,13 @@ enum State {
 }
 
 const state = ref(State.LOADING);
-const tapes = ref<ListTape[]>([]);
+const tapes = ref<TapeListRs[]>([]);
 
 (async () => {
     try {
         state.value = State.LOADING;
 
-        const tapesAsync = api.listTapes();
+        const tapesAsync = tapeApi.listTapes();
 
         tapes.value = await tapesAsync;
 

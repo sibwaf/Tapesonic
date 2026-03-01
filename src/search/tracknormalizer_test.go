@@ -87,10 +87,10 @@ func TestNormalize_BandcampAlbumFromArtist(t *testing.T) {
 	svc := search.NewTrackNormalizer()
 
 	raw := []sources.TrackProperties{
-		{RawTitle: "Artist 1 - Song 1", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Song 1", AlbumArtist: "Artist 1", Uploader: "Artist 1"},
-		{RawTitle: "Artist 1 - Song 2", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Song 2", AlbumArtist: "Artist 1", Uploader: "Artist 1"},
-		{RawTitle: "Artist 1 - Song 3", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Song 3", AlbumArtist: "Artist 1", Uploader: "Artist 1"},
-		{RawTitle: "Artist 1 - Song 4", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Song 4", AlbumArtist: "Artist 1", Uploader: "Artist 1"},
+		{RawTitle: "Artist 1 - Song 1", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Song 1", RawAlbumArtist: "Artist 1", Uploader: "Artist 1"},
+		{RawTitle: "Artist 1 - Song 2", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Song 2", RawAlbumArtist: "Artist 1", Uploader: "Artist 1"},
+		{RawTitle: "Artist 1 - Song 3", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Song 3", RawAlbumArtist: "Artist 1", Uploader: "Artist 1"},
+		{RawTitle: "Artist 1 - Song 4", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Song 4", RawAlbumArtist: "Artist 1", Uploader: "Artist 1"},
 	}
 	expected := []artistAndTitle{
 		{Artist: "Artist 1", Title: "Song 1"},
@@ -111,10 +111,10 @@ func TestNormalize_BandcampCompilationFromLabel(t *testing.T) {
 	svc := search.NewTrackNormalizer()
 
 	raw := []sources.TrackProperties{
-		{RawTitle: "Artist 1 - Artist 1 - Song 1", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Artist 1 - Song 1", AlbumArtist: "Label Name", Uploader: "Artist 1"},
-		{RawTitle: "Artist 2 - Artist 2 - Song 2", ParentTitle: "Album Title", Artist: "Artist 2", Title: "Artist 2 - Song 2", AlbumArtist: "Label Name", Uploader: "Artist 2"},
-		{RawTitle: "Artist 3 - Artist 3 - Song 3", ParentTitle: "Album Title", Artist: "Artist 3", Title: "Artist 3 - Song 3", AlbumArtist: "Label Name", Uploader: "Artist 3"},
-		{RawTitle: "Artist 1 - Artist 1 - Song 4", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Artist 1 - Song 4", AlbumArtist: "Label Name", Uploader: "Artist 1"},
+		{RawTitle: "Artist 1 - Artist 1 - Song 1", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Artist 1 - Song 1", RawAlbumArtist: "Label Name", Uploader: "Artist 1"},
+		{RawTitle: "Artist 2 - Artist 2 - Song 2", ParentTitle: "Album Title", Artist: "Artist 2", Title: "Artist 2 - Song 2", RawAlbumArtist: "Label Name", Uploader: "Artist 2"},
+		{RawTitle: "Artist 3 - Artist 3 - Song 3", ParentTitle: "Album Title", Artist: "Artist 3", Title: "Artist 3 - Song 3", RawAlbumArtist: "Label Name", Uploader: "Artist 3"},
+		{RawTitle: "Artist 1 - Artist 1 - Song 4", ParentTitle: "Album Title", Artist: "Artist 1", Title: "Artist 1 - Song 4", RawAlbumArtist: "Label Name", Uploader: "Artist 1"},
 	}
 	expected := []artistAndTitle{
 		{Artist: "Artist 1", Title: "Song 1"},

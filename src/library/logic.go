@@ -1,6 +1,7 @@
 package library
 
 import (
+	"slices"
 	"tapesonic/model"
 	"tapesonic/users"
 
@@ -68,6 +69,10 @@ func (svc *LibraryService) SearchArtistsByQuery(user users.User, query string, c
 
 func (svc *LibraryService) GetArtistsSortById(user users.User, count int, offset int) ([]model.LibraryArtist, error) {
 	return svc.artists.GetArtistsSortId(user.Id, count, offset)
+}
+
+func (svc *LibraryService) GetArtistsSortByName(user users.User, count int, offset int) ([]model.LibraryArtist, error) {
+	return svc.artists.GetArtistsSortName(user.Id, count, offset)
 }
 
 func (svc *LibraryService) GetAlbumById(user users.User, id string) (model.LibraryAlbum, error) {
@@ -152,12 +157,24 @@ func (svc *LibraryService) GetPlaylistById(user users.User, id string) (model.Li
 		return model.LibraryPlaylist{}, err
 	}
 
-	tracks, err := svc.playlists.GetTracksByPlaylistId(user.Id, playlist.Id)
+	trackIds, err := svc.playlists.GetTrackIdsByPlaylistId(playlist.Id)
 	if err != nil {
 		return model.LibraryPlaylist{}, err
 	}
 
-	playlist.Tracks = tracks
+	stringIds := []string{}
+	ordering := map[string]int{}
+	for index, trackId := range trackIds {
+		stringIds = append(stringIds, trackId.String())
+		ordering[trackId.String()] = index
+	}
+
+	playlist.Tracks, err = svc.GetTracksByIds(user.Id, stringIds)
+	if err != nil {
+		return model.LibraryPlaylist{}, err
+	}
+
+	slices.SortFunc(playlist.Tracks, func(a model.LibraryTrack, b model.LibraryTrack) int { return ordering[a.Id] - ordering[b.Id] })
 
 	return playlist, err
 }

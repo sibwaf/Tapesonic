@@ -131,6 +131,7 @@ func (svc *ListenBrainzRecommendedPlaylistService) collectTracks(userId uuid.UUI
 	result := []RecommendedPlaylistTrack{}
 	for _, item := range playlist.Track {
 		trackForSearch := search.TrackForSearch{
+			// todo: ArtistMusicBrainzId
 			Artist: item.Creator,
 			Title:  item.Title,
 			Album:  item.Album,

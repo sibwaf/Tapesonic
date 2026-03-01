@@ -25,8 +25,12 @@ func MakeTextSearchCondition(fields []string, query string) string {
 	return strings.Join(filter, " AND ")
 }
 
-func MakeTextSearchString(raw string) string {
-	return strings.Join(extractSearchTerms(raw), " ")
+func MakeTextSearchString(text string, more ...string) string {
+	terms := extractSearchTerms(text)
+	for _, text := range more {
+		terms = append(terms, extractSearchTerms(text)...)
+	}
+	return strings.Join(terms, " ")
 }
 
 func extractSearchTerms(query string) []string {

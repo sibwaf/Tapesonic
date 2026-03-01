@@ -6,6 +6,8 @@ import SourceView from "@/views/SourceView.vue"
 import NewTapeView from "@/views/NewTapeView.vue"
 import Settings from "@/views/Settings.vue"
 import SetupView from "@/views/SetupView.vue"
+import ArtistsView from "@/views/ArtistsView.vue"
+import ArtistView from "@/views/ArtistView.vue"
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -19,6 +21,16 @@ const router = createRouter({
             path: "/setup",
             name: "setup",
             component: SetupView
+        },
+        {
+            path: "/artists",
+            name: "artists",
+            component: ArtistsView
+        },
+        {
+            path: "/artists/:artistId",
+            name: "artist",
+            component: ArtistView
         },
         {
             path: "/tapes/new",

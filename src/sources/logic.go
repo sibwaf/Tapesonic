@@ -91,10 +91,10 @@ func (svc *SourceService) GetHierarchy(id uuid.UUID) ([]SourceForHierarchy, erro
 	return svc.sources.GetHierarchy(id)
 }
 
-func (svc *SourceService) ReplaceTracks(sourceId uuid.UUID, tracks []SourceTrack, managementPolicy SourceManagementPolicy) ([]SourceTrack, error) {
+func (svc *SourceService) ReplaceTracks(sourceId uuid.UUID, tracks []SourceTrack, managementPolicy SourceManagementPolicy) ([]SavedSourceTrack, error) {
 	currentManagementPolicy, err := svc.sources.GetManagementPolicyById(sourceId)
 	if err != nil {
-		return tracks, err
+		return []SavedSourceTrack{}, err
 	}
 
 	if currentManagementPolicy == SOURCE_MANAGEMENT_POLICY_MANUAL && managementPolicy != SOURCE_MANAGEMENT_POLICY_MANUAL {
@@ -103,18 +103,24 @@ func (svc *SourceService) ReplaceTracks(sourceId uuid.UUID, tracks []SourceTrack
 
 	if managementPolicy == SOURCE_MANAGEMENT_POLICY_MANUAL && currentManagementPolicy != managementPolicy {
 		if err := svc.sources.SetManagementPolicyById(sourceId, managementPolicy); err != nil {
-			return tracks, fmt.Errorf("failed to update source management policy: %w", err)
+			return []SavedSourceTrack{}, fmt.Errorf("failed to update source management policy: %w", err)
+		}
+	}
+
+	for i := range tracks {
+		if tracks[i].Id == uuid.Nil {
+			tracks[i].Id = uuid.New()
 		}
 	}
 
 	return svc.tracks.ReplaceTracksForSource(sourceId, tracks)
 }
 
-func (svc *SourceService) GetDirectTracks(sourceId uuid.UUID) ([]SourceTrack, error) {
+func (svc *SourceService) GetDirectTracks(sourceId uuid.UUID) ([]SavedSourceTrack, error) {
 	return svc.tracks.GetDirectTracksBySource(sourceId)
 }
 
-func (svc *SourceService) GetAllTracks(sourceId uuid.UUID) ([]SourceTrack, error) {
+func (svc *SourceService) GetAllTracks(sourceId uuid.UUID) ([]SavedSourceTrack, error) {
 	return svc.tracks.GetAllTracksBySource(sourceId)
 }
 

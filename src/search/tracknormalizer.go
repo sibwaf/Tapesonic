@@ -88,8 +88,8 @@ func (normalizer *TrackNormalizer) Normalize(tracks []sources.TrackProperties) (
 	guessingSamples := []string{}
 
 	for i := range result {
-		artist := strings.TrimSpace(util.Coalesce(result[i].Artist, result[i].AlbumArtist))
-		title := strings.TrimSpace(util.Coalesce(result[i].Title, result[i].RawTitle))
+		artist := strings.TrimSpace(util.Coalesce(result[i].Artist, result[i].RawTrackArtist, result[i].RawAlbumArtist))
+		title := strings.TrimSpace(util.Coalesce(result[i].Title, result[i].RawTrackTitle, result[i].RawTitle))
 
 		if artist != "" {
 			removeArtistFromTitleRegex, err := regexp.Compile(fmt.Sprintf("^%s\\s+-\\s+(.+)", regexp.QuoteMeta(artist)))

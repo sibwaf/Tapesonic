@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import api, { TapeType, type GuessTapeMetadataRs, type ListThumbnailRs, type Tape, type SourceTrackRs } from '@/api';
+import tapes, { TapeType, type GuessTapeMetadataRs, type TapeRq, type TapeRsArtist, type TapeRsTrack } from '@/api/tapes';
+import api, { type ListThumbnailRs, type SourceTrackRs } from '@/api';
 import DateEditor from '@/components/DateEditor.vue';
 import TapeTrackSearch from '@/components/TapeTrackSearch.vue';
 import Thumbnail from '@/components/Thumbnail.vue';
@@ -7,6 +8,7 @@ import ThumbnailSelector from '@/components/ThumbnailSelector.vue';
 import util from '@/util';
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import ArtistSelector, { type Artist } from '@/components/ArtistSelector.vue';
 
 const router = useRouter();
 
@@ -18,6 +20,97 @@ enum Stage {
 }
 
 const isBusy = ref(false);
+
+const name = ref("");
+const type = ref(TapeType.Playlist);
+const artist = ref<Artist | null>(null);
+const releasedAt = ref<string | null>(null);
+const thumbnailId = ref<string | null>(null);
+const tracks = ref<TapeRsTrack[]>([]);
+
+const trackIds = computed(() => tracks.value.map(it => it.Id));
+const sourceIds = computed(() => tracks.value.map(it => it.SourceId));
+const uniqueSourceIds = computed(() => [...new Set(sourceIds.value)]);
+
+function onAddTrack(track: SourceTrackRs) {
+    let artist: TapeRsArtist | null = null;
+    if (track.Artist != null) {
+        artist = {
+            Id: track.Artist.Id,
+            Name: track.Artist.Name,
+        };
+    }
+
+    tracks.value.push({
+        Id: track.Id,
+        SourceId: track.SourceId,
+        Artist: artist,
+        Title: track.Title,
+        StartOffsetMs: track.StartOffsetMs,
+        EndOffsetMs: track.EndOffsetMs,
+    });
+}
+
+const metadataGuess = ref<GuessTapeMetadataRs | null>(null);
+
+async function guessAndUpdateMetadata() {
+    try {
+        isBusy.value = true;
+
+        const trackIdsValue = trackIds.value;
+        const guess = await tapes.guessTapeMetadata({
+            TrackIds: trackIdsValue,
+        });
+
+        name.value = guess.Name;
+        type.value = guess.Type;
+        releasedAt.value = guess.ReleasedAt;
+        thumbnailId.value = guess.ThumbnailId;
+
+        if (guess.Artist == null) {
+            artist.value = null
+        } else {
+            artist.value = {
+                id: guess.Artist.Id,
+                name: guess.Artist.Name,
+            };
+        }
+
+        metadataGuess.value = guess;
+    } catch (e) {
+        console.error("Failed to guess tape metadata", e);
+    } finally {
+        isBusy.value = false;
+    }
+}
+
+const thumbnails = ref<{ sourceIds: Set<string>, thumbnails: ListThumbnailRs[] }>({ sourceIds: new Set<string>(), thumbnails: [] });
+const thumbnailIds = computed(() => {
+    const ids = new Set<string>(thumbnails.value.thumbnails.map(it => it.Id));
+
+    const tapeThumbnailId = thumbnailId.value;
+    if (tapeThumbnailId != null) {
+        ids.add(tapeThumbnailId);
+    }
+
+    return [...ids];
+});
+
+async function updateThumbnails() {
+    try {
+        isBusy.value = true;
+
+        const sourceIdsValue = uniqueSourceIds.value;
+        const response = await api.searchThumbnails(sourceIdsValue);
+
+        thumbnails.value.sourceIds = new Set<string>(sourceIdsValue);
+        thumbnails.value.thumbnails = response;
+    } catch (e) {
+        console.error("Failed to fetch thumbnails", e);
+    } finally {
+        isBusy.value = false;
+    }
+}
 
 const stage = ref<Stage>(Stage.TRACKS);
 const totalStageCount = computed(() => Object.values(Stage).length / 2);
@@ -45,10 +138,16 @@ async function goForward() {
     try {
         isBusy.value = true;
 
-        const result = await api.createTape({
-            ...tape.value,
-            Tracks: tracks.value
-        });
+        const tapeRq: TapeRq = {
+            Name: name.value,
+            Type: type.value,
+            ThumbnailId: thumbnailId.value,
+            ArtistId: artist.value?.id ?? null,
+            ReleasedAt: releasedAt.value,
+            TrackIds: tracks.value.map(it => it.Id),
+        };
+
+        const result = await tapes.createTape(tapeRq);
 
         router.push({ name: "tape", params: { tapeId: result.Id } });
     } catch (e) {
@@ -58,116 +157,36 @@ async function goForward() {
     }
 }
 
-const tracks = ref<SourceTrackRs[]>([]);
-const trackIds = computed(() => tracks.value.map(it => it.Id));
-const sourceIds = computed(() => tracks.value.map(it => it.SourceId));
-const uniqueSourceIds = computed(() => [...new Set(sourceIds.value)]);
-
-function addTrack(track: SourceTrackRs) {
-    tracks.value.push(track);
-}
-
-function removeTrack(index: number) {
-    tracks.value.splice(index, 1);
-}
-
-const tape = ref<Tape>({
-    Id: "00000000-0000-0000-0000-000000000000",
-    Type: TapeType.Playlist,
-    Name: "",
-    Artist: "",
-    ReleasedAt: null,
-    ThumbnailId: null,
-    Tracks: [],
-});
-
-const metadataGuess = ref<GuessTapeMetadataRs | null>(null);
-
-async function guessAndUpdateMetadata() {
-    try {
-        isBusy.value = true;
-
-        const trackIdsValue = trackIds.value;
-        const guess = await api.guessTapeMetadata({
-            TrackIds: trackIdsValue,
-        });
-
-        tape.value.Name = guess.Name;
-        tape.value.Type = guess.Type;
-        tape.value.Artist = guess.Artist;
-        tape.value.ReleasedAt = guess.ReleasedAt;
-        tape.value.ThumbnailId = guess.ThumbnailId;
-
-        metadataGuess.value = guess;
-    } catch (e) {
-        console.error("Failed to guess tape metadata", e);
-    } finally {
-        isBusy.value = false;
-    }
-}
-
-const thumbnails = ref<{ sourceIds: Set<string>, thumbnails: ListThumbnailRs[] }>({ sourceIds: new Set<string>(), thumbnails: [] });
-const thumbnailIds = computed(() => {
-    const ids = new Set<string>(thumbnails.value.thumbnails.map(it => it.Id));
-
-    const tapeThumbnailId = tape.value.ThumbnailId;
-    if (tapeThumbnailId != null) {
-        ids.add(tapeThumbnailId);
-    }
-
-    return [...ids];
-});
-
-async function updateThumbnails() {
-    try {
-        isBusy.value = true;
-
-        const sourceIdsValue = uniqueSourceIds.value;
-        const response = await api.searchThumbnails(sourceIdsValue);
-
-        thumbnails.value.sourceIds = new Set<string>(sourceIdsValue);
-        thumbnails.value.thumbnails = response;
-    } catch (e) {
-        console.error("Failed to fetch thumbnails", e);
-    } finally {
-        isBusy.value = false;
-    }
-}
-
-watch(stage, (newStage) => {
+watch(stage, async (newStage) => {
     switch (newStage) {
         case Stage.METADATA:
-            (async () => {
-                const lastAttempt = metadataGuess.value;
-                if (lastAttempt != null) {
-                    return;
-                }
-                if (trackIds.value.length == 0) {
-                    return;
-                }
+            const lastAttempt = metadataGuess.value;
+            if (lastAttempt != null) {
+                return;
+            }
+            if (trackIds.value.length == 0) {
+                return;
+            }
 
-                await guessAndUpdateMetadata();
-            })();
+            await guessAndUpdateMetadata();
             break;
         case Stage.COVER:
-            (async () => {
-                const previousSourceIds = thumbnails.value.sourceIds;
-                const currentSourceIds = new Set<string>(uniqueSourceIds.value);
-                if (util.areSetsEqual(previousSourceIds, currentSourceIds)) {
-                    return;
-                }
+            const previousSourceIds = thumbnails.value.sourceIds;
+            const currentSourceIds = new Set<string>(uniqueSourceIds.value);
+            if (util.areSetsEqual(previousSourceIds, currentSourceIds)) {
+                return;
+            }
 
-                await updateThumbnails();
-            })();
+            await updateThumbnails();
             break;
     }
-});
+}, { immediate: true });
 </script>
 
 <template>
     <div>
         <div v-if="stage == Stage.TRACKS">
-            <TapeTrackSearch @add-track="addTrack"></TapeTrackSearch>
+            <TapeTrackSearch @add-track="onAddTrack"></TapeTrackSearch>
             <hr>
             <table>
                 <thead>
@@ -178,9 +197,9 @@ watch(stage, (newStage) => {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="track, i in tracks" :key="track.Id">
-                        <td><button @click="removeTrack(i)">Remove</button></td>
-                        <td>{{ track.Artist }}</td>
+                    <tr v-for="track, index in tracks" :key="track.Id">
+                        <td><button @click="tracks.splice(index, 1)">Remove</button></td>
+                        <td>{{ track.Artist?.Name ?? "" }}</td>
                         <td>{{ track.Title }}</td>
                     </tr>
                 </tbody>
@@ -196,7 +215,7 @@ watch(stage, (newStage) => {
                     <tr>
                         <td>
                             <button v-for="option in [TapeType.Album, TapeType.Playlist]"
-                                :disabled="isBusy || tape.Type == option" @click="tape.Type = option">
+                                :disabled="isBusy || type == option" @click="type = option">
                                 {{ option }}
                             </button>
                         </td>
@@ -204,36 +223,35 @@ watch(stage, (newStage) => {
                     <tr>
                         <td>Name</td>
                         <td>
-                            <input :disabled="isBusy" type="text" v-model="tape.Name">
+                            <input :disabled="isBusy" type="text" v-model="name">
                         </td>
                     </tr>
-                    <tr v-if="tape.Type == TapeType.Album">
+                    <tr v-if="type == TapeType.Album">
                         <td>Artist</td>
                         <td>
-                            <input :disabled="isBusy" type="text" v-model="tape.Artist">
+                            <ArtistSelector v-model="artist" />
                         </td>
                     </tr>
-                    <tr v-if="tape.Type == TapeType.Album">
+                    <tr v-if="type == TapeType.Album">
                         <td>Release date</td>
                         <td>
-                            <DateEditor :disabled="isBusy" v-model="tape.ReleasedAt" />
-                            <button :disabled="isBusy || tape.ReleasedAt == null"
-                                @click="tape.ReleasedAt = null">Clear</button>
+                            <DateEditor :disabled="isBusy" v-model="releasedAt" />
+                            <button :disabled="isBusy || releasedAt == null" @click="releasedAt = null">Clear</button>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
         <div v-else-if="stage == Stage.COVER">
-            <ThumbnailSelector :thumbnail-ids="thumbnailIds" size="12em" v-model="tape.ThumbnailId" />
+            <ThumbnailSelector :thumbnail-ids="thumbnailIds" size="12em" v-model="thumbnailId" />
         </div>
         <div v-else-if="stage == Stage.PREVIEW">
-            <Thumbnail size="12em" :id="tape.ThumbnailId" />
-            <h3>{{ tape.Name }}</h3>
-            <h4 v-if="tape.Type == TapeType.Album">by <em>{{ tape.Artist }}</em></h4>
+            <Thumbnail size="12em" :id="thumbnailId" />
+            <h3>{{ name }}</h3>
+            <h4 v-if="artist">by <em>{{ artist.name }}</em></h4>
             <ol>
                 <li v-for="track in tracks">
-                    <span v-if="track.Artist">{{ track.Artist }}</span>
+                    <span v-if="track.Artist">{{ track.Artist.Name }}</span>
                     <span v-if="track.Artist && track.Title">&ensp;-&ensp;</span>
                     <span v-if="track.Title">{{ track.Title }}</span>
                 </li>

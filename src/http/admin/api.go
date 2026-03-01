@@ -152,6 +152,11 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 	router.HandleFunc("/api/users/{userId}", asHandlerFunc(PatchUser(auth, appCtx.Users.UserService))).Methods("PATCH")
 	router.HandleFunc("/api/users/{userId}/api-keys", asHandlerFunc(PostUserApiKeys(auth, appCtx.Users.UserService))).Methods("POST")
 
+	router.HandleFunc("/api/artists", asHandlerFunc(GetArtists(auth, appCtx.Artists.ArtistService))).Methods("GET")
+	router.HandleFunc("/api/artists", asHandlerFunc(PostArtists(auth, appCtx.Artists.ArtistService))).Methods("POST")
+	router.HandleFunc("/api/artists/{artistId}", asHandlerFunc(GetArtist(auth, appCtx.Artists.ArtistService))).Methods("GET")
+	router.HandleFunc("/api/artists/{artistId}", asHandlerFunc(PutArtist(auth, appCtx.Artists.ArtistService))).Methods("PUT")
+
 	router.HandleFunc("/api/sources", asHandlerFunc(GetSources(auth, appCtx.Sources.SourceService))).Methods("GET")
 	router.HandleFunc("/api/sources/{sourceId}", asHandlerFunc(GetSource(auth, appCtx.Sources.SourceService))).Methods("GET")
 	router.HandleFunc("/api/sources/{sourceId}/hierarchy", asHandlerFunc(GetSourceHierarchy(auth, appCtx.Sources.SourceService))).Methods("GET")

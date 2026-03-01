@@ -151,7 +151,8 @@ func (svc *ImportService) ImportTree(node AnalyzedSourceTree, managementPolicy S
 		source.Id,
 		util.Map(node.Tracks, func(track TrackProperties) SourceTrack {
 			return SourceTrack{
-				Artist:        track.Artist,
+				Id:            uuid.New(),
+				ArtistId:      track.ArtistId,
 				Title:         track.Title,
 				StartOffsetMs: track.StartOffsetMs,
 				EndOffsetMs:   track.EndOffsetMs,
@@ -180,30 +181,26 @@ func parseDateOrNull(str string) *time.Time {
 
 func extractTrackProperties(source Source) TrackProperties {
 	return TrackProperties{
-		SourceId:      source.Id,
-		RawTitle:      source.Title,
-		Artist:        source.TrackArtist,
-		Title:         source.TrackTitle,
-		AlbumArtist:   source.AlbumArtist,
-		Uploader:      source.Uploader,
-		StartOffsetMs: 0,
-		EndOffsetMs:   source.DurationMs,
+		SourceId:       source.Id,
+		Uploader:       source.Uploader,
+		RawTitle:       source.Title,
+		RawAlbumArtist: source.AlbumArtist,
+		RawTrackArtist: source.TrackArtist,
+		RawTrackTitle:  source.TrackTitle,
+		StartOffsetMs:  0,
+		EndOffsetMs:    source.DurationMs,
 	}
 }
 
-func (svc *ImportService) initializeTracksFor(sourceId uuid.UUID, tracks []SourceTrack) ([]SourceTrack, error) {
+func (svc *ImportService) initializeTracksFor(sourceId uuid.UUID, tracks []SourceTrack) ([]SavedSourceTrack, error) {
 	existingTracks, err := svc.tracks.GetDirectTracksBySource(sourceId)
 	if err != nil {
-		return tracks, err
+		return []SavedSourceTrack{}, err
 	}
 
 	if len(existingTracks) > 0 {
 		return existingTracks, nil
 	} else {
-		for i := range tracks {
-			tracks[i].Id = uuid.New()
-		}
-
 		return svc.tracks.ReplaceTracksForSource(sourceId, tracks)
 	}
 }
