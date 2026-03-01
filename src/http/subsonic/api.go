@@ -157,7 +157,7 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 
 		"/getAlbumList2":            asHandlerFunc(GetAlbumList2(auth, appCtx.Library.LibraryService)),
 		"/getAlbum":                 asHandlerFunc(GetAlbum(auth, appCtx.Library.LibraryService)),
-		"/getArtists":               asHandlerFunc(GetArtists(auth)),
+		"/getArtists":               asHandlerFunc(GetArtists(auth, appCtx.Library.LibraryService)),
 		"/getArtist":                asHandlerFunc(GetArtist(auth, appCtx.Library.LibraryService)),
 		"/getGenres":                asHandlerFunc(GetGenres(auth)),
 		"/getIndexes":               asHandlerFunc(GetIndexes(auth)),
