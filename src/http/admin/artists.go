@@ -130,3 +130,28 @@ func PutArtist(auth *authenticator, artists *artists.ArtistService) WebappHandle
 		return toArtistFullRs(artist), nil
 	}
 }
+
+type MergeArtistsRq struct {
+	Ids []uuid.UUID
+}
+
+func PostArtistsMerge(auth *authenticator, artists *artists.ArtistService) WebappHandler {
+	return func(r *http.Request) (any, error) {
+		_, err := auth.Authenticate(r)
+		if err != nil {
+			return nil, err
+		}
+
+		var rq MergeArtistsRq
+		if err := json.NewDecoder(r.Body).Decode(&rq); err != nil {
+			return nil, err
+		}
+
+		result, err := artists.MergeArtists(rq.Ids)
+		if err != nil {
+			return nil, err
+		}
+
+		return toArtistFullRs(result), nil
+	}
+}

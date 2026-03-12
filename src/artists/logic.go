@@ -1,6 +1,7 @@
 package artists
 
 import (
+	"fmt"
 	"math/rand"
 	"slices"
 	"tapesonic/util"
@@ -128,6 +129,71 @@ func (svc *ArtistService) updateAliases(artist Artist, name string) (Artist, err
 	} else {
 		return artist, nil
 	}
+}
+
+func (svc *ArtistService) MergeArtists(ids []uuid.UUID) (Artist, error) {
+	name := ""
+	aliases := []string{}
+	musicBrainzId := ""
+
+	addAlias := func(newAlias string) {
+		if util.MatchText(name, newAlias) {
+			return
+		}
+
+		for _, existingAlias := range aliases {
+			if util.MatchText(existingAlias, newAlias) {
+				return
+			}
+		}
+
+		aliases = append(aliases, newAlias)
+	}
+
+	for _, id := range ids {
+		artist, err := svc.artists.GetById(id)
+		if err != nil {
+			return Artist{}, err
+		}
+
+		if name == "" {
+			name = artist.Name
+		}
+
+		addAlias(artist.Name)
+		for _, alias := range artist.Aliases {
+			addAlias(alias)
+		}
+
+		if artist.MusicBrainzId != nil {
+			if musicBrainzId == "" {
+				musicBrainzId = *artist.MusicBrainzId
+			} else if musicBrainzId != *artist.MusicBrainzId {
+				return Artist{}, fmt.Errorf("impossible to merge multiple MBIDs")
+			}
+		}
+	}
+
+	newId := uuid.New()
+	newArtist, err := svc.artists.CreateOrGet(newId, name, aliases, musicBrainzId)
+	if err != nil {
+		return Artist{}, err
+	}
+
+	if newId != newArtist.Id {
+		newArtist, err = svc.artists.Update(newArtist.Id, newArtist.Name, aliases, musicBrainzId)
+		if err != nil {
+			return Artist{}, err
+		}
+		newId = newArtist.Id
+	}
+
+	err = svc.artists.ReplaceUsages(ids, newId)
+	if err != nil {
+		return Artist{}, err
+	}
+
+	return newArtist, svc.artists.DeleteByIds(ids)
 }
 
 func getAllNames(artist Artist) []string {

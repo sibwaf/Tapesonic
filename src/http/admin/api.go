@@ -152,6 +152,7 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 	router.HandleFunc("/api/users/{userId}", asHandlerFunc(PatchUser(auth, appCtx.Users.UserService))).Methods("PATCH")
 	router.HandleFunc("/api/users/{userId}/api-keys", asHandlerFunc(PostUserApiKeys(auth, appCtx.Users.UserService))).Methods("POST")
 
+	router.HandleFunc("/api/artists/merge", asHandlerFunc(PostArtistsMerge(auth, appCtx.Artists.ArtistService))).Methods("POST")
 	router.HandleFunc("/api/artists", asHandlerFunc(GetArtists(auth, appCtx.Artists.ArtistService))).Methods("GET")
 	router.HandleFunc("/api/artists", asHandlerFunc(PostArtists(auth, appCtx.Artists.ArtistService))).Methods("POST")
 	router.HandleFunc("/api/artists/{artistId}", asHandlerFunc(GetArtist(auth, appCtx.Artists.ArtistService))).Methods("GET")

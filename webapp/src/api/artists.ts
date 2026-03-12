@@ -1,3 +1,5 @@
+import api from "@/api/api";
+
 export interface ArtistListRs {
     Id: string;
     Name: string;
@@ -16,7 +18,15 @@ export interface ArtistRq {
     MusicBrainzId: string | null;
 }
 
+export interface MergeArtistsRq {
+    Ids: string[];
+}
+
 export default {
+    async mergeArtists(rq: MergeArtistsRq): Promise<ArtistFullRs> {
+        const response = await fetch(`/api/artists/merge`, { method: "POST", body: JSON.stringify(rq) });
+        return await api.handleRequiredResponse(response);
+    },
     async listArtists(query: string, count: number, offset: number): Promise<ArtistListRs[]> {
         const params = new URLSearchParams();
         params.append("q", query);

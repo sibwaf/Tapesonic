@@ -83,6 +83,39 @@ func (store *artistStorage) Update(id uuid.UUID, name string, aliases []string, 
 	}
 }
 
+func (store *artistStorage) ReplaceUsages(oldIds []uuid.UUID, newId uuid.UUID) error {
+	if len(oldIds) == 0 {
+		return nil
+	}
+
+	return store.db.Transaction(func(tx *gorm.DB) error {
+		params := map[string]any{
+			"oldIds": oldIds,
+			"newId":  newId,
+		}
+
+		if err := tx.Exec("UPDATE remote_artists SET tapesonic_artist_id = @newId WHERE tapesonic_artist_id IN @oldIds", params).Error; err != nil {
+			return err
+		}
+		if err := tx.Exec("UPDATE source_tracks SET artist_id = @newId WHERE artist_id IN @oldIds", params).Error; err != nil {
+			return err
+		}
+		if err := tx.Exec("UPDATE tapes SET artist_id = @newId WHERE artist_id IN @oldIds", params).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+func (store *artistStorage) DeleteByIds(ids []uuid.UUID) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	return store.db.Exec("DELETE FROM artists WHERE id IN @ids", map[string]any{"ids": ids}).Error
+}
+
 func (store *artistStorage) SearchByQuery(query string, count int, offset int) ([]Artist, error) {
 	filter := util.MakeTextSearchCondition([]string{"artists.search_name"}, query)
 	if filter == "" {
