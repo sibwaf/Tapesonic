@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api, { type ListenBrainzSessionRs, type ListenBrainzSessionSettingsRq } from '@/api';
+import listenbrainzApi, { type ListenBrainzSessionRs, type ListenBrainzSessionSettingsRq } from '@/api/listenbrainz';
 import { computed, ref, watch } from 'vue';
 
 const isBusy = ref(false);
@@ -26,7 +26,7 @@ watch(session, newValue => {
 async function createSession() {
     try {
         isBusy.value = true;
-        session.value = await api.createListenBrainzSession(token.value);
+        session.value = await listenbrainzApi.createListenBrainzSession(token.value);
         token.value = "";
     } catch (e) {
         console.error("Failed to create a ListenBrainz session", e);
@@ -43,7 +43,7 @@ async function updateSessionSettings() {
 
     try {
         isBusy.value = true;
-        session.value = await api.updateListenBrainzSessionSettings(settingsValue);
+        session.value = await listenbrainzApi.updateListenBrainzSessionSettings(settingsValue);
     } catch (e) {
         console.error("Failed to update ListenBrainz session settings", e);
     } finally {
@@ -54,7 +54,7 @@ async function updateSessionSettings() {
 async function deleteSession() {
     try {
         isBusy.value = true;
-        await api.deleteListenBrainzSession();
+        await listenbrainzApi.deleteListenBrainzSession();
         session.value = null;
     } catch (e) {
         console.error("Failed to delete the ListenBrainz session", e)
@@ -65,7 +65,7 @@ async function deleteSession() {
 
 try {
     isBusy.value = true;
-    session.value = await api.getCurrentListenBrainzSession();
+    session.value = await listenbrainzApi.getCurrentListenBrainzSession();
 } catch (e) {
     console.error("Failed to fetch current ListenBrainz session", e);
 } finally {

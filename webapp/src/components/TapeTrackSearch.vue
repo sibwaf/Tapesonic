@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import api, { type SourceTrackRs } from '@/api';
+import tracksApi, { type TrackRs } from '@/api/tracks';
 import { computed, ref, toRaw } from 'vue';
 
 enum State {
@@ -13,7 +13,7 @@ enum State {
 }
 
 const emit = defineEmits<{
-    (e: "add-track", track: SourceTrackRs): void
+    (e: "add-track", track: TrackRs): void
 }>();
 
 const state = ref(State.WAITING);
@@ -21,7 +21,7 @@ const isBusy = computed(() => state.value == State.SEARCHING || state.value == S
 
 const query = ref("");
 
-const searchResult = ref<SourceTrackRs[]>([]);
+const searchResult = ref<TrackRs[]>([]);
 
 async function search() {
     try {
@@ -29,7 +29,7 @@ async function search() {
 
         searchResult.value = [];
 
-        const rs = await api.searchTracks(query.value);
+        const rs = await tracksApi.searchTracks(query.value);
         searchResult.value = rs.filter(it => it.SourceId != ""); // todo: only non-remote tracks can be used in tapes for now
 
         state.value = State.SEARCH_DONE;
@@ -39,7 +39,7 @@ async function search() {
     }
 }
 
-function onAdd(track: SourceTrackRs) {
+function onAdd(track: TrackRs) {
     emit("add-track", toRaw(track));
 }
 

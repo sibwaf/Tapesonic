@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api, { type SourceListRs } from "@/api";
+import sourcesApi, { type SourceListRs } from "@/api/sources";
 import Thumbnail from "@/components/Thumbnail.vue";
 import { ref } from "vue";
 
@@ -17,7 +17,7 @@ const sources = ref<SourceListRs[]>([]);
     try {
         state.value = State.LOADING;
 
-        sources.value = await api.listSources();
+        sources.value = await sourcesApi.listSources();
 
         state.value = State.LOADING_OK;
     } catch (e) {

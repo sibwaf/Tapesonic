@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import tapes, { type GuessTapeMetadataRs, type TapeFullRs, type TapeRq, TapeType, type TapeRsTrack, type TapeRsArtist } from '@/api/tapes';
-import api, { type SourceTrackRs } from '@/api';
+import { type TrackRs } from '@/api/tracks';
+import thumbnailsApi from '@/api/thumbnails';
 import util from '@/util';
 import TapeTrackSearch from '@/components/TapeTrackSearch.vue';
 import ThumbnailSelector from '@/components/ThumbnailSelector.vue';
@@ -54,7 +55,7 @@ const isEdited = computed(() => {
 
 const isBusy = ref(false);
 
-function onAddTrack(track: SourceTrackRs) {
+function onAddTrack(track: TrackRs) {
     let artist: TapeRsArtist | null = null;
     if (track.Artist != null) {
         artist = {
@@ -68,8 +69,8 @@ function onAddTrack(track: SourceTrackRs) {
         SourceId: track.SourceId,
         Artist: artist,
         Title: track.Title,
-        StartOffsetMs: track.StartOffsetMs,
-        EndOffsetMs: track.EndOffsetMs,
+        StartOffsetMs: -1,
+        EndOffsetMs: -1,
     });
 }
 
@@ -175,7 +176,7 @@ watch(uniqueSourceIds, async (sourceIds) => {
     }
 
     try {
-        const thumbnails = await api.searchThumbnails(sourceIds);
+        const thumbnails = await thumbnailsApi.searchThumbnails(sourceIds);
         thumbnailIds.value = thumbnails.map(it => it.Id);
     } catch (e) {
         console.error("Failed to fetch thumbnails", e);

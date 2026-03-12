@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SourceHierarchyListRs, SourceTrackRs } from "@/api";
+import type { SourceHierarchyListRs, SourceTrackRs } from "@/api/sources";
 import TrackEditor from "@/components/TrackEditor.vue";
 import { type Editable } from "@/model/Editable";
 import { computed } from "vue";

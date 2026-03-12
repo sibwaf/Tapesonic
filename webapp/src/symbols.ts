@@ -1,5 +1,5 @@
 import type { InjectionKey, Ref } from "vue";
-import type { UserRs } from "./api";
+import type { UserRs } from "@/api/users";
 
 export default {
     currentUser: Symbol() as InjectionKey<{

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SourceTrackRs } from "@/api";
+import type { SourceTrackRs } from "@/api/sources";
 import { type Editable } from "@/model/Editable";
 import util from "@/util";
 import { computed } from "vue";

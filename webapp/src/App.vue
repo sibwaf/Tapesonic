@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { provide, ref } from "vue";
 import { RouterView, useRouter } from "vue-router"
-import type { UserRs } from "@/api";
-import api from "@/api";
+import usersApi, { type UserRs } from "@/api/users";
 import symbols from "@/symbols";
 
 const router = useRouter();
@@ -31,7 +30,7 @@ router.beforeEach(async (to) => {
 
     if (currentUser.value == null) {
         try {
-            updateCurrentUser(await api.getCurrentUser());
+            updateCurrentUser(await usersApi.getCurrentUser());
         } catch (e) {
             console.log("Failed to retrieve current user", e)
         }

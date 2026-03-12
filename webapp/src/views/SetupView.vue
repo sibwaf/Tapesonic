@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api from '@/api';
+import usersApi from '@/api/users';
 import UserEditor, { EditableUserPropertiesImpl } from '@/components/UserEditor.vue';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -20,7 +20,7 @@ async function onSave() {
     try {
         isBusy.value = true;
 
-        const _ = await api.putRootUser({
+        const _ = await usersApi.putRootUser({
             Name: user.value.editedValue.name,
             Password: user.value.editedValue.password,
             Role: user.value.editedValue.role,

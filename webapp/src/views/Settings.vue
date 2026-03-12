@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { UserRq } from '@/api';
-import api from '@/api';
+import usersApi, { type UserRq } from '@/api/users';
 import UserEditor, { type EditableUserProperties, userRsToEditableUserProperties } from '@/components/UserEditor.vue';
 import RemoteEditorList from '@/components/RemoteEditorList.vue';
 import symbols from '@/symbols';
@@ -35,7 +34,7 @@ async function onUpdateCurrentUser(user: EditableUserProperties) {
             rq.Password = null;
         }
 
-        const rs = await api.patchUser(currentUser.value!.Id, rq)
+        const rs = await usersApi.patchUser(currentUser.value!.Id, rq)
         updateCurrentUser(rs);
     } catch (e) {
         console.error("Failed to patch user", e);
@@ -48,7 +47,7 @@ async function onRegenerateCurrentUserApiKey(userId: string) {
     try {
         isBusy.value = true;
 
-        const rs = await api.postUserApiKeys(userId);
+        const rs = await usersApi.postUserApiKeys(userId);
         updateCurrentUserApiKey(rs.ApiKey);
     } catch (e) {
         console.error("Failed to regenerate api key", e);

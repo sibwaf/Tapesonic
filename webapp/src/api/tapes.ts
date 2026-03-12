@@ -1,3 +1,5 @@
+import api from '@/api/api';
+
 export enum TapeType {
     Album = "album",
     Playlist = "playlist",
@@ -73,25 +75,26 @@ export interface GuessTapeMetadataRs {
 export default {
     async createTape(tape: TapeRq): Promise<TapeFullRs> {
         const response = await fetch(`/api/tapes`, { method: "POST", body: JSON.stringify(tape) });
-        return await response.json();
+        return await api.handleRequiredResponse(response);
     },
     async updateTape(id: string, tape: TapeRq): Promise<TapeFullRs> {
         const response = await fetch(`/api/tapes/${id}`, { method: "PUT", body: JSON.stringify(tape) });
-        return await response.json();
+        return await api.handleRequiredResponse(response);
     },
     async deleteTape(id: string): Promise<void> {
-        await fetch(`/api/tapes/${id}`, { method: "DELETE" });
+        const response = await fetch(`/api/tapes/${id}`, { method: "DELETE" });
+        await api.handleRequiredResponse(response);
     },
     async listTapes(): Promise<TapeListRs[]> {
         const response = await fetch(`/api/tapes`, { method: "GET" });
-        return await response.json();
+        return await api.handleRequiredResponse(response);
     },
     async getTape(id: string): Promise<TapeFullRs> {
         const response = await fetch(`/api/tapes/${id}`, { method: "GET" });
-        return await response.json();
+        return await api.handleRequiredResponse(response);
     },
     async guessTapeMetadata(rq: GuessTapeMetadataRq): Promise<GuessTapeMetadataRs> {
         const response = await fetch(`/api/tapes/guess-metadata`, { method: "POST", body: JSON.stringify(rq) });
-        return await response.json();
+        return await api.handleRequiredResponse(response);
     },
 }

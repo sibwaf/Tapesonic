@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api, { type RemoteFullRs, type RemoteListRs, type RemoteRq } from '@/api';
+import remotesApi, { type RemoteFullRs, type RemoteListRs, type RemoteRq } from '@/api/remotes';
 import { ref } from 'vue';
 import RemoteEditor, { EditableRemoteConfig, type RemoteConfig, type RemoteCredentials, type RemoteInfo } from '@/components/RemoteEditor.vue';
 import type { Editable } from '@/model/Editable';
@@ -59,7 +59,7 @@ async function onCreate(remote: Editable<RemoteConfig>) {
     try {
         isBusy.value = true;
 
-        const createdRemote = await api.createRemote(toRemoteRq(remote.editedValue));
+        const createdRemote = await remotesApi.createRemote(toRemoteRq(remote.editedValue));
 
         replaceRemoteState(createdRemote);
         blankRemote.value = createBlankEntry();
@@ -74,12 +74,8 @@ async function onUpdate(id: string, remote: Editable<RemoteConfig>) {
     try {
         isBusy.value = true;
 
-        const updatedRemote = await api.updateRemote(id, toRemoteRq(remote.editedValue));
-        if (updatedRemote != null) {
-            replaceRemoteState(updatedRemote);
-        } else {
-            console.error(`Remote id=${id} doesn't exist, update failed`);
-        }
+        const updatedRemote = await remotesApi.updateRemote(id, toRemoteRq(remote.editedValue));
+        replaceRemoteState(updatedRemote);
     } catch (e) {
         console.error("Failed to update remote", e);
     } finally {
@@ -91,7 +87,7 @@ async function onDelete(id: string) {
     try {
         isBusy.value = true;
 
-        await api.deleteRemote(id);
+        await remotesApi.deleteRemote(id);
 
         const index = remotes.value.findIndex(it => it.id == id);
         if (index >= 0) {
@@ -107,7 +103,7 @@ async function onDelete(id: string) {
 async function onAuthenticate(id: string, credentials: any) {
     try {
         isBusy.value = true;
-        const result = await api.authenticateRemote(id, credentials);
+        const result = await remotesApi.authenticateRemote(id, credentials);
         replaceRemoteState(result);
     } catch (e) {
         console.error("Failed to authenticate remote", e);
@@ -119,7 +115,7 @@ async function onAuthenticate(id: string, credentials: any) {
 async function onDeauthenticate(id: string) {
     try {
         isBusy.value = true;
-        const result = await api.deauthenticateRemote(id);
+        const result = await remotesApi.deauthenticateRemote(id);
         replaceRemoteState(result);
     } catch (e) {
         console.error("Failed to deauthenticate remote", e);
@@ -152,12 +148,12 @@ function replaceRemoteState(remote: RemoteFullRs) {
 
 try {
     isBusy.value = true;
-    const allRemotes = await api.getRemotes();
+    const allRemotes = await remotesApi.getRemotes();
 
     remotes.value = await Promise.all(allRemotes.map(async (remote) => {
         let remoteState: RemoteFullRs | null = null;
         try {
-            remoteState = await api.getRemote(remote.Id);
+            remoteState = await remotesApi.getRemote(remote.Id);
         } catch (e) {
             console.log("Failed to get remote info", e);
         }

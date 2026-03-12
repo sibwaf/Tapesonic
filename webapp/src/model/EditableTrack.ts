@@ -1,4 +1,4 @@
-import type { SourceTrackRs } from "@/api";
+import type { SourceTrackRs } from "@/api/sources";
 import type { Editable } from "@/model/Editable";
 
 export class EditableTrack implements Editable<SourceTrackRs> {

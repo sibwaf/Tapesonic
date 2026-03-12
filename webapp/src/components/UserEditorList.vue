@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { UserRq, UserRs } from '@/api';
-import api from '@/api';
+import usersApi, { type UserRq, type UserRs } from '@/api/users';
 import { computed, onMounted, ref } from 'vue';
 import UserEditor, { type EditableUserProperties, EditableUserPropertiesImpl, userRsToEditableUserProperties } from './UserEditor.vue';
 
@@ -37,7 +36,7 @@ onMounted(async () => {
     try {
         isBusy.value = true;
 
-        const rs = await api.getUsers();
+        const rs = await usersApi.getUsers();
         users.value = rs.map(it => userRsToEntry(it));
     } catch (e) {
         console.log("Failed to load user list", e);
@@ -56,7 +55,7 @@ async function onCreate(user: EditableUserProperties) {
             Password: user.editedValue.password,
         };
 
-        const createdUser = await api.createUser(rq);
+        const createdUser = await usersApi.createUser(rq);
 
         users.value.push(userRsToEntry(createdUser));
         blankUser.value = createBlankEntry();
@@ -80,7 +79,7 @@ async function onUpdate(id: string, user: EditableUserProperties) {
             rq.Password = null;
         }
 
-        const updatedUser = await api.patchUser(id, rq);
+        const updatedUser = await usersApi.patchUser(id, rq);
         if (updatedUser == null) {
             throw `user ${id} doesn't exist`;
         }

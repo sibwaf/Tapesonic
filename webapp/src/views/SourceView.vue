@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api, { type SourceHierarchyListRs, type SourceFullRs, type SourceTrackRs, type SourceFileRs } from "@/api";
+import sourcesApi, { type SourceHierarchyListRs, type SourceFullRs, type SourceTrackRs, type SourceFileRs } from "@/api/sources";
 import TrackEditorList from "@/components/TrackEditorList.vue";
 import Tree from "@/components/Tree.vue";
 import type { Editable } from "@/model/Editable";
@@ -106,7 +106,7 @@ async function saveTracks() {
                     EndOffsetMs: it.editedValue.EndOffsetMs,
                 }));
 
-            const response = await api.replaceSourceTracks(sourceId, request);
+            const response = await sourcesApi.replaceSourceTracks(sourceId, request);
 
             for (let i = 0; i < tracksValue.length; i++) {
                 if (tracksValue[i].SourceId == sourceId) {
@@ -135,7 +135,7 @@ function resetTracks() {
 async function deleteFile() {
     const sourceIdValue = sourceId.value;
     try {
-        await api.deleteSourceFile(sourceIdValue);
+        await sourcesApi.deleteSourceFile(sourceIdValue);
 
         if (sourceIdValue != sourceId.value) {
             return;
@@ -159,9 +159,9 @@ watch(sourceId, (newSourceId) => {
         try {
             state.value = State.LOADING;
 
-            const sourceAsync = api.getSource(newSourceId);
-            const hierarchyAsync = api.getSourceHierarchy(newSourceId);
-            const tracksAsync = api.getSourceTracks(newSourceId, true);
+            const sourceAsync = sourcesApi.getSource(newSourceId);
+            const hierarchyAsync = sourcesApi.getSourceHierarchy(newSourceId);
+            const tracksAsync = sourcesApi.getSourceTracks(newSourceId, true);
 
             const sourceResult = await sourceAsync;
             const hierarchyResult = buildHierarchyTree(await hierarchyAsync);

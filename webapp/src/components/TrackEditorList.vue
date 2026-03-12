@@ -2,7 +2,7 @@
 import { type Editable } from "@/model/Editable";
 import { computed } from "vue";
 import TrackEditorListBySource from "@/components/TrackEditorListBySource.vue";
-import type { SourceHierarchyListRs, SourceTrackRs } from "@/api";
+import type { SourceHierarchyListRs, SourceTrackRs } from "@/api/sources";
 
 const props = defineProps<{
     modelValue: Editable<SourceTrackRs>[],

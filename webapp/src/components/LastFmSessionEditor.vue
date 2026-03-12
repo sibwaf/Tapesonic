@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import api, { type LastFmAuthLinkRs, type LastFmSessionRs, type LastFmSessionSettingsRq } from '@/api';
+import lastfmApi, { type LastFmAuthLinkRs, type LastFmSessionRs, type LastFmSessionSettingsRq } from '@/api/lastfm';
 import { computed, ref, watch } from 'vue';
 
 const isBusy = ref(false);
@@ -27,7 +27,7 @@ async function startAuthFlow() {
     try {
         isBusy.value = true;
         pendingAuthLink.value = null;
-        pendingAuthLink.value = await api.createLastFmAuthLink();
+        pendingAuthLink.value = await lastfmApi.createLastFmAuthLink();
     } catch (e) {
         console.error("Failed to get an authentication link for last.fm", e);
     } finally {
@@ -38,7 +38,7 @@ async function startAuthFlow() {
 async function createSession() {
     try {
         isBusy.value = true;
-        session.value = await api.createLastFmSession(pendingAuthLink.value!.Token);
+        session.value = await lastfmApi.createLastFmSession(pendingAuthLink.value!.Token);
         pendingAuthLink.value = null;
     } catch (e) {
         console.error("Failed to create a last.fm session", e);
@@ -55,7 +55,7 @@ async function updateSessionSettings() {
 
     try {
         isBusy.value = true;
-        session.value = await api.updateLastFmSessionSettings(settingsValue);
+        session.value = await lastfmApi.updateLastFmSessionSettings(settingsValue);
     } catch (e) {
         console.error("Failed to update last.fm session settings", e);
     } finally {
@@ -66,7 +66,7 @@ async function updateSessionSettings() {
 async function deleteSession() {
     try {
         isBusy.value = true;
-        await api.deleteLastFmSession();
+        await lastfmApi.deleteLastFmSession();
         session.value = null;
     } catch (e) {
         console.error("Failed to delete the last.fm session", e)
@@ -77,7 +77,7 @@ async function deleteSession() {
 
 try {
     isBusy.value = true;
-    session.value = await api.getCurrentLastFmSession();
+    session.value = await lastfmApi.getCurrentLastFmSession();
 } catch (e) {
     console.error("Failed to fetch current last.fm session", e);
 } finally {

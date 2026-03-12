@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import tapes, { TapeType, type GuessTapeMetadataRs, type TapeRq, type TapeRsArtist, type TapeRsTrack } from '@/api/tapes';
-import api, { type ListThumbnailRs, type SourceTrackRs } from '@/api';
+import { type TrackRs } from '@/api/tracks';
+import thumbnailsApi, { type ListThumbnailRs } from '@/api/thumbnails';
 import DateEditor from '@/components/DateEditor.vue';
 import TapeTrackSearch from '@/components/TapeTrackSearch.vue';
 import Thumbnail from '@/components/Thumbnail.vue';
@@ -32,7 +33,7 @@ const trackIds = computed(() => tracks.value.map(it => it.Id));
 const sourceIds = computed(() => tracks.value.map(it => it.SourceId));
 const uniqueSourceIds = computed(() => [...new Set(sourceIds.value)]);
 
-function onAddTrack(track: SourceTrackRs) {
+function onAddTrack(track: TrackRs) {
     let artist: TapeRsArtist | null = null;
     if (track.Artist != null) {
         artist = {
@@ -46,8 +47,8 @@ function onAddTrack(track: SourceTrackRs) {
         SourceId: track.SourceId,
         Artist: artist,
         Title: track.Title,
-        StartOffsetMs: track.StartOffsetMs,
-        EndOffsetMs: track.EndOffsetMs,
+        StartOffsetMs: -1,
+        EndOffsetMs: -1,
     });
 }
 
@@ -101,7 +102,7 @@ async function updateThumbnails() {
         isBusy.value = true;
 
         const sourceIdsValue = uniqueSourceIds.value;
-        const response = await api.searchThumbnails(sourceIdsValue);
+        const response = await thumbnailsApi.searchThumbnails(sourceIdsValue);
 
         thumbnails.value.sourceIds = new Set<string>(sourceIdsValue);
         thumbnails.value.thumbnails = response;

@@ -64,7 +64,7 @@ export function userRsToEditableUserProperties(user: UserRs): EditableUserProper
 </script>
 
 <script setup lang="ts">
-import type { UserRs } from '@/api';
+import type { UserRs } from '@/api/users';
 import type { Editable } from '@/model/Editable';
 import { computed, ref } from 'vue';
 

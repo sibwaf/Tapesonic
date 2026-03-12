@@ -34,18 +34,18 @@ export default {
         params.append("offset", offset.toString());
 
         const response = await fetch(`/api/artists?${params}`, { method: "GET" });
-        return await response.json();
+        return await api.handleRequiredResponse(response);
     },
     async createArtist(rq: ArtistRq): Promise<ArtistFullRs> {
         const response = await fetch(`/api/artists`, { method: "POST", body: JSON.stringify(rq) });
-        return await response.json();
+        return await api.handleRequiredResponse(response);
     },
     async getArtistById(id: string): Promise<ArtistFullRs> {
         const response = await fetch(`/api/artists/${id}`, { method: "GET" });
-        return await response.json();
+        return await api.handleRequiredResponse(response);
     },
     async putArtistById(id: string, rq: ArtistRq): Promise<ArtistFullRs> {
         const response = await fetch(`/api/artists/${id}`, { method: "PUT", body: JSON.stringify(rq) });
-        return await response.json();
+        return await api.handleRequiredResponse(response);
     }
 }
