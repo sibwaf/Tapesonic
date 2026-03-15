@@ -1,6 +1,7 @@
 package scrobbling
 
 import (
+	"tapesonic/library"
 	"tapesonic/users"
 	"tapesonic/util"
 	"time"
@@ -14,6 +15,7 @@ type ListenStat struct {
 	User   users.User
 
 	TrackId string `gorm:"uniqueIndex:listen_stat_uniq"`
+	Track   library.AllTrackId
 
 	ListenCount    int
 	LastListenedAt util.TimestampWrapper

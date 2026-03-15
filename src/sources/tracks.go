@@ -36,6 +36,11 @@ func (storage *TrackStorage) ReplaceTracksForSource(sourceId uuid.UUID, tracks [
 				search_title = excluded.search_title
 			RETURNING *
 		`
+		idUpsertSql := `
+			INSERT INTO all_track_ids (id, source_track_id)
+			VALUES (@id, @id)
+			ON CONFLICT (id) DO NOTHING
+		`
 
 		for i, track := range tracks {
 			upsertParams := map[string]any{
@@ -49,6 +54,10 @@ func (storage *TrackStorage) ReplaceTracksForSource(sourceId uuid.UUID, tracks [
 			}
 
 			if err := tx.Raw(upsertSql, upsertParams).Take(&tracks[i]).Error; err != nil {
+				return err
+			}
+
+			if err := tx.Exec(idUpsertSql, map[string]any{"id": tracks[i].Id}).Error; err != nil {
 				return err
 			}
 		}

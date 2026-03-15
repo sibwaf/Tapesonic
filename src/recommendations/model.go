@@ -1,6 +1,7 @@
 package recommendations
 
 import (
+	"tapesonic/library"
 	"tapesonic/users"
 	"tapesonic/util"
 
@@ -44,7 +45,9 @@ type RecommendedPlaylistTrack struct {
 	Artist string
 	Title  string
 
-	TrackId    string
+	TrackId string
+	Track   library.AllTrackId
+
 	TrackIndex int
 }
 

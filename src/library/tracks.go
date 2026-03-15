@@ -21,7 +21,21 @@ func newTrackStorage(db *gorm.DB) *TrackStorage {
 }
 
 func (store *TrackStorage) PrepareDatabase() error {
-	sql := fmt.Sprintf(
+	sql := `
+		CREATE TABLE IF NOT EXISTS all_track_ids (
+			id TEXT NOT NULL PRIMARY KEY,
+			source_track_id TEXT,
+			remote_track_id TEXT,
+
+			CONSTRAINT all_track_ids_source_track_id_fk FOREIGN KEY (source_track_id) REFERENCES source_tracks (id),
+			CONSTRAINT all_track_ids_remote_track_id_fk FOREIGN KEY (remote_track_id) REFERENCES remote_tracks (id)
+		)
+	`
+	if err := store.db.Exec(sql).Error; err != nil {
+		return err
+	}
+
+	sql = fmt.Sprintf(
 		`
 			CREATE VIEW all_tracks (
 				id,
@@ -102,8 +116,11 @@ func (store *TrackStorage) PrepareDatabase() error {
 		`,
 		model.TAPE_TYPE_ALBUM,
 	)
+	if err := store.db.Exec(sql).Error; err != nil {
+		return err
+	}
 
-	return store.db.Exec(sql).Error
+	return nil
 }
 
 func (store *TrackStorage) SearchTracksByQuery(userId uuid.UUID, query string, count int, offset int) ([]model.LibraryTrack, error) {

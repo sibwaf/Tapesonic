@@ -79,6 +79,10 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		return nil, err
 	}
 
+	if err := storage.DropCascades(db); err != nil {
+		return nil, err
+	}
+
 	if err := db.Exec(`DROP VIEW IF EXISTS all_playlist_tracks`).Error; err != nil {
 		return nil, err
 	}
@@ -193,7 +197,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		config.RecommendationPlaylistSyncSchedule,
 	)
 
-	if err = prepareDatabase(&context); err != nil {
+	if err = prepareDatabase(&context, db); err != nil {
 		return nil, err
 	}
 
@@ -203,7 +207,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	return &context, nil
 }
 
-func prepareDatabase(context *Context) error {
+func prepareDatabase(context *Context, db *gorm.DB) error {
 	if err := context.Scheduling.PrepareDatabase(); err != nil {
 		return err
 	}
@@ -231,6 +235,11 @@ func prepareDatabase(context *Context) error {
 	if err := context.ListenBrainz.PrepareDatabase(); err != nil {
 		return err
 	}
+
+	if err := storage.CreateCascades(db); err != nil {
+		return err
+	}
+
 	return nil
 }
 

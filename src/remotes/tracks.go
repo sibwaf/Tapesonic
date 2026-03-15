@@ -104,6 +104,18 @@ func (store *RemoteTrackStorage) Upsert(track RemoteTrack, trackToUser RemoteTra
 			return err
 		}
 
+		sql3 := `
+			INSERT INTO all_track_ids (id, remote_track_id)
+			VALUES (@id, @id)
+			ON CONFLICT (id) DO NOTHING
+		`
+		params3 := map[string]any{
+			"id": remoteTrackIdHolder.Id,
+		}
+		if err := tx.Exec(sql3, params3).Error; err != nil {
+			return err
+		}
+
 		return nil
 	})
 }
