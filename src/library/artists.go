@@ -30,7 +30,7 @@ func (store *ArtistStorage) PrepareDatabase() error {
 		) AS
 
 		WITH
-			artist_aggregate (user_id, artist_id, album_count) AS (
+			artist_raw_aggregate (user_id, artist_id, album_count) AS (
 				SELECT
 					users.id AS user_id,
 					tapes.artist_id AS artist_id,
@@ -50,6 +50,14 @@ func (store *ArtistStorage) PrepareDatabase() error {
 				JOIN remote_album_to_users ON remote_albums.id = remote_album_to_users.remote_album_id
 				JOIN remote_artists ON remote_albums.remote_id = remote_artists.remote_id AND remote_albums.artist_id = remote_artists.artist_id
 				GROUP BY remote_album_to_users.user_id, remote_artists.tapesonic_artist_id
+			),
+			artist_aggregate (user_id, artist_id, album_count) AS (
+				SELECT
+					user_id AS user_id,
+					artist_id AS artist_id,
+					sum(album_count) AS album_count
+				FROM artist_raw_aggregate
+				GROUP BY user_id, artist_id
 			)
 
 		SELECT
