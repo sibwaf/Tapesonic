@@ -58,6 +58,16 @@ func (store *TrackStorage) PrepareDatabase() error {
 				user_id
 			) AS
 
+			WITH track_albums (track_id, tape_id, list_index) AS (
+				SELECT
+					tape_to_tracks.track_id AS track_id,
+					tapes.id AS tape_id,
+					tape_to_tracks.list_index AS list_index
+				FROM tape_to_tracks
+				JOIN tapes ON tape_to_tracks.tape_id = tapes.id
+				WHERE tapes.type = '%s'
+			)
+
 			SELECT
 				source_tracks.id AS id,
 				sources.id AS source_id,
@@ -68,7 +78,7 @@ func (store *TrackStorage) PrepareDatabase() error {
 				tapes.name AS album,
 				tapes.id AS album_id,
 				tapes.released_at AS album_released_at,
-				tape_to_tracks.list_index AS album_track_index,
+				track_albums.list_index AS album_track_index,
 				source_tracks.title AS title,
 				coalesce(tapes.thumbnail_id, sources.thumbnail_id) AS cover_id,
 				source_tracks.end_offset_ms - source_tracks.start_offset_ms AS duration_ms,
@@ -80,8 +90,8 @@ func (store *TrackStorage) PrepareDatabase() error {
 			FROM source_tracks
 			JOIN users ON 1 = 1
 			LEFT JOIN artists ON source_tracks.artist_id = artists.id
-			LEFT JOIN tape_to_tracks ON source_tracks.id = tape_to_tracks.track_id
-			LEFT JOIN tapes ON tape_to_tracks.tape_id = tapes.id AND tapes.type = '%s'
+			LEFT JOIN track_albums ON source_tracks.id = track_albums.track_id
+			LEFT JOIN tapes ON track_albums.tape_id = tapes.id
 			LEFT JOIN sources ON source_tracks.source_id = sources.id
 			LEFT JOIN listen_stats ON source_tracks.id = listen_stats.track_id AND users.id = listen_stats.user_id
 
