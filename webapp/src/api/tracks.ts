@@ -7,10 +7,14 @@ export interface TrackRsArtist {
 
 export interface TrackRs {
     Id: string;
-    SourceId: string;
+
+    SourceId: string | null;
+    RemoteId: string | null;
 
     Artist: TrackRsArtist | null;
     Title: string;
+
+    ThumbnailId: string | null;
 }
 
 export default {

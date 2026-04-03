@@ -7,11 +7,18 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	action_delete = iota
+	action_set_null
+)
+
 type cascade struct {
 	ReferencingTable string
 	ReferencedTable  string
 
 	Keys []cascadeField
+
+	OnConstraint int
 }
 
 type cascadeField struct {
@@ -45,21 +52,43 @@ func CreateCascades(db *gorm.DB) error {
 			ReferencingTable: "all_track_ids",
 			ReferencedTable:  "source_tracks",
 			Keys:             []cascadeField{{ReferencingField: "source_track_id", ReferencedField: "id"}},
+			OnConstraint:     action_delete,
 		},
 		{
 			ReferencingTable: "all_track_ids",
 			ReferencedTable:  "remote_tracks",
 			Keys:             []cascadeField{{ReferencingField: "remote_track_id", ReferencedField: "id"}},
+			OnConstraint:     action_delete,
+		},
+		{
+			ReferencingTable: "tape_to_tracks",
+			ReferencedTable:  "all_track_ids",
+			Keys:             []cascadeField{{ReferencingField: "track_id", ReferencedField: "id"}},
+			OnConstraint:     action_delete,
 		},
 		{
 			ReferencingTable: "listen_stats",
 			ReferencedTable:  "all_track_ids",
 			Keys:             []cascadeField{{ReferencingField: "track_id", ReferencedField: "id"}},
+			OnConstraint:     action_delete,
 		},
 		{
 			ReferencingTable: "recommended_playlist_tracks",
 			ReferencedTable:  "all_track_ids",
 			Keys:             []cascadeField{{ReferencingField: "track_id", ReferencedField: "id"}},
+			OnConstraint:     action_delete,
+		},
+		{
+			ReferencingTable: "tapes",
+			ReferencedTable:  "thumbnails",
+			Keys:             []cascadeField{{ReferencingField: "thumbnail_id", ReferencedField: "id"}},
+			OnConstraint:     action_set_null,
+		},
+		{
+			ReferencingTable: "tapes",
+			ReferencedTable:  "remote_covers",
+			Keys:             []cascadeField{{ReferencingField: "thumbnail_id", ReferencedField: "id"}},
+			OnConstraint:     action_set_null,
 		},
 	}
 
@@ -73,18 +102,41 @@ func CreateCascades(db *gorm.DB) error {
 			keyConditions = append(keyConditions, fmt.Sprintf("%s = %s", referencingColumn, referencedColumn))
 		}
 
+		var actionSql string
+		switch cascade.OnConstraint {
+		case action_delete:
+			actionSql = fmt.Sprintf(
+				"DELETE FROM %s WHERE %s",
+				cascade.ReferencingTable,
+				strings.Join(keyConditions, " AND "),
+			)
+		case action_set_null:
+			fieldAssignments := []string{}
+			for _, key := range cascade.Keys {
+				fieldAssignments = append(fieldAssignments, fmt.Sprintf("%s = NULL", key.ReferencingField))
+			}
+
+			actionSql = fmt.Sprintf(
+				"UPDATE %s SET %s WHERE %s",
+				cascade.ReferencingTable,
+				strings.Join(fieldAssignments, ", "),
+				strings.Join(keyConditions, " AND "),
+			)
+		default:
+			panic(fmt.Sprintf("unknown cascade action: %d", cascade.OnConstraint))
+		}
+
 		sql := fmt.Sprintf(
 			`
 			CREATE TRIGGER %s
 			BEFORE DELETE ON %s FOR EACH ROW
 			BEGIN
-				DELETE FROM %s WHERE %s;
+				%s;
 			END
 			`,
 			name,
 			cascade.ReferencedTable,
-			cascade.ReferencingTable,
-			strings.Join(keyConditions, " AND "),
+			actionSql,
 		)
 
 		if err := db.Exec(sql).Error; err != nil {

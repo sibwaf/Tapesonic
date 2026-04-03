@@ -28,9 +28,7 @@ async function search() {
         state.value = State.SEARCHING;
 
         searchResult.value = [];
-
-        const rs = await tracksApi.searchTracks(query.value);
-        searchResult.value = rs.filter(it => it.SourceId != ""); // todo: only non-remote tracks can be used in tapes for now
+        searchResult.value = await tracksApi.searchTracks(query.value);
 
         state.value = State.SEARCH_DONE;
     } catch (e) {

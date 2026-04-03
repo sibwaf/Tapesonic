@@ -124,6 +124,10 @@ func (svc *SourceService) GetAllTracks(sourceId uuid.UUID) ([]SavedSourceTrack, 
 	return svc.tracks.GetAllTracksBySource(sourceId)
 }
 
+func (svc *SourceService) FindTracksForMetadataGuessingByIds(trackIds []string) ([]SourceTrackForMetadataGuessing, error) {
+	return svc.tracks.FindTracksForMetadataGuessingByIds(trackIds)
+}
+
 func (svc *SourceService) DeleteFile(sourceId uuid.UUID) error {
 	slog.Debug(fmt.Sprintf("Trying to delete media for source id=%s", sourceId))
 

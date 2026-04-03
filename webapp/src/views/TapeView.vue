@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import tapes, { type GuessTapeMetadataRs, type TapeFullRs, type TapeRq, TapeType, type TapeRsTrack, type TapeRsArtist } from '@/api/tapes';
 import { type TrackRs } from '@/api/tracks';
-import thumbnailsApi from '@/api/thumbnails';
 import util from '@/util';
 import TapeTrackSearch from '@/components/TapeTrackSearch.vue';
 import ThumbnailSelector from '@/components/ThumbnailSelector.vue';
@@ -23,10 +22,23 @@ const thumbnailId = ref<string | null>(null);
 const tracks = ref<TapeRsTrack[]>([]);
 
 const guessedMetadata = ref<GuessTapeMetadataRs | null>(null);
-const thumbnailIds = ref<string[]>([]);
+const thumbnailIds = computed(() => {
+    const result = new Set<string>();
 
-const sourceIds = computed(() => tracks.value.map(it => it.SourceId));
-const uniqueSourceIds = computed(() => [...new Set<string>(sourceIds.value)].sort());
+    const tapeThumbnailId = tape.value?.ThumbnailId ?? null;
+    if (tapeThumbnailId != null) {
+        result.add(tapeThumbnailId);
+    }
+
+    for (const track of tracks.value) {
+        const thumbnailId = track.ThumbnailId;
+        if (thumbnailId != null) {
+            result.add(thumbnailId);
+        }
+    }
+
+    return [...result];
+});
 
 const trackIds = computed(() => tracks.value.map(it => it.Id));
 const trackArtists = computed(() => tracks.value.map(it => it.Artist != null ? new Artist(it.Artist.Id, it.Artist.Name) : null).filter(it => it != null));
@@ -67,10 +79,10 @@ function onAddTrack(track: TrackRs) {
     tracks.value.push({
         Id: track.Id,
         SourceId: track.SourceId,
+        RemoteId: track.RemoteId,
         Artist: artist,
         Title: track.Title,
-        StartOffsetMs: -1,
-        EndOffsetMs: -1,
+        ThumbnailId: track.ThumbnailId,
     });
 }
 
@@ -166,20 +178,6 @@ watch(albumTrackIds, async (trackIds) => {
         guessedMetadata.value = await tapes.guessTapeMetadata({ TrackIds: trackIds });
     } catch (e) {
         console.error("Failed to guess metadata", e);
-    }
-}, { immediate: true });
-
-watch(uniqueSourceIds, async (sourceIds) => {
-    if (sourceIds.length == 0) {
-        thumbnailIds.value = [];
-        return;
-    }
-
-    try {
-        const thumbnails = await thumbnailsApi.searchThumbnails(sourceIds);
-        thumbnailIds.value = thumbnails.map(it => it.Id);
-    } catch (e) {
-        console.error("Failed to fetch thumbnails", e);
     }
 }, { immediate: true });
 

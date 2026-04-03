@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"tapesonic/appcontext"
-	"tapesonic/http/admin/handlers"
 	"tapesonic/model"
 	"tapesonic/users"
 
@@ -99,51 +98,9 @@ func (auth *authenticator) Authorize(r *http.Request, role model.Role) (users.Us
 	return user, nil
 }
 
-func (auth *authenticator) Authenticated(handler WebappHandler) WebappHandler {
-	// todo: deprecated
-
-	return func(r *http.Request) (any, error) {
-		_, err := auth.Authenticate(r)
-		if err != nil {
-			return nil, err
-		}
-
-		return handler(r)
-	}
-}
-
-func (auth *authenticator) AuthenticatedRaw(handler WebappRawHandler) WebappRawHandler {
-	// todo: deprecated
-
-	return func(r *http.Request, w http.ResponseWriter) error {
-		_, err := auth.Authenticate(r)
-		if err != nil {
-			return err
-		}
-
-		return handler(r, w)
-	}
-}
-
 func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 	auth := newAuthenticator(appCtx.Users.UserService)
-
-	type PathHandler struct {
-		Path    string
-		Handler WebappHandler
-	}
-
-	// todo: logging
-	rawHandlers := []PathHandler{
-		{Path: "/api/thumbnails", Handler: handlers.NewThumbnailsHandler(appCtx.ThumbnailService).Handle},
-	}
-
 	router := mux.NewRouter()
-	for _, pathHandler := range rawHandlers {
-		router.HandleFunc(pathHandler.Path, asHandlerFunc(auth.Authenticated(pathHandler.Handler)))
-	}
-
-	router.HandleFunc("/media/thumbnails/{thumbnailId}", rawAsHandlerFunc(auth.AuthenticatedRaw(handlers.NewThumbnailRawHandler(appCtx.ThumbnailService).Handle)))
 
 	router.HandleFunc("/api/users", asHandlerFunc(GetUsers(auth, appCtx.Users.UserService))).Methods("GET")
 	router.HandleFunc("/api/users", asHandlerFunc(PostUsers(auth, appCtx.Users.UserService))).Methods("POST")
@@ -193,9 +150,5 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 	router.HandleFunc("/api/tapes/{tapeId}", asHandlerFunc(PutTape(auth, appCtx.Tapes.TapeService))).Methods("PUT")
 	router.HandleFunc("/api/tapes/{tapeId}", asHandlerFunc(DeleteTape(auth, appCtx.Tapes.TapeService))).Methods("DELETE")
 
-	// todo: wow that's disgusting
-	return map[string]http.HandlerFunc{
-		"/api/":   router.ServeHTTP,
-		"/media/": router.ServeHTTP,
-	}
+	return map[string]http.HandlerFunc{"/api/": router.ServeHTTP}
 }

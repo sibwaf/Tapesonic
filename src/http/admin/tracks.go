@@ -5,34 +5,46 @@ import (
 	"tapesonic/model"
 	"tapesonic/search"
 	"tapesonic/util"
+
+	"github.com/google/uuid"
 )
 
 type TrackRsArtist struct {
-	Id   string
+	Id   uuid.UUID
 	Name string
 }
 
 type TrackRs struct {
-	Id       string
-	SourceId string
+	Id string
+
+	SourceId *string
+	RemoteId *string
 
 	Artist *TrackRsArtist
 	Title  string
+
+	ThumbnailId *uuid.UUID
 }
 
 func libraryToTrackRs(track model.LibraryTrack) TrackRs {
 	trackRs := TrackRs{
-		Id:    track.Id,
-		Title: track.Title,
+		Id:          track.Id,
+		Title:       track.Title,
+		ThumbnailId: track.CoverId,
 	}
 
 	if track.SourceId != nil {
-		trackRs.SourceId = track.SourceId.String()
+		sourceId := track.SourceId.String()
+		trackRs.SourceId = &sourceId
+	}
+	if track.RemoteId != nil {
+		remoteId := track.RemoteId.String()
+		trackRs.RemoteId = &remoteId
 	}
 
-	if track.ArtistId != "" {
+	if track.ArtistId != nil {
 		trackRs.Artist = &TrackRsArtist{
-			Id:   track.ArtistId,
+			Id:   *track.ArtistId,
 			Name: track.ArtistName,
 		}
 	}

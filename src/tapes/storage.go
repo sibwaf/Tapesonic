@@ -3,7 +3,6 @@ package tapes
 import (
 	"errors"
 	"tapesonic/model"
-	"tapesonic/sources"
 	"tapesonic/util"
 
 	"github.com/google/uuid"
@@ -92,7 +91,7 @@ func (store *TapeStorage) Update(tape Tape) (SavedTape, error) {
 	})
 }
 
-func (store *TapeStorage) ReplaceTracksById(tapeId uuid.UUID, trackIds []uuid.UUID) error {
+func (store *TapeStorage) ReplaceTracksById(tapeId uuid.UUID, trackIds []string) error {
 	return store.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec("DELETE FROM tape_to_tracks WHERE tape_id = ?", tapeId).Error; err != nil {
 			return err
@@ -178,52 +177,15 @@ func (store *TapeStorage) getByIdWithTx(tx *gorm.DB, id uuid.UUID) (SavedTape, e
 	}
 }
 
-func (store *TapeStorage) GetTracksById(tapeId uuid.UUID) ([]sources.SavedSourceTrack, error) {
+func (store *TapeStorage) GetTrackIdsById(tapeId uuid.UUID) ([]string, error) {
 	query := `
-		SELECT
-			source_tracks.id AS id,
-			source_tracks.source_id AS source_id,
-			source_tracks.start_offset_ms AS start_offset_ms,
-			source_tracks.end_offset_ms AS end_offset_ms,
-			artists.id AS artist_id,
-			artists.name AS artist_name,
-			source_tracks.title AS title
-		FROM source_tracks
-		JOIN tape_to_tracks ON tape_to_tracks.track_id = source_tracks.id
-		LEFT JOIN artists ON source_tracks.artist_id = artists.id
+		SELECT tape_to_tracks.track_id
+		FROM tape_to_tracks
 		WHERE tape_to_tracks.tape_id = @tapeId
 		ORDER BY tape_to_tracks.list_index
 	`
 	params := map[string]any{"tapeId": tapeId}
 
-	tracks := []sources.SavedSourceTrack{}
-	return tracks, store.db.Raw(query, params).Find(&tracks).Error
-}
-
-func (store *TapeStorage) GetTracksForMetadataGuessing(ids []uuid.UUID) ([]TrackForMetadataGuessing, error) {
-	query := `
-		SELECT
-			source_tracks.id AS "id",
-			sources.album_artist AS "album_artist",
-			sources.album_title AS "album_title",
-			sources.title AS "source_title",
-			(
-				SELECT json_group_array(parents.title)
-				FROM sources parents
-				JOIN source_hierarchies ON parents.id = source_hierarchies.parent_id
-				WHERE source_hierarchies.child_id = sources.id
-			) AS "source_parent_titles",
-			source_tracks.artist_id AS "artist_id",
-			sources.release_date AS "release_date",
-			sources.thumbnail_id AS "thumbnail_id"
-		FROM source_tracks
-		JOIN sources ON source_tracks.source_id = sources.id
-		WHERE source_tracks.id IN @ids
-	`
-	params := map[string]any{
-		"ids": ids,
-	}
-
-	tracks := []TrackForMetadataGuessing{}
+	tracks := []string{}
 	return tracks, store.db.Raw(query, params).Find(&tracks).Error
 }

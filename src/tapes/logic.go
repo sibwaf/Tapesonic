@@ -2,11 +2,12 @@ package tapes
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"tapesonic/artists"
+	"tapesonic/library"
 	"tapesonic/model"
 	"tapesonic/sources"
-	"tapesonic/users"
 	"tapesonic/util"
 	"time"
 
@@ -16,70 +17,76 @@ import (
 type TapeService struct {
 	tapes   *TapeStorage
 	artists *artists.ArtistService
+	sources *sources.SourceService
+	library *library.LibraryService
 }
 
 func newTapeService(
 	tapes *TapeStorage,
 	artists *artists.ArtistService,
+	sources *sources.SourceService,
+	library *library.LibraryService,
 ) *TapeService {
 	return &TapeService{
 		tapes:   tapes,
 		artists: artists,
+		sources: sources,
+		library: library,
 	}
 }
 
-func (s *TapeService) Create(user users.User, tape Tape) (SavedTape, []sources.SavedSourceTrack, error) {
+func (s *TapeService) Create(userId uuid.UUID, tape Tape) (SavedTape, []model.LibraryTrack, error) {
 	tape.Id = uuid.New()
-	tape.CreatedById = user.Id
+	tape.CreatedById = userId
 	tape.CreatedAt = util.NewTimestampWrapper(time.Now())
 	tape.UpdatedAt = util.NewTimestampWrapper(time.Now())
 
 	savedTape, err := s.tapes.Create(tape)
 
 	if err != nil {
-		return SavedTape{}, []sources.SavedSourceTrack{}, err
+		return SavedTape{}, []model.LibraryTrack{}, err
 	}
 
-	trackIds := []uuid.UUID{}
+	trackIds := []string{}
 	for _, track := range tape.Tracks {
 		trackIds = append(trackIds, track.TrackId)
 	}
 
 	err = s.tapes.ReplaceTracksById(savedTape.Id, trackIds)
 	if err != nil {
-		return SavedTape{}, []sources.SavedSourceTrack{}, err
+		return SavedTape{}, []model.LibraryTrack{}, err
 	}
 
-	tracks, err := s.tapes.GetTracksById(savedTape.Id)
+	tracks, err := s.fetchTracks(userId, savedTape.Id)
 	if err != nil {
-		return SavedTape{}, []sources.SavedSourceTrack{}, err
+		return SavedTape{}, []model.LibraryTrack{}, err
 	}
 
 	return savedTape, tracks, nil
 }
 
-func (s *TapeService) Update(id uuid.UUID, tape Tape) (SavedTape, []sources.SavedSourceTrack, error) {
-	tape.Id = id
+func (s *TapeService) Update(userId uuid.UUID, tapeId uuid.UUID, tape Tape) (SavedTape, []model.LibraryTrack, error) {
+	tape.Id = tapeId
 	tape.UpdatedAt = util.NewTimestampWrapper(time.Now())
 
 	savedTape, err := s.tapes.Update(tape)
 	if err != nil {
-		return SavedTape{}, []sources.SavedSourceTrack{}, err
+		return SavedTape{}, []model.LibraryTrack{}, err
 	}
 
-	trackIds := []uuid.UUID{}
+	trackIds := []string{}
 	for _, track := range tape.Tracks {
 		trackIds = append(trackIds, track.TrackId)
 	}
 
 	err = s.tapes.ReplaceTracksById(savedTape.Id, trackIds)
 	if err != nil {
-		return SavedTape{}, []sources.SavedSourceTrack{}, err
+		return SavedTape{}, []model.LibraryTrack{}, err
 	}
 
-	tracks, err := s.tapes.GetTracksById(savedTape.Id)
+	tracks, err := s.fetchTracks(userId, tapeId)
 	if err != nil {
-		return SavedTape{}, []sources.SavedSourceTrack{}, err
+		return SavedTape{}, []model.LibraryTrack{}, err
 	}
 
 	return savedTape, tracks, nil
@@ -93,18 +100,39 @@ func (s *TapeService) GetList() ([]SavedTape, error) {
 	return s.tapes.GetAllTapes()
 }
 
-func (s *TapeService) GetById(id uuid.UUID) (SavedTape, []sources.SavedSourceTrack, error) {
-	tape, err := s.tapes.GetById(id)
+func (s *TapeService) GetById(userId uuid.UUID, tapeId uuid.UUID) (SavedTape, []model.LibraryTrack, error) {
+	tape, err := s.tapes.GetById(tapeId)
 	if err != nil {
-		return SavedTape{}, []sources.SavedSourceTrack{}, err
+		return SavedTape{}, []model.LibraryTrack{}, err
 	}
 
-	tracks, err := s.tapes.GetTracksById(id)
+	tracks, err := s.fetchTracks(userId, tapeId)
 	if err != nil {
-		return SavedTape{}, []sources.SavedSourceTrack{}, err
+		return SavedTape{}, []model.LibraryTrack{}, err
 	}
 
 	return tape, tracks, nil
+}
+
+func (s *TapeService) fetchTracks(userId uuid.UUID, tapeId uuid.UUID) ([]model.LibraryTrack, error) {
+	trackIds, err := s.tapes.GetTrackIdsById(tapeId)
+	if err != nil {
+		return []model.LibraryTrack{}, err
+	}
+
+	ordering := map[string]int{}
+	for index, trackId := range trackIds {
+		ordering[trackId] = index
+	}
+
+	tracks, err := s.library.GetTracksByIds(userId, trackIds)
+	if err != nil {
+		return []model.LibraryTrack{}, err
+	}
+
+	slices.SortFunc(tracks, func(a model.LibraryTrack, b model.LibraryTrack) int { return ordering[a.Id] - ordering[b.Id] })
+
+	return tracks, nil
 }
 
 type TapeMetadata struct {
@@ -116,10 +144,20 @@ type TapeMetadata struct {
 	ThumbnailId *uuid.UUID
 }
 
-func (s *TapeService) GuessTapeMetadata(trackIds []uuid.UUID) (TapeMetadata, error) {
-	tracks, err := s.tapes.GetTracksForMetadataGuessing(trackIds)
+func (s *TapeService) GuessTapeMetadata(userId uuid.UUID, trackIds []string) (TapeMetadata, error) {
+	libraryTracks, err := s.library.GetTracksByIds(userId, trackIds)
 	if err != nil {
 		return TapeMetadata{}, err
+	}
+
+	sourceTracks, err := s.sources.FindTracksForMetadataGuessingByIds(trackIds)
+	if err != nil {
+		return TapeMetadata{}, err
+	}
+
+	sourceInfoByTrackId := map[string]sources.SourceTrackForMetadataGuessing{}
+	for _, sourceTrack := range sourceTracks {
+		sourceInfoByTrackId[sourceTrack.Id.String()] = sourceTrack
 	}
 
 	parentNames := util.NewCountingSet[string]()
@@ -143,34 +181,45 @@ func (s *TapeService) GuessTapeMetadata(trackIds []uuid.UUID) (TapeMetadata, err
 		return artist.Id, nil
 	}
 
-	for _, track := range tracks {
-		names.Add(util.Coalesce(track.AlbumTitle, track.SourceTitle))
+	for _, track := range libraryTracks {
+		sourceTrack := sourceInfoByTrackId[track.Id]
 
-		for _, parentName := range track.SourceParentTitles {
+		names.Add(util.Coalesce(sourceTrack.AlbumTitle, sourceTrack.SourceTitle, track.AlbumName))
+
+		for _, parentName := range sourceTrack.SourceParentTitles {
 			parentNames.Add(parentName)
 		}
+		if len(sourceTrack.SourceParentTitles) == 0 {
+			parentNames.Add("")
+		}
 
-		if track.AlbumArtist != "" {
-			artistId, err := getArtistId(strings.TrimSpace(track.AlbumArtist))
+		if sourceTrack.AlbumArtist != "" {
+			artistId, err := getArtistId(strings.TrimSpace(sourceTrack.AlbumArtist))
 			if err != nil {
 				return TapeMetadata{}, err
 			}
 
 			artistIds.Add(artistId)
+		} else if track.AlbumArtistId != nil {
+			artistIds.Add(*track.AlbumArtistId)
 		} else if track.ArtistId != nil {
 			artistIds.Add(*track.ArtistId)
 		} else {
 			artistIds.Add(uuid.Nil)
 		}
 
-		if track.ThumbnailId != nil {
-			thumbnailIds.Add(*track.ThumbnailId)
+		if sourceTrack.ThumbnailId != nil {
+			thumbnailIds.Add(*sourceTrack.ThumbnailId)
+		} else if track.CoverId != nil {
+			thumbnailIds.Add(*track.CoverId)
 		} else {
 			thumbnailIds.Add(uuid.Nil)
 		}
 
-		if track.ReleaseDate != nil {
-			releaseDates.Add(track.ReleaseDate.Unwrap())
+		if sourceTrack.ReleaseDate != nil {
+			releaseDates.Add(sourceTrack.ReleaseDate.Unwrap())
+		} else if track.AlbumReleasedAt != nil {
+			releaseDates.Add(track.AlbumReleasedAt.Unwrap())
 		} else {
 			releaseDates.Add(time.Time{})
 		}

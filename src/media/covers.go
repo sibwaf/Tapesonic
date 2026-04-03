@@ -32,13 +32,8 @@ func newCoverService(
 
 func (svc *CoverService) ServeCover(user users.User, r *http.Request, w http.ResponseWriter, cover model.LibraryCover) error {
 	if cover.RemoteId == uuid.Nil {
-		uuidId, err := uuid.Parse(cover.Id)
-		if err != nil {
-			return model.ErrNotFound
-		}
-
 		// todo: proper file streaming
-		mime, reader, err := svc.thumbnails.GetThumbnailContent(uuidId)
+		mime, reader, err := svc.thumbnails.GetThumbnailContent(cover.Id)
 		if err != nil {
 			return err
 		}
@@ -93,7 +88,7 @@ func (svc *CoverService) ServeCover(user users.User, r *http.Request, w http.Res
 
 			return err
 		default:
-			return fmt.Errorf("unknown remote type %s" + remote.Type)
+			return fmt.Errorf("unknown remote type %s", remote.Type)
 		}
 	}
 }

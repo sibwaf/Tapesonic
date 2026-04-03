@@ -39,19 +39,35 @@ func (store *AlbumStorage) PrepareDatabase() error {
 			) AS
 
 			WITH
-				tapes_aggregate (user_id, id, track_count, total_duration_ms, last_listened_at, total_listened_ms) AS (
+				raw_all_tracks (user_id, track_id, duration_ms) AS (
 					SELECT
 						users.id AS user_id,
-						tape_to_tracks.tape_id AS id,
-						count(*) AS track_count,
-						sum(source_tracks.end_offset_ms - source_tracks.start_offset_ms) AS total_duration_ms,
-						max(listen_stats.last_listened_at) AS last_listened_at,
-						sum((source_tracks.end_offset_ms - source_tracks.start_offset_ms) * listen_stats.listen_count) AS total_listened_ms
+						source_tracks.id AS track_id,
+						(source_tracks.end_offset_ms - source_tracks.start_offset_ms) AS duration_ms
 					FROM source_tracks
 					JOIN users ON 1 = 1
-					JOIN tape_to_tracks ON source_tracks.id = tape_to_tracks.track_id
-					LEFT JOIN listen_stats ON source_tracks.id = listen_stats.track_id AND users.id = listen_stats.user_id
-					GROUP BY users.id, tape_to_tracks.tape_id
+
+					UNION ALL
+
+					SELECT
+						remote_track_to_users.user_id AS user_id,
+						remote_tracks.id AS track_id,
+						remote_tracks.duration_ms AS duration_ms
+					FROM remote_tracks
+					JOIN remote_track_to_users ON remote_tracks.id = remote_track_to_users.remote_track_id
+				),
+				tapes_aggregate (user_id, id, track_count, total_duration_ms, last_listened_at, total_listened_ms) AS (
+					SELECT
+						raw_all_tracks.user_id AS user_id,
+						tape_to_tracks.tape_id AS id,
+						count(*) AS track_count,
+						sum(raw_all_tracks.duration_ms) AS total_duration_ms,
+						max(listen_stats.last_listened_at) AS last_listened_at,
+						sum(raw_all_tracks.duration_ms * listen_stats.listen_count) AS total_listened_ms
+					FROM tape_to_tracks
+					JOIN raw_all_tracks ON tape_to_tracks.track_id = raw_all_tracks.track_id
+					LEFT JOIN listen_stats ON tape_to_tracks.track_id = listen_stats.track_id AND raw_all_tracks.user_id = listen_stats.user_id
+					GROUP BY raw_all_tracks.user_id, tape_to_tracks.tape_id
 				),
 				remote_albums_aggregate (user_id, id, track_count, total_duration_ms, last_listened_at, total_listened_ms) AS (
 					SELECT

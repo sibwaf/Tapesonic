@@ -143,8 +143,8 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	); err != nil {
 		return nil, err
 	}
-	context.Tapes = tapes.NewTapesModule(db, context.Artists.ArtistService)
 	context.Library = library.NewLibraryModule(db)
+	context.Tapes = tapes.NewTapesModule(db, context.Artists.ArtistService, context.Sources.SourceService, context.Library.LibraryService)
 
 	context.MediaStorage = storage.NewMediaStorage(db, config.MediaStorageDir)
 

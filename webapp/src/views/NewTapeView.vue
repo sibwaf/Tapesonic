@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import tapes, { TapeType, type GuessTapeMetadataRs, type TapeRq, type TapeRsArtist, type TapeRsTrack } from '@/api/tapes';
 import { type TrackRs } from '@/api/tracks';
-import thumbnailsApi, { type ListThumbnailRs } from '@/api/thumbnails';
 import DateEditor from '@/components/DateEditor.vue';
 import TapeTrackSearch from '@/components/TapeTrackSearch.vue';
 import Thumbnail from '@/components/Thumbnail.vue';
 import ThumbnailSelector from '@/components/ThumbnailSelector.vue';
-import util from '@/util';
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import ArtistSelector, { type Artist } from '@/components/ArtistSelector.vue';
@@ -30,8 +28,6 @@ const thumbnailId = ref<string | null>(null);
 const tracks = ref<TapeRsTrack[]>([]);
 
 const trackIds = computed(() => tracks.value.map(it => it.Id));
-const sourceIds = computed(() => tracks.value.map(it => it.SourceId));
-const uniqueSourceIds = computed(() => [...new Set(sourceIds.value)]);
 
 function onAddTrack(track: TrackRs) {
     let artist: TapeRsArtist | null = null;
@@ -45,10 +41,10 @@ function onAddTrack(track: TrackRs) {
     tracks.value.push({
         Id: track.Id,
         SourceId: track.SourceId,
+        RemoteId: track.RemoteId,
         Artist: artist,
         Title: track.Title,
-        StartOffsetMs: -1,
-        EndOffsetMs: -1,
+        ThumbnailId: track.ThumbnailId,
     });
 }
 
@@ -85,33 +81,23 @@ async function guessAndUpdateMetadata() {
     }
 }
 
-const thumbnails = ref<{ sourceIds: Set<string>, thumbnails: ListThumbnailRs[] }>({ sourceIds: new Set<string>(), thumbnails: [] });
 const thumbnailIds = computed(() => {
-    const ids = new Set<string>(thumbnails.value.thumbnails.map(it => it.Id));
+    const ids = new Set<string>();
 
     const tapeThumbnailId = thumbnailId.value;
     if (tapeThumbnailId != null) {
         ids.add(tapeThumbnailId);
     }
 
+    for (const track of tracks.value) {
+        const thumbnailId = track.ThumbnailId;
+        if (thumbnailId != null) {
+            ids.add(thumbnailId);
+        }
+    }
+
     return [...ids];
 });
-
-async function updateThumbnails() {
-    try {
-        isBusy.value = true;
-
-        const sourceIdsValue = uniqueSourceIds.value;
-        const response = await thumbnailsApi.searchThumbnails(sourceIdsValue);
-
-        thumbnails.value.sourceIds = new Set<string>(sourceIdsValue);
-        thumbnails.value.thumbnails = response;
-    } catch (e) {
-        console.error("Failed to fetch thumbnails", e);
-    } finally {
-        isBusy.value = false;
-    }
-}
 
 const stage = ref<Stage>(Stage.TRACKS);
 const totalStageCount = computed(() => Object.values(Stage).length / 2);
@@ -170,15 +156,6 @@ watch(stage, async (newStage) => {
             }
 
             await guessAndUpdateMetadata();
-            break;
-        case Stage.COVER:
-            const previousSourceIds = thumbnails.value.sourceIds;
-            const currentSourceIds = new Set<string>(uniqueSourceIds.value);
-            if (util.areSetsEqual(previousSourceIds, currentSourceIds)) {
-                return;
-            }
-
-            await updateThumbnails();
             break;
     }
 }, { immediate: true });

@@ -144,3 +144,35 @@ func (storage *TrackStorage) GetAllTracksBySource(sourceId uuid.UUID) ([]SavedSo
 	tracks := []SavedSourceTrack{}
 	return tracks, storage.db.Raw(query).Find(&tracks).Error
 }
+
+func (storage *TrackStorage) FindTracksForMetadataGuessingByIds(trackIds []string) ([]SourceTrackForMetadataGuessing, error) {
+	if len(trackIds) == 0 {
+		return []SourceTrackForMetadataGuessing{}, nil
+	}
+
+	sql := `
+		SELECT
+			source_tracks.id AS "id",
+			sources.album_artist AS "album_artist",
+			sources.album_title AS "album_title",
+			sources.title AS "source_title",
+			(
+				SELECT json_group_array(parents.title)
+				FROM sources parents
+				JOIN source_hierarchies ON parents.id = source_hierarchies.parent_id
+				WHERE source_hierarchies.child_id = sources.id
+			) AS "source_parent_titles",
+			source_tracks.artist_id AS "artist_id",
+			sources.release_date AS "release_date",
+			sources.thumbnail_id AS "thumbnail_id"
+		FROM source_tracks
+		JOIN sources ON source_tracks.source_id = sources.id
+		WHERE source_tracks.id IN @trackIds
+	`
+	params := map[string]any{
+		"trackIds": trackIds,
+	}
+
+	result := []SourceTrackForMetadataGuessing{}
+	return result, storage.db.Raw(sql, params).Find(&result).Error
+}

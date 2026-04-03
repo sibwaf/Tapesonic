@@ -91,6 +91,20 @@ type SavedSourceTrack struct {
 	EndOffsetMs   int64
 }
 
+type SourceTrackForMetadataGuessing struct {
+	Id uuid.UUID
+
+	AlbumArtist string
+	AlbumTitle  string
+
+	SourceTitle        string
+	SourceParentTitles []string `gorm:"serializer:json"`
+
+	ArtistId    *uuid.UUID
+	ReleaseDate *util.TimestampWrapper
+	ThumbnailId *uuid.UUID
+}
+
 // database
 
 type Source struct {

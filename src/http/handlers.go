@@ -8,6 +8,7 @@ import (
 
 	"tapesonic/appcontext"
 	"tapesonic/http/admin"
+	"tapesonic/http/media"
 	"tapesonic/http/subsonic"
 
 	"net/http/pprof"
@@ -21,6 +22,10 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 	}
 
 	for path, handler := range admin.GetHandlers(appCtx) {
+		handlers[path] = handler
+	}
+
+	for path, handler := range media.GetHandlers(appCtx) {
 		handlers[path] = handler
 	}
 

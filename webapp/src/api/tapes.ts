@@ -12,13 +12,14 @@ export interface TapeRsArtist {
 
 export interface TapeRsTrack {
     Id: string;
-    SourceId: string;
+
+    SourceId: string | null;
+    RemoteId: string | null;
 
     Artist: TapeRsArtist | null;
     Title: string;
 
-    StartOffsetMs: number;
-    EndOffsetMs: number;
+    ThumbnailId: string | null;
 }
 
 export interface TapeListRs {

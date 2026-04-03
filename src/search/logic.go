@@ -126,14 +126,17 @@ func (svc *SearchService) findMatchInLibrary(userId uuid.UUID, track TrackForSea
 		return nil, err
 	}
 
-	allowedArtistIds := []string{}
+	allowedArtistIds := []uuid.UUID{}
 	for _, artist := range artists {
-		allowedArtistIds = append(allowedArtistIds, artist.Id.String())
+		allowedArtistIds = append(allowedArtistIds, artist.Id)
 	}
 
 	var match *model.LibraryTrack = nil
 	for _, candidate := range candidates {
-		if !slices.Contains(allowedArtistIds, candidate.ArtistId) || !util.MatchText(track.Title, candidate.Title) {
+		if candidate.ArtistId == nil || !slices.Contains(allowedArtistIds, *candidate.ArtistId) {
+			continue
+		}
+		if !util.MatchText(track.Title, candidate.Title) {
 			continue
 		}
 

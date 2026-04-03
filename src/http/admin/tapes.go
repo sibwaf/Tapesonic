@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"tapesonic/model"
-	"tapesonic/sources"
 	"tapesonic/tapes"
 	"tapesonic/util"
 	"time"
@@ -67,25 +66,26 @@ type TapeFullRs struct {
 }
 
 type TapeRsTrack struct {
-	Id       uuid.UUID
-	SourceId uuid.UUID
+	Id string
+
+	SourceId *uuid.UUID
+	RemoteId *uuid.UUID
 
 	Artist *TapeRsArtist
 	Title  string
 
-	StartOffsetMs int64
-	EndOffsetMs   int64
+	ThumbnailId *uuid.UUID
 }
 
-func toTapeFullRs(tape tapes.SavedTape, tracks []sources.SavedSourceTrack) TapeFullRs {
+func toTapeFullRs(tape tapes.SavedTape, tracks []model.LibraryTrack) TapeFullRs {
 	tracksRs := []TapeRsTrack{}
 	for _, track := range tracks {
 		trackRs := TapeRsTrack{
-			Id:            track.Id,
-			SourceId:      track.SourceId,
-			Title:         track.Title,
-			StartOffsetMs: track.StartOffsetMs,
-			EndOffsetMs:   track.EndOffsetMs,
+			Id:          track.Id,
+			SourceId:    track.SourceId,
+			RemoteId:    track.RemoteId,
+			Title:       track.Title,
+			ThumbnailId: track.CoverId,
 		}
 
 		if track.ArtistId != nil {
@@ -143,7 +143,7 @@ type TapeRq struct {
 	ArtistId   *uuid.UUID
 	ReleasedAt *time.Time
 
-	TrackIds []uuid.UUID
+	TrackIds []string
 }
 
 func tapeRqToTape(tapeRq TapeRq) tapes.Tape {
@@ -176,7 +176,7 @@ func PostTapes(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
 
 		tape := tapeRqToTape(tapeRq)
 
-		savedTape, savedTracks, err := tapes.Create(user, tape)
+		savedTape, savedTracks, err := tapes.Create(user.Id, tape)
 		if err != nil {
 			return nil, err
 		}
@@ -187,7 +187,7 @@ func PostTapes(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
 
 func GetTape(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
 	return func(r *http.Request) (any, error) {
-		_, err := auth.Authenticate(r)
+		user, err := auth.Authenticate(r)
 		if err != nil {
 			return nil, err
 		}
@@ -197,7 +197,7 @@ func GetTape(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
 			return nil, model.ErrNotFound
 		}
 
-		tape, tracks, err := tapes.GetById(id)
+		tape, tracks, err := tapes.GetById(user.Id, id)
 		if err != nil {
 			return nil, err
 		}
@@ -208,7 +208,7 @@ func GetTape(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
 
 func PutTape(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
 	return func(r *http.Request) (any, error) {
-		_, err := auth.Authenticate(r)
+		user, err := auth.Authenticate(r)
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +225,7 @@ func PutTape(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
 
 		tape := tapeRqToTape(tapeRq)
 
-		savedTape, savedTracks, err := tapes.Update(id, tape)
+		savedTape, savedTracks, err := tapes.Update(user.Id, id, tape)
 		if err != nil {
 			return nil, err
 		}
@@ -251,7 +251,7 @@ func DeleteTape(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
 }
 
 type GuessTapeMetadataRq struct {
-	TrackIds []uuid.UUID
+	TrackIds []string
 }
 
 type GuessTapeMetadataRs struct {
@@ -264,7 +264,7 @@ type GuessTapeMetadataRs struct {
 
 func PostTapesGuessMetadata(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
 	return func(r *http.Request) (any, error) {
-		_, err := auth.Authenticate(r)
+		user, err := auth.Authenticate(r)
 		if err != nil {
 			return nil, err
 		}
@@ -274,7 +274,7 @@ func PostTapesGuessMetadata(auth *authenticator, tapes *tapes.TapeService) Webap
 			return nil, err
 		}
 
-		guessedMetadata, err := tapes.GuessTapeMetadata(guessRq.TrackIds)
+		guessedMetadata, err := tapes.GuessTapeMetadata(user.Id, guessRq.TrackIds)
 		if err != nil {
 			return nil, err
 		}

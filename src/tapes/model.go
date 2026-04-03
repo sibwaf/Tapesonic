@@ -2,9 +2,8 @@ package tapes
 
 import (
 	"tapesonic/artists"
+	"tapesonic/library"
 	"tapesonic/model"
-	"tapesonic/sources"
-	"tapesonic/storage"
 	"tapesonic/users"
 	"tapesonic/util"
 
@@ -12,20 +11,6 @@ import (
 )
 
 // internal
-
-type TrackForMetadataGuessing struct {
-	Id uuid.UUID
-
-	AlbumArtist string
-	AlbumTitle  string
-
-	SourceTitle        string
-	SourceParentTitles []string `gorm:"serializer:json"`
-
-	ArtistId    *uuid.UUID
-	ReleaseDate *util.TimestampWrapper
-	ThumbnailId *uuid.UUID
-}
 
 type SavedTape struct {
 	Id uuid.UUID
@@ -51,7 +36,6 @@ type Tape struct {
 	Type model.TapeType
 
 	ThumbnailId *uuid.UUID
-	Thumbnail   *storage.Thumbnail
 
 	Tracks []TapeToTrack `gorm:"constraint:OnDelete:CASCADE;"`
 
@@ -73,8 +57,8 @@ type TapeToTrack struct {
 	TapeId uuid.UUID `gorm:"primaryKey"`
 	Tape   *Tape
 
-	TrackId uuid.UUID `gorm:"primaryKey"`
-	Track   *sources.SourceTrack
+	TrackId string `gorm:"primaryKey"`
+	Track   *library.AllTrackId
 
 	ListIndex int
 }
