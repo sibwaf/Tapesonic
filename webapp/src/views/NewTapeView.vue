@@ -8,6 +8,7 @@ import ThumbnailSelector from '@/components/ThumbnailSelector.vue';
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import ArtistSelector, { type Artist } from '@/components/ArtistSelector.vue';
+import TapeTrackList from '@/components/TapeTrackList.vue';
 
 const router = useRouter();
 
@@ -166,22 +167,7 @@ watch(stage, async (newStage) => {
         <div v-if="stage == Stage.TRACKS">
             <TapeTrackSearch @add-track="onAddTrack"></TapeTrackSearch>
             <hr>
-            <table>
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>Artist</th>
-                        <th>Title</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="track, index in tracks" :key="track.Id">
-                        <td><button @click="tracks.splice(index, 1)">Remove</button></td>
-                        <td>{{ track.Artist?.Name ?? "" }}</td>
-                        <td>{{ track.Title }}</td>
-                    </tr>
-                </tbody>
-            </table>
+            <TapeTrackList v-model="tracks" />
         </div>
         <div v-else-if="stage == Stage.METADATA">
             <div>

@@ -8,6 +8,7 @@ import { computed, ref, toRaw, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import DateEditor from '@/components/DateEditor.vue';
 import ArtistSelector, { Artist } from '@/components/ArtistSelector.vue';
+import TapeTrackList from '@/components/TapeTrackList.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -167,7 +168,13 @@ async function onDelete() {
     }
 }
 
-watch(albumTrackIds, async (trackIds) => {
+watch(albumTrackIds, async (trackIds, oldTrackIds) => {
+    if (trackIds != null && oldTrackIds != null) {
+        if (util.areSetsEqual(new Set(trackIds), new Set(oldTrackIds))) {
+            return;
+        }
+    }
+
     guessedMetadata.value = null;
 
     if (trackIds == null || trackIds.length == 0) {
@@ -269,27 +276,6 @@ watch(albumTrackIds, async (trackIds) => {
 
         <ThumbnailSelector :thumbnail-ids="thumbnailIds" size="12em" v-model="thumbnailId" />
 
-        <div>
-            <table>
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>Artist</th>
-                        <th></th>
-                        <th>Title</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="track, index in tracks" :key="track.Id">
-                        <td>
-                            <button @click="tracks.splice(index, 1)">Remove</button>
-                        </td>
-                        <td>{{ track.Artist?.Name ?? "" }}</td>
-                        <td></td>
-                        <td>{{ track.Title }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <TapeTrackList v-model="tracks" />
     </div>
 </template>
