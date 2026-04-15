@@ -92,7 +92,7 @@ func (svc *SubsonicSyncService) SyncLibrary(userId uuid.UUID, remoteId uuid.UUID
 		}
 
 		for _, artist := range response.Artist {
-			if svc.upsertArtist(artist, remote.Id, userId, syncTag) != nil {
+			if err = svc.upsertArtist(artist, remote.Id, userId, syncTag); err != nil {
 				return err
 			}
 		}
@@ -101,7 +101,7 @@ func (svc *SubsonicSyncService) SyncLibrary(userId uuid.UUID, remoteId uuid.UUID
 		}
 
 		for _, album := range response.Album {
-			if svc.upsertAlbum(album, remote.Id, userId, syncTag) != nil {
+			if err = svc.upsertAlbum(album, remote.Id, userId, syncTag); err != nil {
 				return err
 			}
 		}
@@ -110,7 +110,7 @@ func (svc *SubsonicSyncService) SyncLibrary(userId uuid.UUID, remoteId uuid.UUID
 		}
 
 		for _, song := range response.Song {
-			if svc.upsertTrack(song, remote.Id, userId, syncTag) != nil {
+			if err = svc.upsertTrack(song, remote.Id, userId, syncTag); err != nil {
 				return err
 			}
 		}
