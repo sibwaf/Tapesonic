@@ -8,7 +8,7 @@ import (
 	"tapesonic/subsonic"
 )
 
-func GetCoverArt(auth *authenticator, library *library.LibraryService, covers *media.CoverService) SubsonicRawHandler {
+func GetCoverArt(auth *authenticator, library *library.LibraryService, artworks *media.ArtworkService) SubsonicRawHandler {
 	return func(w http.ResponseWriter, r *http.Request) (*subsonic.Response, error) {
 		user, err := auth.Authenticate(r)
 		if err != nil {
@@ -20,11 +20,11 @@ func GetCoverArt(auth *authenticator, library *library.LibraryService, covers *m
 			return subsonic.NewParameterMissingResponse("id"), nil
 		}
 
-		cover, err := library.GetCover(id)
+		artwork, err := library.GetArtwork(id)
 		if err != nil {
 			return nil, err
 		}
 
-		return nil, covers.ServeCover(user, r, w, cover)
+		return nil, artworks.ServeArtwork(user, r, w, artwork)
 	}
 }

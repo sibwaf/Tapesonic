@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { TapeType, type TapeListRs } from "@/api/tapes";
 import { RouterLink } from "vue-router";
-import Thumbnail from "@/components/Thumbnail.vue";
+import Artwork from "@/components/Artwork.vue";
 
 defineProps<{ modelValue: TapeListRs[] }>();
 </script>
@@ -9,7 +9,7 @@ defineProps<{ modelValue: TapeListRs[] }>();
 <template>
     <div class="tape-list">
         <RouterLink v-for="tape in modelValue" :key="tape.Id" :to="'/tapes/' + tape.Id" class="tape-list-item">
-            <Thumbnail size="12em" :id="tape.ThumbnailId" />
+            <Artwork size="12em" :id="tape.ArtworkId" />
             <div class="tape-name" :title="tape.Name">{{ tape.Name }}</div>
             <div class="tape-artist" :title="tape.Artist.Name" v-if="tape.Type == TapeType.Album && tape.Artist">{{ tape.Artist.Name }}</div>
         </RouterLink>

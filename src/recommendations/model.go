@@ -1,6 +1,7 @@
 package recommendations
 
 import (
+	"tapesonic/artworks"
 	"tapesonic/library"
 	"tapesonic/users"
 	"tapesonic/util"
@@ -28,7 +29,8 @@ type RecommendedPlaylist struct {
 
 	Name string
 
-	CoverId *string
+	ArtworkId *uuid.UUID
+	Artwork   *artworks.Artwork
 
 	CreatedAt util.TimestampWrapper
 	UpdatedAt util.TimestampWrapper

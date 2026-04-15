@@ -3,8 +3,8 @@ import tapes, { TapeType, type GuessTapeMetadataRs, type TapeRq, type TapeRsArti
 import { type TrackRs } from '@/api/tracks';
 import DateEditor from '@/components/DateEditor.vue';
 import TapeTrackSearch from '@/components/TapeTrackSearch.vue';
-import Thumbnail from '@/components/Thumbnail.vue';
-import ThumbnailSelector from '@/components/ThumbnailSelector.vue';
+import Artwork from '@/components/Artwork.vue';
+import ArtworkSelector from '@/components/ArtworkSelector.vue';
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import ArtistSelector, { type Artist } from '@/components/ArtistSelector.vue';
@@ -15,7 +15,7 @@ const router = useRouter();
 enum Stage {
     TRACKS,
     METADATA,
-    COVER,
+    ARTWORK,
     PREVIEW,
 }
 
@@ -25,7 +25,7 @@ const name = ref("");
 const type = ref(TapeType.Playlist);
 const artist = ref<Artist | null>(null);
 const releasedAt = ref<string | null>(null);
-const thumbnailId = ref<string | null>(null);
+const artworkId = ref<string | null>(null);
 const tracks = ref<TapeRsTrack[]>([]);
 
 const trackIds = computed(() => tracks.value.map(it => it.Id));
@@ -45,7 +45,7 @@ function onAddTrack(track: TrackRs) {
         RemoteId: track.RemoteId,
         Artist: artist,
         Title: track.Title,
-        ThumbnailId: track.ThumbnailId,
+        ArtworkId: track.ArtworkId,
     });
 }
 
@@ -63,7 +63,7 @@ async function guessAndUpdateMetadata() {
         name.value = guess.Name;
         type.value = guess.Type;
         releasedAt.value = guess.ReleasedAt;
-        thumbnailId.value = guess.ThumbnailId;
+        artworkId.value = guess.ArtworkId;
 
         if (guess.Artist == null) {
             artist.value = null
@@ -82,18 +82,18 @@ async function guessAndUpdateMetadata() {
     }
 }
 
-const thumbnailIds = computed(() => {
+const artworkIds = computed(() => {
     const ids = new Set<string>();
 
-    const tapeThumbnailId = thumbnailId.value;
-    if (tapeThumbnailId != null) {
-        ids.add(tapeThumbnailId);
+    const tapeArtworkId = artworkId.value;
+    if (tapeArtworkId != null) {
+        ids.add(tapeArtworkId);
     }
 
     for (const track of tracks.value) {
-        const thumbnailId = track.ThumbnailId;
-        if (thumbnailId != null) {
-            ids.add(thumbnailId);
+        const artworkId = track.ArtworkId;
+        if (artworkId != null) {
+            ids.add(artworkId);
         }
     }
 
@@ -129,7 +129,7 @@ async function goForward() {
         const tapeRq: TapeRq = {
             Name: name.value,
             Type: type.value,
-            ThumbnailId: thumbnailId.value,
+            ArtworkId: artworkId.value,
             ArtistId: artist.value?.id ?? null,
             ReleasedAt: releasedAt.value,
             TrackIds: tracks.value.map(it => it.Id),
@@ -206,11 +206,11 @@ watch(stage, async (newStage) => {
                 </tbody>
             </table>
         </div>
-        <div v-else-if="stage == Stage.COVER">
-            <ThumbnailSelector :thumbnail-ids="thumbnailIds" size="12em" v-model="thumbnailId" />
+        <div v-else-if="stage == Stage.ARTWORK">
+            <ArtworkSelector :artwork-ids="artworkIds" size="12em" v-model="artworkId" />
         </div>
         <div v-else-if="stage == Stage.PREVIEW">
-            <Thumbnail size="12em" :id="thumbnailId" />
+            <Artwork size="12em" :id="artworkId" />
             <h3>{{ name }}</h3>
             <h4 v-if="artist">by <em>{{ artist.name }}</em></h4>
             <ol>

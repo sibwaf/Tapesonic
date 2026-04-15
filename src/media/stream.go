@@ -11,6 +11,7 @@ import (
 	"tapesonic/ffmpeg"
 	"tapesonic/model"
 	"tapesonic/remotes"
+	"tapesonic/sources"
 	"tapesonic/storage"
 	"tapesonic/subsonic"
 	"tapesonic/users"
@@ -25,7 +26,7 @@ var allowedStreamingCodecs = []string{"mp3", "flac", "opus"}
 
 type StreamService struct {
 	remotes *remotes.RemoteService
-	media   *storage.MediaStorage
+	sources *sources.SourceService
 	cache   *storage.StreamCacheStorage
 	ffmpeg  *ffmpeg.Ffmpeg
 	ytdlp   *ytdlp.YtdlpService
@@ -33,14 +34,14 @@ type StreamService struct {
 
 func newStreamService(
 	remotes *remotes.RemoteService,
-	media *storage.MediaStorage,
+	sources *sources.SourceService,
 	cache *storage.StreamCacheStorage,
 	ffmpeg *ffmpeg.Ffmpeg,
 	ytdlp *ytdlp.YtdlpService,
 ) *StreamService {
 	return &StreamService{
 		remotes: remotes,
-		media:   media,
+		sources: sources,
 		cache:   cache,
 		ffmpeg:  ffmpeg,
 		ytdlp:   ytdlp,
@@ -54,44 +55,44 @@ func (svc *StreamService) ServeStream(user users.User, r *http.Request, w http.R
 			return model.ErrNotFound
 		}
 
-		sources, err := svc.media.GetTrackSources(uuidId)
+		descriptor, err := svc.sources.GetTrackFileDescriptor(uuidId)
 		if err != nil {
 			return err
 		}
 
-		if sources.LocalPath != "" {
+		if descriptor.LocalPath != "" {
 			allowDirectStreaming := true
 			switch {
-			case sources.StartOffsetMs > 0:
-				slog.Debug(fmt.Sprintf("Direct streaming for track id=`%s` (%s) is forbidden because StartOffsetMs > 0 (%d)", track.Id, sources.LocalPath, sources.StartOffsetMs))
+			case descriptor.StartOffsetMs > 0:
+				slog.Debug(fmt.Sprintf("Direct streaming for track id=`%s` (%s) is forbidden because StartOffsetMs > 0 (%d)", track.Id, descriptor.LocalPath, descriptor.StartOffsetMs))
 				allowDirectStreaming = false
-			case sources.EndOffsetMs != sources.SourceDurationMs:
-				slog.Debug(fmt.Sprintf("Direct streaming for track id=`%s` (%s) is forbidden because EndOffsetMs != SourceDurationMs (%d != %d)", track.Id, sources.LocalPath, sources.EndOffsetMs, sources.SourceDurationMs))
+			case descriptor.EndOffsetMs != descriptor.SourceDurationMs:
+				slog.Debug(fmt.Sprintf("Direct streaming for track id=`%s` (%s) is forbidden because EndOffsetMs != SourceDurationMs (%d != %d)", track.Id, descriptor.LocalPath, descriptor.EndOffsetMs, descriptor.SourceDurationMs))
 				allowDirectStreaming = false
-			case !slices.Contains(allowedStreamingCodecs, sources.LocalCodec):
-				slog.Debug(fmt.Sprintf("Direct streaming for track id=`%s` (%s) is forbidden because codec `%s` is not allowed", track.Id, sources.LocalPath, sources.LocalCodec))
+			case !slices.Contains(allowedStreamingCodecs, descriptor.LocalCodec):
+				slog.Debug(fmt.Sprintf("Direct streaming for track id=`%s` (%s) is forbidden because codec `%s` is not allowed", track.Id, descriptor.LocalPath, descriptor.LocalCodec))
 				allowDirectStreaming = false
 			}
 
 			if allowDirectStreaming {
-				slog.Debug(fmt.Sprintf("Streaming downloaded track id=`%s` (%s) directly from file", track.Id, sources.LocalPath))
+				slog.Debug(fmt.Sprintf("Streaming downloaded track id=`%s` (%s) directly from file", track.Id, descriptor.LocalPath))
 
-				http.ServeFile(w, r, sources.LocalPath)
+				http.ServeFile(w, r, descriptor.LocalPath)
 				return nil
 			}
 
-			slog.Debug(fmt.Sprintf("Streaming downloaded track id=`%s` (%s) via ffmpeg, start=%d, end=%d", track.Id, sources.LocalPath, sources.StartOffsetMs, sources.EndOffsetMs))
+			slog.Debug(fmt.Sprintf("Streaming downloaded track id=`%s` (%s) via ffmpeg, start=%d, end=%d", track.Id, descriptor.LocalPath, descriptor.StartOffsetMs, descriptor.EndOffsetMs))
 
 			item, reader, err := svc.cache.GetOrSave(fmt.Sprintf("tapesonic-%s", track.Id), func() (string, io.ReadCloser, error) {
 				slog.Debug(fmt.Sprintf("Populating stream cache for track id=`%s`", track.Id))
 
 				format, reader, err := svc.ffmpeg.StreamFrom(
 					r.Context(),
-					sources.LocalCodec,
+					descriptor.LocalCodec,
 					ffmpeg.ANY_FORMAT,
-					sources.StartOffsetMs,
-					sources.EndOffsetMs-sources.StartOffsetMs,
-					sources.LocalPath,
+					descriptor.StartOffsetMs,
+					descriptor.EndOffsetMs-descriptor.StartOffsetMs,
+					descriptor.LocalPath,
 				)
 				if err != nil {
 					return "", nil, err
@@ -111,20 +112,20 @@ func (svc *StreamService) ServeStream(user users.User, r *http.Request, w http.R
 			w.Header().Add("Content-Type", item.ContentType)
 			_, err = io.Copy(w, reader)
 			return err
-		} else if sources.RemoteUrl != "" {
-			streamInfo, err := svc.ytdlp.GetStreamInfo(r.Context(), sources.RemoteUrl, "ba")
+		} else if descriptor.RemoteUrl != "" {
+			streamInfo, err := svc.ytdlp.GetStreamInfo(r.Context(), descriptor.RemoteUrl, "ba")
 			if err != nil {
 				return err
 			}
 
-			slog.Debug(fmt.Sprintf("Streaming remote track id=`%s` (%s) via ffmpeg, start=%d, end=%d", track.Id, sources.RemoteUrl, sources.StartOffsetMs, sources.EndOffsetMs))
+			slog.Debug(fmt.Sprintf("Streaming remote track id=`%s` (%s) via ffmpeg, start=%d, end=%d", track.Id, descriptor.RemoteUrl, descriptor.StartOffsetMs, descriptor.EndOffsetMs))
 
 			format, reader, err := svc.ffmpeg.StreamFrom(
 				r.Context(),
 				streamInfo.ACodec,
 				ffmpeg.SEEKABLE_FORMAT,
-				sources.StartOffsetMs,
-				sources.EndOffsetMs-sources.StartOffsetMs,
+				descriptor.StartOffsetMs,
+				descriptor.EndOffsetMs-descriptor.StartOffsetMs,
 				streamInfo.Url,
 			)
 			if reader != nil {

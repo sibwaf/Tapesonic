@@ -1,7 +1,9 @@
 package sources
 
 import (
+	"errors"
 	"fmt"
+	"tapesonic/model"
 	"tapesonic/util"
 
 	"github.com/google/uuid"
@@ -145,6 +147,32 @@ func (storage *TrackStorage) GetAllTracksBySource(sourceId uuid.UUID) ([]SavedSo
 	return tracks, storage.db.Raw(query).Find(&tracks).Error
 }
 
+func (storage *TrackStorage) GetSourceDescriptor(trackId uuid.UUID) (SourceTrackFileDescriptor, error) {
+	query := `
+		SELECT
+			source_files.media_path AS local_path,
+			source_files.format AS local_format,
+			source_files.codec AS local_codec,
+			sources.url AS remote_url,
+			sources.duration_ms AS source_duration_ms,
+			source_tracks.start_offset_ms AS start_offset_ms,
+			source_tracks.end_offset_ms AS end_offset_ms
+		FROM source_tracks
+		JOIN sources ON sources.id = source_tracks.source_id
+		LEFT JOIN source_files ON source_files.source_id = sources.id
+		WHERE source_tracks.id = @trackId
+	`
+	params := map[string]any{"trackId": trackId}
+
+	sourceDescriptor := SourceTrackFileDescriptor{}
+	err := storage.db.Raw(query, params).Take(&sourceDescriptor).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return sourceDescriptor, model.ErrNotFound
+	} else {
+		return sourceDescriptor, err
+	}
+}
+
 func (storage *TrackStorage) FindTracksForMetadataGuessingByIds(trackIds []string) ([]SourceTrackForMetadataGuessing, error) {
 	if len(trackIds) == 0 {
 		return []SourceTrackForMetadataGuessing{}, nil
@@ -164,7 +192,7 @@ func (storage *TrackStorage) FindTracksForMetadataGuessingByIds(trackIds []strin
 			) AS "source_parent_titles",
 			source_tracks.artist_id AS "artist_id",
 			sources.release_date AS "release_date",
-			sources.thumbnail_id AS "thumbnail_id"
+			sources.artwork_id AS "artwork_id"
 		FROM source_tracks
 		JOIN sources ON source_tracks.source_id = sources.id
 		WHERE source_tracks.id IN @trackIds

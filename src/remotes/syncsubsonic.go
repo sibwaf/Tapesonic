@@ -22,17 +22,17 @@ const (
 type SubsonicSyncService struct {
 	allArtists *artists.ArtistService
 
-	remotes *RemoteStorage
-	covers  *RemoteCoverStorage
-	artists *RemoteArtistStorage
-	albums  *RemoteAlbumStorage
-	tracks  *RemoteTrackStorage
+	remotes  *RemoteStorage
+	artworks *RemoteArtworkStorage
+	artists  *RemoteArtistStorage
+	albums   *RemoteAlbumStorage
+	tracks   *RemoteTrackStorage
 }
 
 func newSubsonicSyncService(
 	allArtists *artists.ArtistService,
 	remotes *RemoteStorage,
-	covers *RemoteCoverStorage,
+	artworks *RemoteArtworkStorage,
 	artists *RemoteArtistStorage,
 	albums *RemoteAlbumStorage,
 	tracks *RemoteTrackStorage,
@@ -40,7 +40,7 @@ func newSubsonicSyncService(
 	return &SubsonicSyncService{
 		allArtists: allArtists,
 		remotes:    remotes,
-		covers:     covers,
+		artworks:   artworks,
 		artists:    artists,
 		albums:     albums,
 		tracks:     tracks,
@@ -136,7 +136,7 @@ func (svc *SubsonicSyncService) SyncLibrary(userId uuid.UUID, remoteId uuid.UUID
 
 func (svc *SubsonicSyncService) upsertArtist(artist subsonic.ArtistId3, remoteId uuid.UUID, userId uuid.UUID, syncTag string) error {
 	if artist.CoverArt != "" {
-		if err := svc.covers.Upsert(RemoteCover{Id: uuid.New(), RemoteId: remoteId, CoverId: artist.CoverArt}); err != nil {
+		if err := svc.artworks.Upsert(RemoteArtwork{Id: uuid.New(), RemoteId: remoteId, ArtworkId: artist.CoverArt}); err != nil {
 			return err
 		}
 	}
@@ -146,7 +146,7 @@ func (svc *SubsonicSyncService) upsertArtist(artist subsonic.ArtistId3, remoteId
 			Id:            uuid.New(),
 			RemoteId:      remoteId,
 			ArtistId:      artist.Id,
-			CoverId:       artist.CoverArt,
+			ArtworkId:     artist.CoverArt,
 			Name:          artist.Name,
 			MusicBrainzId: artist.MusicBrainzId,
 		},
@@ -176,7 +176,7 @@ func (svc *SubsonicSyncService) upsertArtist(artist subsonic.ArtistId3, remoteId
 
 func (svc *SubsonicSyncService) upsertAlbum(album subsonic.AlbumId3, remoteId uuid.UUID, userId uuid.UUID, syncTag string) error {
 	if album.CoverArt != "" {
-		if err := svc.covers.Upsert(RemoteCover{Id: uuid.New(), RemoteId: remoteId, CoverId: album.CoverArt}); err != nil {
+		if err := svc.artworks.Upsert(RemoteArtwork{Id: uuid.New(), RemoteId: remoteId, ArtworkId: album.CoverArt}); err != nil {
 			return err
 		}
 	}
@@ -193,7 +193,7 @@ func (svc *SubsonicSyncService) upsertAlbum(album subsonic.AlbumId3, remoteId uu
 			Id:         uuid.New(),
 			RemoteId:   remoteId,
 			AlbumId:    album.Id,
-			CoverId:    album.CoverArt,
+			ArtworkId:  album.CoverArt,
 			ArtistId:   album.ArtistId,
 			Title:      album.Name,
 			AddedAt:    util.NewTimestampWrapper(album.Created),
@@ -208,7 +208,7 @@ func (svc *SubsonicSyncService) upsertAlbum(album subsonic.AlbumId3, remoteId uu
 
 func (svc *SubsonicSyncService) upsertTrack(song subsonic.Child, remoteId uuid.UUID, userId uuid.UUID, syncTag string) error {
 	if song.CoverArt != "" {
-		if err := svc.covers.Upsert(RemoteCover{Id: uuid.New(), RemoteId: remoteId, CoverId: song.CoverArt}); err != nil {
+		if err := svc.artworks.Upsert(RemoteArtwork{Id: uuid.New(), RemoteId: remoteId, ArtworkId: song.CoverArt}); err != nil {
 			return err
 		}
 	}
@@ -223,7 +223,7 @@ func (svc *SubsonicSyncService) upsertTrack(song subsonic.Child, remoteId uuid.U
 			Album:      song.Album,
 			AlbumId:    song.AlbumId,
 			AlbumIndex: song.Track - 1,
-			CoverId:    song.CoverArt,
+			ArtworkId:  song.CoverArt,
 			Title:      song.Title,
 			DurationMs: song.Duration * 1000,
 		},

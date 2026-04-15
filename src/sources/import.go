@@ -2,7 +2,7 @@ package sources
 
 import (
 	"context"
-	"tapesonic/logic"
+	"tapesonic/artworks"
 	"tapesonic/util"
 	"tapesonic/ytdlp"
 	"time"
@@ -11,23 +11,23 @@ import (
 )
 
 type ImportService struct {
-	sources    *SourceStorage
-	tracks     *TrackStorage
-	ytdlp      *ytdlp.YtdlpService
-	thumbnails *logic.ThumbnailService
+	sources  *SourceStorage
+	tracks   *TrackStorage
+	ytdlp    *ytdlp.YtdlpService
+	artworks *artworks.ArtworkService
 }
 
 func newImportService(
 	sources *SourceStorage,
 	tracks *TrackStorage,
 	ytdlp *ytdlp.YtdlpService,
-	thumbnails *logic.ThumbnailService,
+	artworks *artworks.ArtworkService,
 ) *ImportService {
 	return &ImportService{
-		sources:    sources,
-		tracks:     tracks,
-		ytdlp:      ytdlp,
-		thumbnails: thumbnails,
+		sources:  sources,
+		tracks:   tracks,
+		ytdlp:    ytdlp,
+		artworks: artworks,
 	}
 }
 
@@ -121,12 +121,12 @@ func (svc *ImportService) ImportTree(node AnalyzedSourceTree, managementPolicy S
 		source.UpdatedAt = util.NewTimestampWrapper(time.Now())
 
 		if node.Metadata.Thumbnail != "" {
-			thumbnail, err := svc.thumbnails.CreateFromUrl(node.Metadata.Thumbnail)
+			artwork, err := svc.artworks.CreateFromUrl(node.Metadata.Thumbnail)
 			if err != nil {
 				return SourceTree{}, err
 			}
 
-			source.ThumbnailId = &thumbnail.Id
+			source.ArtworkId = &artwork.Id
 		}
 
 		source, err = svc.sources.Upsert(source)

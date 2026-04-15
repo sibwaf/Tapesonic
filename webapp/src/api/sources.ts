@@ -13,7 +13,7 @@ export interface SourceFullRs {
     TrackTitle: string;
     DurationMs: number;
     ReleaseDate: string | null;
-    ThumbnailId: string | null;
+    ArtworkId: string | null;
     File: SourceFileRs | null;
 }
 
@@ -24,7 +24,7 @@ export interface SourceListRs {
     Title: string;
     Uploader: string;
     DurationMs: number;
-    ThumbnailId: string | null;
+    ArtworkId: string | null;
     File: SourceFileRs | null;
 }
 
@@ -36,7 +36,7 @@ export interface SourceHierarchyListRs {
     Title: string;
     Uploader: string;
     ListIndex: number;
-    ThumbnailId: string | null;
+    ArtworkId: string | null;
 }
 
 export interface SourceFileRs {

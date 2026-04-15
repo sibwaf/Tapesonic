@@ -3,7 +3,7 @@ package library
 import "gorm.io/gorm"
 
 type LibraryModule struct {
-	coverStorage    *CoverStorage
+	artworkStorage  *ArtworkStorage
 	artistStorage   *ArtistStorage
 	albumStorage    *AlbumStorage
 	trackStorage    *TrackStorage
@@ -16,13 +16,13 @@ func NewLibraryModule(db *gorm.DB) *LibraryModule {
 	artistStorage := newArtistStorage(db)
 	albumStorage := newAlbumStorage(db)
 	trackStorage := newTrackStorage(db)
-	coverStorage := newCoverStorage(db)
+	artworkStorage := newArtworkStorage(db)
 	playlistStorage := newPlaylistStorage(db)
 
-	service := newLibraryService(artistStorage, albumStorage, trackStorage, coverStorage, playlistStorage)
+	service := newLibraryService(artistStorage, albumStorage, trackStorage, artworkStorage, playlistStorage)
 
 	return &LibraryModule{
-		coverStorage:    coverStorage,
+		artworkStorage:  artworkStorage,
 		artistStorage:   artistStorage,
 		albumStorage:    albumStorage,
 		trackStorage:    trackStorage,
@@ -32,7 +32,7 @@ func NewLibraryModule(db *gorm.DB) *LibraryModule {
 }
 
 func (module *LibraryModule) PrepareDatabase() error {
-	if err := module.coverStorage.PrepareDatabase(); err != nil {
+	if err := module.artworkStorage.PrepareDatabase(); err != nil {
 		return err
 	}
 	if err := module.artistStorage.PrepareDatabase(); err != nil {

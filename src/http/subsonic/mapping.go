@@ -19,8 +19,8 @@ func ToPlaylist(playlist model.LibraryPlaylist) subsonic.Playlist {
 		Entry: util.Map(playlist.Tracks, ToChild),
 	}
 
-	if playlist.CoverId != nil {
-		rs.CoverArt = playlist.CoverId.String()
+	if playlist.ArtworkId != nil {
+		rs.CoverArt = playlist.ArtworkId.String()
 	}
 
 	return rs
@@ -51,8 +51,8 @@ func ToAlbumId3(album model.LibraryAlbum) subsonic.AlbumId3 {
 		Song:        util.Map(album.Tracks, ToChild),
 	}
 
-	if album.CoverId != nil {
-		rs.CoverArt = album.CoverId.String()
+	if album.ArtworkId != nil {
+		rs.CoverArt = album.ArtworkId.String()
 	}
 
 	return rs
@@ -66,8 +66,8 @@ func ToArtistId3(artist model.LibraryArtist) subsonic.ArtistId3 {
 		Album:      util.Map(artist.Albums, ToAlbumId3),
 	}
 
-	if artist.CoverId != nil {
-		rs.CoverArt = artist.CoverId.String()
+	if artist.ArtworkId != nil {
+		rs.CoverArt = artist.ArtworkId.String()
 	}
 
 	return rs
@@ -98,8 +98,8 @@ func ToChild(track model.LibraryTrack) subsonic.Child {
 	if track.ArtistId != nil {
 		result.ArtistId = track.ArtistId.String()
 	}
-	if track.CoverId != nil {
-		result.CoverArt = track.CoverId.String()
+	if track.ArtworkId != nil {
+		result.CoverArt = track.ArtworkId.String()
 	}
 
 	return result

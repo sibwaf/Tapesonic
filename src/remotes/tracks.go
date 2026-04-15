@@ -24,7 +24,7 @@ type RemoteTrack struct {
 
 	AlbumIndex int
 
-	CoverId string
+	ArtworkId string
 
 	Title string
 
@@ -64,10 +64,10 @@ func (store *RemoteTrackStorage) Upsert(track RemoteTrack, trackToUser RemoteTra
 		}
 
 		sql1 := `
-			INSERT INTO remote_tracks (id, remote_id, track_id, artist, artist_id, album, album_id, album_index, cover_id, title, duration_ms, search_title)
-			VALUES (@id, @remoteId, @trackId, @artist, @artistId, @album, @albumId, @albumIndex, @coverId, @title, @durationMs, @searchTitle)
+			INSERT INTO remote_tracks (id, remote_id, track_id, artist, artist_id, album, album_id, album_index, artwork_id, title, duration_ms, search_title)
+			VALUES (@id, @remoteId, @trackId, @artist, @artistId, @album, @albumId, @albumIndex, @artworkId, @title, @durationMs, @searchTitle)
 			ON CONFLICT (remote_id, track_id) DO UPDATE
-			SET artist = excluded.artist, artist_id = excluded.artist_id, album = excluded.album, album_id = excluded.album_id, album_index = excluded.album_index, cover_id = excluded.cover_id, title = excluded.title, duration_ms = excluded.duration_ms, search_title = excluded.search_title
+			SET artist = excluded.artist, artist_id = excluded.artist_id, album = excluded.album, album_id = excluded.album_id, album_index = excluded.album_index, artwork_id = excluded.artwork_id, title = excluded.title, duration_ms = excluded.duration_ms, search_title = excluded.search_title
 			RETURNING id
 		`
 		params1 := map[string]any{
@@ -79,7 +79,7 @@ func (store *RemoteTrackStorage) Upsert(track RemoteTrack, trackToUser RemoteTra
 			"album":       track.Album,
 			"albumId":     track.AlbumId,
 			"albumIndex":  track.AlbumIndex,
-			"coverId":     track.CoverId,
+			"artworkId":   track.ArtworkId,
 			"title":       track.Title,
 			"durationMs":  track.DurationMs,
 			"searchTitle": util.MakeTextSearchString(track.Title),

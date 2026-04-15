@@ -17,7 +17,7 @@ type RemoteArtist struct {
 
 	ArtistId string `gorm:"uniqueIndex:remote_artist_uniq"`
 
-	CoverId string
+	ArtworkId string
 
 	Name          string
 	MusicBrainzId string
@@ -56,17 +56,17 @@ func (store *RemoteArtistStorage) Upsert(artist RemoteArtist, artistToUser Remot
 	result := RemoteArtist{}
 	return result, store.db.Transaction(func(tx *gorm.DB) error {
 		sql1 := `
-			INSERT INTO remote_artists (id, remote_id, artist_id, cover_id, name, music_brainz_id, search_name)
-			VALUES (@id, @remoteId, @artistId, @coverId, @name, @musicBrainzId, @searchName)
+			INSERT INTO remote_artists (id, remote_id, artist_id, artwork_id, name, music_brainz_id, search_name)
+			VALUES (@id, @remoteId, @artistId, @artworkId, @name, @musicBrainzId, @searchName)
 			ON CONFLICT (remote_id, artist_id) DO UPDATE
-			SET cover_id = excluded.cover_id, name = excluded.name, music_brainz_id = excluded.music_brainz_id, search_name = excluded.search_name
-			RETURNING id, remote_id, artist_id, cover_id, name, music_brainz_id, tapesonic_artist_id
+			SET artwork_id = excluded.artwork_id, name = excluded.name, music_brainz_id = excluded.music_brainz_id, search_name = excluded.search_name
+			RETURNING id, remote_id, artist_id, artwork_id, name, music_brainz_id, tapesonic_artist_id
 		`
 		params1 := map[string]any{
 			"id":            artist.Id,
 			"remoteId":      artist.RemoteId,
 			"artistId":      artist.ArtistId,
-			"coverId":       artist.CoverId,
+			"artworkId":     artist.ArtworkId,
 			"name":          artist.Name,
 			"musicBrainzId": artist.MusicBrainzId,
 			"searchName":    util.MakeTextSearchString(artist.Name),

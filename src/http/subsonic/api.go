@@ -179,7 +179,7 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 		"/scrobble": asHandlerFunc(Scrobble(auth, appCtx.Scrobbling.ScrobbleService)),
 
 		"/stream":      asRawHandlerFunc(Stream(auth, appCtx.Library.LibraryService, appCtx.Media.Streams)),
-		"/getCoverArt": asRawHandlerFunc(GetCoverArt(auth, appCtx.Library.LibraryService, appCtx.Media.Covers)),
+		"/getCoverArt": asRawHandlerFunc(GetCoverArt(auth, appCtx.Library.LibraryService, appCtx.Media.Artworks)),
 	}
 
 	resultHandlers := map[string]http.HandlerFunc{}

@@ -3,7 +3,7 @@ package sources
 import (
 	"fmt"
 	"log/slog"
-	"tapesonic/logic"
+	"tapesonic/artworks"
 	"tapesonic/scheduling"
 	"tapesonic/ytdlp"
 	"time"
@@ -28,7 +28,7 @@ type SourcesModule struct {
 func NewSourcesModule(
 	db *gorm.DB,
 	ytdlp *ytdlp.YtdlpService,
-	thumbnails *logic.ThumbnailService,
+	artworks *artworks.ArtworkService,
 	sourceDownloadCron cron.Schedule,
 	mediaDir string,
 ) *SourcesModule {
@@ -40,7 +40,7 @@ func NewSourcesModule(
 
 	return &SourcesModule{
 		SourceService: newSourceService(sources, tracks, files, mediaDir),
-		ImportService: newImportService(sources, tracks, ytdlp, thumbnails),
+		ImportService: newImportService(sources, tracks, ytdlp, artworks),
 
 		sources: sources,
 		tracks:  tracks,

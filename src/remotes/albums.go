@@ -16,7 +16,7 @@ type RemoteAlbum struct {
 
 	AlbumId string `gorm:"uniqueIndex:remote_album_uniq"`
 
-	CoverId    string
+	ArtworkId  string
 	ArtistId   string
 	Title      string
 	AddedAt    util.TimestampWrapper
@@ -56,17 +56,17 @@ func (store *RemoteAlbumStorage) Upsert(album RemoteAlbum, albumToUser RemoteAlb
 		}
 
 		sql1 := `
-			INSERT INTO remote_albums (id, remote_id, album_id, cover_id, artist_id, title, added_at, released_at, search_title)
-			VALUES (@id, @remoteId, @albumId, @coverId, @artistId, @title, @addedAt, @releasedAt, @searchTitle)
+			INSERT INTO remote_albums (id, remote_id, album_id, artwork_id, artist_id, title, added_at, released_at, search_title)
+			VALUES (@id, @remoteId, @albumId, @artworkId, @artistId, @title, @addedAt, @releasedAt, @searchTitle)
 			ON CONFLICT (remote_id, album_id) DO UPDATE
-			SET cover_id = excluded.cover_id, artist_id = excluded.artist_id, title = excluded.title, added_at = excluded.added_at, released_at = excluded.released_at, search_title = excluded.search_title
+			SET artwork_id = excluded.artwork_id, artist_id = excluded.artist_id, title = excluded.title, added_at = excluded.added_at, released_at = excluded.released_at, search_title = excluded.search_title
 			RETURNING id
 		`
 		params1 := map[string]any{
 			"id":          album.Id,
 			"remoteId":    album.RemoteId,
 			"albumId":     album.AlbumId,
-			"coverId":     album.CoverId,
+			"artworkId":   album.ArtworkId,
 			"artistId":    album.ArtistId,
 			"title":       album.Title,
 			"addedAt":     album.AddedAt,

@@ -19,7 +19,7 @@ export interface TapeRsTrack {
     Artist: TapeRsArtist | null;
     Title: string;
 
-    ThumbnailId: string | null;
+    ArtworkId: string | null;
 }
 
 export interface TapeListRs {
@@ -27,7 +27,7 @@ export interface TapeListRs {
     Name: string;
     Type: TapeType;
 
-    ThumbnailId: string | null;
+    ArtworkId: string | null;
 
     Artist: TapeRsArtist | null;
     ReleasedAt: string | null;
@@ -40,7 +40,7 @@ export interface TapeFullRs {
     Name: string;
     Type: TapeType;
 
-    ThumbnailId: string | null;
+    ArtworkId: string | null;
 
     Artist: TapeRsArtist | null;
     ReleasedAt: string | null;
@@ -52,7 +52,7 @@ export interface TapeRq {
     Name: string;
     Type: string;
 
-    ThumbnailId: string | null;
+    ArtworkId: string | null;
 
     ArtistId: string | null;
     ReleasedAt: string | null;
@@ -70,7 +70,7 @@ export interface GuessTapeMetadataRs {
 
     Artist: TapeRsArtist | null;
     ReleasedAt: string | null;
-    ThumbnailId: string | null;
+    ArtworkId: string | null;
 }
 
 export default {

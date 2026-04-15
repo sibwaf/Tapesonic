@@ -6,14 +6,14 @@ const props = defineProps<{
 </script>
 
 <template>
-    <span class="thumbnail-container" :style="`width: ${size}; height: ${size};`">
-        <img v-if="id" class="thumbnail" :src="`/media/thumbnails/${props.id}`" />
-        <span v-else class="thumbnail">No thumbnail</span>
+    <span class="artwork-container" :style="`width: ${size}; height: ${size};`">
+        <img v-if="id" class="artwork" :src="`/media/artworks/${props.id}`" />
+        <span v-else class="artwork">No artwork</span>
     </span>
 </template>
 
 <style>
-.thumbnail-container {
+.artwork-container {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -24,7 +24,7 @@ const props = defineProps<{
     flex-grow: 0;
 }
 
-.thumbnail {
+.artwork {
     max-height: 100%;
     max-width: 100%;
 }

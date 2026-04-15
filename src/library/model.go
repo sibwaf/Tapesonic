@@ -1,6 +1,7 @@
 package library
 
 import (
+	"tapesonic/artworks"
 	"tapesonic/remotes"
 	"tapesonic/sources"
 
@@ -21,4 +22,14 @@ type AllTrackId struct {
 
 	RemoteTrackId *uuid.UUID
 	RemoteTrack   *remotes.RemoteTrack
+}
+
+type AllArtworkId struct {
+	Id string
+
+	ArtworkId *uuid.UUID
+	Artwork   *artworks.Artwork
+
+	RemoteArtworkId *uuid.UUID
+	RemoteArtwork   *remotes.RemoteArtwork
 }

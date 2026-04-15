@@ -5,12 +5,12 @@ import (
 	"path"
 
 	"tapesonic/artists"
+	"tapesonic/artworks"
 	configPkg "tapesonic/config"
 	"tapesonic/ffmpeg"
 	"tapesonic/lastfm"
 	"tapesonic/library"
 	"tapesonic/listenbrainz"
-	"tapesonic/logic"
 	"tapesonic/media"
 	"tapesonic/recommendations"
 	"tapesonic/remotes"
@@ -36,6 +36,7 @@ type Context struct {
 	Ffmpeg *ffmpeg.Ffmpeg
 
 	Users           *users.UsersModule
+	Artworks        *artworks.ArtworksModule
 	Artists         *artists.ArtistsModule
 	Sources         *sources.SourcesModule
 	Remotes         *remotes.RemotesModule
@@ -48,12 +49,7 @@ type Context struct {
 	Search          *search.SearchModule
 	Recommendations *recommendations.RecommendationsModule
 
-	ThumbnailStorage *storage.ThumbnailStorage
-
-	MediaStorage       *storage.MediaStorage
 	StreamCacheStorage *storage.StreamCacheStorage
-
-	ThumbnailService *logic.ThumbnailService
 }
 
 func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
@@ -98,15 +94,11 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	if err := db.Exec(`DROP VIEW IF EXISTS all_artists`).Error; err != nil {
 		return nil, err
 	}
-	if err := db.Exec(`DROP VIEW IF EXISTS all_covers`).Error; err != nil {
+	if err := db.Exec(`DROP VIEW IF EXISTS all_artworks`).Error; err != nil {
 		return nil, err
 	}
 
 	context.Scheduling = scheduling.NewSchedulingModule(db, config.SchedulerDelay)
-
-	if context.ThumbnailStorage, err = storage.NewThumbnailStorage(db); err != nil {
-		return nil, err
-	}
 
 	if err = storage.Migrate(db); err != nil {
 		return nil, err
@@ -119,19 +111,18 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		config.YtdlpMetadataMaxParallelism,
 	)
 
-	context.ThumbnailService = logic.NewThumbnailService(
-		context.ThumbnailStorage,
-		path.Join(config.MediaStorageDir, "thumbnails"),
-	)
-
 	if context.Users, err = users.NewUsersModule(db); err != nil {
 		return nil, err
 	}
+	context.Artworks = artworks.NewArtworksModule(
+		db,
+		path.Join(config.MediaStorageDir, "artworks"),
+	)
 	context.Artists = artists.NewArtistsModule(db)
 	context.Sources = sources.NewSourcesModule(
 		db,
 		context.Ytdlp.YtdlpService,
-		context.ThumbnailService,
+		context.Artworks.ArtworkService,
 		config.DownloadNextSourceSchedule,
 		config.MediaStorageDir,
 	)
@@ -145,8 +136,6 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	}
 	context.Library = library.NewLibraryModule(db)
 	context.Tapes = tapes.NewTapesModule(db, context.Artists.ArtistService, context.Sources.SourceService, context.Library.LibraryService)
-
-	context.MediaStorage = storage.NewMediaStorage(db, config.MediaStorageDir)
 
 	if context.StreamCacheStorage, err = storage.NewStreamCacheStorage(
 		path.Join(config.CacheDir, "stream"),
@@ -173,8 +162,8 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 
 	context.Media = media.NewMediaModule(
 		context.Remotes.RemoteService,
-		context.ThumbnailService,
-		context.MediaStorage,
+		context.Artworks.ArtworkService,
+		context.Sources.SourceService,
 		context.StreamCacheStorage,
 		context.Ffmpeg,
 		context.Ytdlp.YtdlpService,
@@ -212,6 +201,9 @@ func prepareDatabase(context *Context, db *gorm.DB) error {
 		return err
 	}
 	if err := context.Ytdlp.PrepareDatabase(); err != nil {
+		return err
+	}
+	if err := context.Artworks.PrepareDatabase(); err != nil {
 		return err
 	}
 	if err := context.Artists.PrepareDatabase(); err != nil {

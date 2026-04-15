@@ -27,7 +27,7 @@ func (store *AlbumStorage) PrepareDatabase() error {
 				artist_id,
 				artist,
 				title,
-				cover_id,
+				artwork_id,
 				track_count,
 				duration_ms,
 				released_at,
@@ -89,7 +89,7 @@ func (store *AlbumStorage) PrepareDatabase() error {
 				artists.id AS artist_id,
 				artists.name AS artist,
 				tapes.name AS title,
-				tapes.thumbnail_id AS cover_id,
+				tapes.artwork_id AS artwork_id,
 				tapes_aggregate.track_count AS track_count,
 				tapes_aggregate.total_duration_ms AS duration_ms,
 				tapes.released_at AS released_at,
@@ -111,7 +111,7 @@ func (store *AlbumStorage) PrepareDatabase() error {
 				artists.id AS artist_id,
 				artists.name AS artist,
 				remote_albums.title AS title,
-				remote_covers.id AS cover_id,
+				remote_artworks.id AS artwork_id,
 				remote_albums_aggregate.track_count AS track_count,
 				remote_albums_aggregate.total_duration_ms AS duration_ms,
 				remote_albums.released_at AS released_at,
@@ -123,7 +123,7 @@ func (store *AlbumStorage) PrepareDatabase() error {
 			FROM remote_albums
 			JOIN remote_album_to_users ON remote_albums.id = remote_album_to_users.remote_album_id
 			LEFT JOIN remote_albums_aggregate ON remote_albums.id = remote_albums_aggregate.id AND remote_album_to_users.user_id = remote_albums_aggregate.user_id
-			LEFT JOIN remote_covers ON remote_albums.remote_id = remote_covers.remote_id AND remote_albums.cover_id = remote_covers.cover_id
+			LEFT JOIN remote_artworks ON remote_albums.remote_id = remote_artworks.remote_id AND remote_albums.artwork_id = remote_artworks.artwork_id
 			LEFT JOIN remote_artists ON remote_albums.remote_id = remote_artists.remote_id AND remote_albums.artist_id = remote_artists.artist_id
 			LEFT JOIN artists ON remote_artists.tapesonic_artist_id = artists.id
 			WHERE remote_albums_aggregate.track_count > 0
@@ -235,7 +235,7 @@ func (store *AlbumStorage) getAlbums(userId uuid.UUID, count int, offset int, fi
 			all_albums.title AS "name",
 			all_albums.artist_id AS "artist_id",
 			all_albums.artist AS "artist_name",
-			all_albums.cover_id AS "cover_id",
+			all_albums.artwork_id AS "artwork_id",
 			all_albums.track_count AS "track_count",
 			all_albums.duration_ms * 1000000 AS "duration",
 			all_albums.released_at AS "released_at",

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import sourcesApi, { type SourceListRs } from "@/api/sources";
-import Thumbnail from "@/components/Thumbnail.vue";
+import Artwork from "@/components/Artwork.vue";
 import { ref } from "vue";
 
 enum State {
@@ -43,7 +43,7 @@ const sources = ref<SourceListRs[]>([]);
             <tbody>
                 <tr v-for="source in sources" :key="source.Id">
                     <td>
-                        <Thumbnail size="6em" :id="source.ThumbnailId" />
+                        <Artwork size="6em" :id="source.ArtworkId" />
                     </td>
                     <td>
                         {{ source.Title }}

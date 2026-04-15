@@ -50,7 +50,7 @@ func (store *TrackStorage) PrepareDatabase() error {
 				album_released_at,
 				album_track_index,
 				title,
-				cover_id,
+				artwork_id,
 				duration_ms,
 				played_at,
 				search_artist,
@@ -59,14 +59,14 @@ func (store *TrackStorage) PrepareDatabase() error {
 				user_id
 			) AS
 
-			WITH track_albums (track_id, album_id, album_name, album_search_name, album_artist_id, album_cover_id, album_released_at, list_index) AS (
+			WITH track_albums (track_id, album_id, album_name, album_search_name, album_artist_id, album_artwork_id, album_released_at, list_index) AS (
 				SELECT
 					tape_to_tracks.track_id AS track_id,
 					tapes.id AS album_id,
 					tapes.name AS album_name,
 					tapes.search_name AS album_search_name,
 					tapes.artist_id AS album_artist_id,
-					tapes.thumbnail_id AS album_cover_id,
+					tapes.artwork_id AS album_artwork_id,
 					tapes.released_at AS album_released_at,
 					tape_to_tracks.list_index AS list_index
 				FROM tape_to_tracks
@@ -81,14 +81,14 @@ func (store *TrackStorage) PrepareDatabase() error {
 					remote_albums.title AS album_name,
 					remote_albums.search_title AS search_album,
 					album_artists.id AS album_artist_id,
-					remote_covers.id AS album_cover_id,
+					remote_artworks.id AS album_artwork_id,
 					remote_albums.released_at AS album_released_at,
 					remote_tracks.album_index AS list_index
 				FROM remote_tracks
 				JOIN remote_albums ON remote_tracks.remote_id = remote_albums.remote_id AND remote_tracks.album_id = remote_albums.album_id
 				LEFT JOIN remote_artists remote_album_artists ON remote_albums.remote_id = remote_album_artists.remote_id AND remote_albums.artist_id = remote_album_artists.artist_id
 				LEFT JOIN artists album_artists ON remote_album_artists.tapesonic_artist_id = album_artists.id
-				JOIN remote_covers ON remote_albums.remote_id = remote_covers.remote_id AND remote_albums.cover_id = remote_covers.cover_id
+				JOIN remote_artworks ON remote_albums.remote_id = remote_artworks.remote_id AND remote_albums.artwork_id = remote_artworks.artwork_id
 			)
 
 			SELECT
@@ -104,7 +104,7 @@ func (store *TrackStorage) PrepareDatabase() error {
 				track_albums.album_released_at AS album_released_at,
 				track_albums.list_index AS album_track_index,
 				source_tracks.title AS title,
-				coalesce(track_albums.album_cover_id, sources.thumbnail_id) AS cover_id,
+				coalesce(track_albums.album_artwork_id, sources.artwork_id) AS artwork_id,
 				source_tracks.end_offset_ms - source_tracks.start_offset_ms AS duration_ms,
 				listen_stats.last_listened_at AS played_at,
 				artists.search_name AS search_artist,
@@ -133,7 +133,7 @@ func (store *TrackStorage) PrepareDatabase() error {
 				track_albums.album_released_at AS album_released_at,
 				track_albums.list_index AS album_track_index,
 				remote_tracks.title AS title,
-				remote_covers.id AS cover_id,
+				remote_artworks.id AS artwork_id,
 				remote_tracks.duration_ms AS duration_ms,
 				listen_stats.last_listened_at AS played_at,
 				artists.search_name AS search_artist,
@@ -145,7 +145,7 @@ func (store *TrackStorage) PrepareDatabase() error {
 			LEFT JOIN remote_artists ON remote_tracks.remote_id = remote_artists.remote_id AND remote_tracks.artist_id = remote_artists.artist_id
 			LEFT JOIN artists ON remote_artists.tapesonic_artist_id = artists.id
 			LEFT JOIN track_albums ON remote_tracks.id = track_albums.track_id
-			LEFT JOIN remote_covers ON remote_tracks.remote_id = remote_covers.remote_id AND remote_tracks.cover_id = remote_covers.cover_id
+			LEFT JOIN remote_artworks ON remote_tracks.remote_id = remote_artworks.remote_id AND remote_tracks.artwork_id = remote_artworks.artwork_id
 			LEFT JOIN listen_stats ON remote_tracks.id = listen_stats.track_id AND remote_track_to_users.user_id = listen_stats.user_id
 		`,
 		model.TAPE_TYPE_ALBUM,
@@ -269,7 +269,7 @@ func (store *TrackStorage) getTracks(userId uuid.UUID, count int, offset int, fi
 			all_tracks.album_released_at AS "album_released_at",
 			all_tracks.album AS "album_name",
 			all_tracks.album_track_index AS "album_track_index",
-			all_tracks.cover_id AS "cover_id",
+			all_tracks.artwork_id AS "artwork_id",
 			all_tracks.duration_ms * 1000 * 1000 AS "duration",
 			all_tracks.played_at AS "played_at"
 		FROM all_tracks

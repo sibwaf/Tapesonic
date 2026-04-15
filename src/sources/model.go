@@ -2,7 +2,7 @@ package sources
 
 import (
 	"tapesonic/artists"
-	"tapesonic/storage"
+	"tapesonic/artworks"
 	"tapesonic/util"
 	"tapesonic/ytdlp"
 
@@ -33,7 +33,7 @@ type SourceForHierarchy struct {
 
 	ListIndex int
 
-	ThumbnailId *uuid.UUID
+	ArtworkId *uuid.UUID
 }
 
 type AnalyzedSourceTree struct {
@@ -91,6 +91,18 @@ type SavedSourceTrack struct {
 	EndOffsetMs   int64
 }
 
+type SourceTrackFileDescriptor struct {
+	LocalPath   string
+	LocalFormat string
+	LocalCodec  string
+
+	RemoteUrl        string
+	SourceDurationMs int64
+
+	StartOffsetMs int64
+	EndOffsetMs   int64
+}
+
 type SourceTrackForMetadataGuessing struct {
 	Id uuid.UUID
 
@@ -102,7 +114,7 @@ type SourceTrackForMetadataGuessing struct {
 
 	ArtistId    *uuid.UUID
 	ReleaseDate *util.TimestampWrapper
-	ThumbnailId *uuid.UUID
+	ArtworkId   *uuid.UUID
 }
 
 // database
@@ -128,8 +140,8 @@ type Source struct {
 	UploadedAt  util.TimestampWrapper
 	ReleaseDate *util.TimestampWrapper
 
-	ThumbnailId *uuid.UUID
-	Thumbnail   *storage.Thumbnail
+	ArtworkId *uuid.UUID
+	Artwork   *artworks.Artwork
 
 	ManagementPolicy SourceManagementPolicy
 

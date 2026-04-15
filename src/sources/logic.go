@@ -128,6 +128,19 @@ func (svc *SourceService) FindTracksForMetadataGuessingByIds(trackIds []string) 
 	return svc.tracks.FindTracksForMetadataGuessingByIds(trackIds)
 }
 
+func (svc *SourceService) GetTrackFileDescriptor(trackId uuid.UUID) (SourceTrackFileDescriptor, error) {
+	descriptor, err := svc.tracks.GetSourceDescriptor(trackId)
+	if err != nil {
+		return SourceTrackFileDescriptor{}, err
+	}
+
+	if descriptor.LocalPath != "" {
+		descriptor.LocalPath = path.Join(svc.baseDir, descriptor.LocalPath)
+	}
+
+	return descriptor, nil
+}
+
 func (svc *SourceService) DeleteFile(sourceId uuid.UUID) error {
 	slog.Debug(fmt.Sprintf("Trying to delete media for source id=%s", sourceId))
 

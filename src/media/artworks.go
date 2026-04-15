@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 	"syscall"
-	"tapesonic/logic"
+	"tapesonic/artworks"
 	"tapesonic/model"
 	"tapesonic/remotes"
 	"tapesonic/subsonic"
@@ -15,42 +15,32 @@ import (
 	"github.com/google/uuid"
 )
 
-type CoverService struct {
-	remotes    *remotes.RemoteService
-	thumbnails *logic.ThumbnailService
+type ArtworkService struct {
+	remotes  *remotes.RemoteService
+	artworks *artworks.ArtworkService
 }
 
-func newCoverService(
+func newArtworkService(
 	remotes *remotes.RemoteService,
-	thumbnails *logic.ThumbnailService,
-) *CoverService {
-	return &CoverService{
-		remotes:    remotes,
-		thumbnails: thumbnails,
+	artworks *artworks.ArtworkService,
+) *ArtworkService {
+	return &ArtworkService{
+		remotes:  remotes,
+		artworks: artworks,
 	}
 }
 
-func (svc *CoverService) ServeCover(user users.User, r *http.Request, w http.ResponseWriter, cover model.LibraryCover) error {
-	if cover.RemoteId == uuid.Nil {
-		// todo: proper file streaming
-		mime, reader, err := svc.thumbnails.GetThumbnailContent(cover.Id)
+func (svc *ArtworkService) ServeArtwork(user users.User, r *http.Request, w http.ResponseWriter, artwork model.LibraryArtwork) error {
+	if artwork.RemoteId == uuid.Nil {
+		descriptor, err := svc.artworks.GetFileDescriptor(artwork.Id)
 		if err != nil {
 			return err
 		}
 
-		defer reader.Close()
-
-		w.Header().Add("Content-Type", mime)
-
-		_, err = io.Copy(w, reader)
-		if errors.Is(err, syscall.EPIPE) {
-			// client cancelled the request
-			return nil
-		}
-
-		return err
+		http.ServeFile(w, r, descriptor.LocalPath)
+		return nil
 	} else {
-		remote, err := svc.remotes.GetById(cover.RemoteId)
+		remote, err := svc.remotes.GetById(artwork.RemoteId)
 		if err != nil {
 			return err
 		}
@@ -65,7 +55,7 @@ func (svc *CoverService) ServeCover(user users.User, r *http.Request, w http.Res
 			client := subsonic.NewSubsonicClient(remote.Url)
 			auth := remotes.GetSubsonicAuthMethod(&credentials)
 
-			res, err := client.GetCoverArt(r.Context(), auth, cover.RemoteCoverId, FilterProxyHeaders(r.Header))
+			res, err := client.GetCoverArt(r.Context(), auth, artwork.RemoteArtworkId, FilterProxyHeaders(r.Header))
 			if err != nil {
 				return err
 			}

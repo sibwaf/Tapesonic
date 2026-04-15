@@ -25,22 +25,22 @@ func toSourceFileRs(file sources.SourceFile) SourceFileRs {
 type SourceListRs struct {
 	Id uuid.UUID
 
-	Url         string
-	Title       string
-	Uploader    string
-	DurationMs  int64
-	ThumbnailId *uuid.UUID
-	File        *SourceFileRs
+	Url        string
+	Title      string
+	Uploader   string
+	DurationMs int64
+	ArtworkId  *uuid.UUID
+	File       *SourceFileRs
 }
 
 func toSourceListRs(source sources.SourceForApi) SourceListRs {
 	result := SourceListRs{
-		Id:          source.Source.Id,
-		Url:         source.Source.Url,
-		Title:       source.Source.Title,
-		Uploader:    source.Source.Uploader,
-		DurationMs:  source.Source.DurationMs,
-		ThumbnailId: source.Source.ThumbnailId,
+		Id:         source.Source.Id,
+		Url:        source.Source.Url,
+		Title:      source.Source.Title,
+		Uploader:   source.Source.Uploader,
+		DurationMs: source.Source.DurationMs,
+		ArtworkId:  source.Source.ArtworkId,
 	}
 
 	if source.File != nil {
@@ -88,7 +88,7 @@ type SourceFullRs struct {
 	TrackTitle  string
 	DurationMs  int64
 	ReleaseDate *time.Time
-	ThumbnailId *uuid.UUID
+	ArtworkId   *uuid.UUID
 	File        *SourceFileRs
 }
 
@@ -105,7 +105,7 @@ func toSourceFullRs(source sources.Source, file *sources.SourceFile) SourceFullR
 		TrackTitle:  source.TrackTitle,
 		DurationMs:  source.DurationMs,
 		ReleaseDate: source.ReleaseDate.UnwrapNullable(),
-		ThumbnailId: source.ThumbnailId,
+		ArtworkId:   source.ArtworkId,
 	}
 
 	if file != nil {
@@ -141,11 +141,11 @@ type SourceHierarchyListRs struct {
 	Id       uuid.UUID
 	ParentId *uuid.UUID
 
-	Url         string
-	Title       string
-	Uploader    string
-	ListIndex   int
-	ThumbnailId *uuid.UUID
+	Url       string
+	Title     string
+	Uploader  string
+	ListIndex int
+	ArtworkId *uuid.UUID
 }
 
 func toSourceHierarchyListRs(source sources.SourceForHierarchy) SourceHierarchyListRs {
@@ -153,11 +153,11 @@ func toSourceHierarchyListRs(source sources.SourceForHierarchy) SourceHierarchyL
 		Id:       source.Id,
 		ParentId: source.ParentId,
 
-		Url:         source.Url,
-		Title:       source.Title,
-		Uploader:    source.Uploader,
-		ListIndex:   source.ListIndex,
-		ThumbnailId: source.ThumbnailId,
+		Url:       source.Url,
+		Title:     source.Title,
+		Uploader:  source.Uploader,
+		ListIndex: source.ListIndex,
+		ArtworkId: source.ArtworkId,
 	}
 }
 

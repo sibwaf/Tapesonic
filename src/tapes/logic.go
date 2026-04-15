@@ -136,12 +136,12 @@ func (s *TapeService) fetchTracks(userId uuid.UUID, tapeId uuid.UUID) ([]model.L
 }
 
 type TapeMetadata struct {
-	Name        string
-	Type        model.TapeType
-	ArtistId    *uuid.UUID
-	ArtistName  string
-	ReleasedAt  *time.Time
-	ThumbnailId *uuid.UUID
+	Name       string
+	Type       model.TapeType
+	ArtistId   *uuid.UUID
+	ArtistName string
+	ReleasedAt *time.Time
+	ArtworkId  *uuid.UUID
 }
 
 func (s *TapeService) GuessTapeMetadata(userId uuid.UUID, trackIds []string) (TapeMetadata, error) {
@@ -164,7 +164,7 @@ func (s *TapeService) GuessTapeMetadata(userId uuid.UUID, trackIds []string) (Ta
 	names := util.NewCountingSet[string]()
 	artistIds := util.NewCountingSet[uuid.UUID]()
 	releaseDates := util.NewCountingSet[time.Time]()
-	thumbnailIds := util.NewCountingSet[uuid.UUID]()
+	artworkIds := util.NewCountingSet[uuid.UUID]()
 
 	artistMapping := map[string]uuid.UUID{}
 	getArtistId := func(name string) (uuid.UUID, error) {
@@ -208,12 +208,12 @@ func (s *TapeService) GuessTapeMetadata(userId uuid.UUID, trackIds []string) (Ta
 			artistIds.Add(uuid.Nil)
 		}
 
-		if sourceTrack.ThumbnailId != nil {
-			thumbnailIds.Add(*sourceTrack.ThumbnailId)
-		} else if track.CoverId != nil {
-			thumbnailIds.Add(*track.CoverId)
+		if sourceTrack.ArtworkId != nil {
+			artworkIds.Add(*sourceTrack.ArtworkId)
+		} else if track.ArtworkId != nil {
+			artworkIds.Add(*track.ArtworkId)
 		} else {
-			thumbnailIds.Add(uuid.Nil)
+			artworkIds.Add(uuid.Nil)
 		}
 
 		if sourceTrack.ReleaseDate != nil {
@@ -229,13 +229,13 @@ func (s *TapeService) GuessTapeMetadata(userId uuid.UUID, trackIds []string) (Ta
 	name := names.GetDominatingValue(threshold)
 	parentName := parentNames.GetDominatingValue(threshold)
 	artistId := artistIds.GetDominatingValue(threshold)
-	thumbnailId := thumbnailIds.GetDominatingValue(threshold)
+	artworkId := artworkIds.GetDominatingValue(threshold)
 	releaseDate := releaseDates.GetDominatingValue(threshold)
 
 	result := TapeMetadata{
-		Name:        util.Coalesce(name, parentName),
-		ReleasedAt:  util.TakeIf(&releaseDate, !releaseDate.IsZero()),
-		ThumbnailId: util.TakeIf(&thumbnailId, thumbnailId != uuid.Nil),
+		Name:       util.Coalesce(name, parentName),
+		ReleasedAt: util.TakeIf(&releaseDate, !releaseDate.IsZero()),
+		ArtworkId:  util.TakeIf(&artworkId, artworkId != uuid.Nil),
 	}
 
 	if artistId != uuid.Nil {

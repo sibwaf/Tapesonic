@@ -3,7 +3,7 @@ import tapes, { type GuessTapeMetadataRs, type TapeFullRs, type TapeRq, TapeType
 import { type TrackRs } from '@/api/tracks';
 import util from '@/util';
 import TapeTrackSearch from '@/components/TapeTrackSearch.vue';
-import ThumbnailSelector from '@/components/ThumbnailSelector.vue';
+import ArtworkSelector from '@/components/ArtworkSelector.vue';
 import { computed, ref, toRaw, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import DateEditor from '@/components/DateEditor.vue';
@@ -19,22 +19,22 @@ const name = ref("");
 const type = ref(TapeType.Album);
 const artist = ref<Artist | null>(null);
 const releasedAt = ref<string | null>(null);
-const thumbnailId = ref<string | null>(null);
+const artworkId = ref<string | null>(null);
 const tracks = ref<TapeRsTrack[]>([]);
 
 const guessedMetadata = ref<GuessTapeMetadataRs | null>(null);
-const thumbnailIds = computed(() => {
+const artworkIds = computed(() => {
     const result = new Set<string>();
 
-    const tapeThumbnailId = tape.value?.ThumbnailId ?? null;
-    if (tapeThumbnailId != null) {
-        result.add(tapeThumbnailId);
+    const tapeArtworkId = tape.value?.ArtworkId ?? null;
+    if (tapeArtworkId != null) {
+        result.add(tapeArtworkId);
     }
 
     for (const track of tracks.value) {
-        const thumbnailId = track.ThumbnailId;
-        if (thumbnailId != null) {
-            result.add(thumbnailId);
+        const artworkId = track.ArtworkId;
+        if (artworkId != null) {
+            result.add(artworkId);
         }
     }
 
@@ -62,7 +62,7 @@ const isEdited = computed(() => {
         || type.value != tapeValue.Type
         || artist.value?.id != tapeValue.Artist?.Id
         || releasedAt.value != tapeValue.ReleasedAt
-        || thumbnailId.value != tapeValue.ThumbnailId
+        || artworkId.value != tapeValue.ArtworkId
         || JSON.stringify(trackIds.value) != JSON.stringify(tapeValue.Tracks.map(it => it.Id));
 });
 
@@ -83,7 +83,7 @@ function onAddTrack(track: TrackRs) {
         RemoteId: track.RemoteId,
         Artist: artist,
         Title: track.Title,
-        ThumbnailId: track.ThumbnailId,
+        ArtworkId: track.ArtworkId,
     });
 }
 
@@ -111,7 +111,7 @@ function onReset() {
     name.value = tapeValue.Name;
     type.value = tapeValue.Type;
     releasedAt.value = tapeValue.ReleasedAt;
-    thumbnailId.value = tapeValue.ThumbnailId;
+    artworkId.value = tapeValue.ArtworkId;
     tracks.value = [...tapeValue.Tracks];
 
     const tapeArtist = tapeValue.Artist;
@@ -134,7 +134,7 @@ async function onSave() {
         const tapeRq: TapeRq = {
             Name: name.value,
             Type: type.value,
-            ThumbnailId: thumbnailId.value,
+            ArtworkId: artworkId.value,
             ArtistId: artist.value?.id ?? null,
             ReleasedAt: releasedAt.value,
             TrackIds: tracks.value.map(it => it.Id),
@@ -274,7 +274,7 @@ watch(albumTrackIds, async (trackIds, oldTrackIds) => {
 
         <hr>
 
-        <ThumbnailSelector :thumbnail-ids="thumbnailIds" size="12em" v-model="thumbnailId" />
+        <ArtworkSelector :artwork-ids="artworkIds" size="12em" v-model="artworkId" />
 
         <TapeTrackList v-model="tracks" />
     </div>

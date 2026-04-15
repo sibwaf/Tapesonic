@@ -23,7 +23,7 @@ func (store *ArtistStorage) PrepareDatabase() error {
 		CREATE VIEW all_artists (
 			id,
 			name,
-			cover_id,
+			artwork_id,
 			album_count,
 			search_name,
 			user_id
@@ -63,7 +63,7 @@ func (store *ArtistStorage) PrepareDatabase() error {
 		SELECT
 			artists.id AS id,
 			artists.name AS name,
-			NULL AS cover_id,
+			NULL AS artwork_id,
 			artist_aggregate.album_count AS album_count,
 			artists.search_name AS search_name,
 			users.id AS user_id
@@ -82,7 +82,7 @@ func (store *ArtistStorage) FindArtistById(userId uuid.UUID, artistId string) (*
 		SELECT
 			all_artists.id AS id,
 			all_artists.name AS name,
-			all_artists.cover_id AS cover_id,
+			all_artists.artwork_id AS artwork_id,
 			all_artists.album_count AS album_count
 		FROM all_artists
 		WHERE all_artists.user_id = @userId AND all_artists.id = @artistId
@@ -114,7 +114,7 @@ func (store *ArtistStorage) SearchArtistsByQuery(userId uuid.UUID, query string,
 			SELECT
 				all_artists.id AS id,
 				all_artists.name AS name,
-				all_artists.cover_id AS cover_id,
+				all_artists.artwork_id AS artwork_id,
 				all_artists.album_count AS album_count
 			FROM all_artists
 			WHERE all_artists.user_id = @userId AND %s
@@ -139,7 +139,7 @@ func (store *ArtistStorage) GetArtistsSortId(userId uuid.UUID, count int, offset
 			SELECT
 				all_artists.id AS id,
 				all_artists.name AS name,
-				all_artists.cover_id AS cover_id,
+				all_artists.artwork_id AS artwork_id,
 				all_artists.album_count AS album_count
 			FROM all_artists
 			WHERE all_artists.user_id = @userId AND all_artists.album_count > 0
@@ -163,7 +163,7 @@ func (store *ArtistStorage) GetArtistsSortName(userId uuid.UUID, count int, offs
 			SELECT
 				all_artists.id AS id,
 				all_artists.name AS name,
-				all_artists.cover_id AS cover_id,
+				all_artists.artwork_id AS artwork_id,
 				all_artists.album_count AS album_count
 			FROM all_artists
 			WHERE all_artists.user_id = @userId AND all_artists.album_count > 0

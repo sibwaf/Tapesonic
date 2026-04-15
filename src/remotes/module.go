@@ -26,7 +26,7 @@ func NewRemotesModule(
 		return nil, err
 	}
 
-	coverStorage, err := newRemoteCoverStorage(db)
+	artworkStorage, err := newRemoteArtworkStorage(db)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func NewRemotesModule(
 	subsonicSync := newSubsonicSyncService(
 		artists,
 		remoteStorage,
-		coverStorage,
+		artworkStorage,
 		artistStorage,
 		albumStorage,
 		trackStorage,

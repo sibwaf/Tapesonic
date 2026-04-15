@@ -102,7 +102,7 @@ func (storage *RemoteStorage) Delete(remoteId uuid.UUID) error {
 		if err := tx.Exec("DELETE FROM remote_artists WHERE remote_id = ?", remoteId).Error; err != nil {
 			return err
 		}
-		if err := tx.Exec("DELETE FROM remote_covers WHERE remote_id = ?", remoteId).Error; err != nil {
+		if err := tx.Exec("DELETE FROM remote_artworks WHERE remote_id = ?", remoteId).Error; err != nil {
 			return err
 		}
 

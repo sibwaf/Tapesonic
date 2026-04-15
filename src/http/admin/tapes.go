@@ -22,7 +22,7 @@ type TapeListRs struct {
 	Name string
 	Type string
 
-	ThumbnailId *uuid.UUID
+	ArtworkId *uuid.UUID
 
 	Artist     *TapeRsArtist
 	ReleasedAt *time.Time
@@ -32,12 +32,12 @@ type TapeListRs struct {
 
 func tapeToTapeListRs(tape tapes.SavedTape) TapeListRs {
 	tapeRs := TapeListRs{
-		Id:          tape.Id,
-		Name:        tape.Name,
-		Type:        tape.Type,
-		ThumbnailId: tape.ThumbnailId,
-		ReleasedAt:  tape.ReleasedAt.UnwrapNullable(),
-		CreatedAt:   tape.CreatedAt.Unwrap(),
+		Id:         tape.Id,
+		Name:       tape.Name,
+		Type:       tape.Type,
+		ArtworkId:  tape.ArtworkId,
+		ReleasedAt: tape.ReleasedAt.UnwrapNullable(),
+		CreatedAt:  tape.CreatedAt.Unwrap(),
 	}
 
 	if tape.ArtistId != nil {
@@ -55,7 +55,7 @@ type TapeFullRs struct {
 	Name string
 	Type string
 
-	ThumbnailId *uuid.UUID
+	ArtworkId *uuid.UUID
 
 	Artist     *TapeRsArtist
 	ReleasedAt *time.Time
@@ -74,18 +74,18 @@ type TapeRsTrack struct {
 	Artist *TapeRsArtist
 	Title  string
 
-	ThumbnailId *uuid.UUID
+	ArtworkId *uuid.UUID
 }
 
 func toTapeFullRs(tape tapes.SavedTape, tracks []model.LibraryTrack) TapeFullRs {
 	tracksRs := []TapeRsTrack{}
 	for _, track := range tracks {
 		trackRs := TapeRsTrack{
-			Id:          track.Id,
-			SourceId:    track.SourceId,
-			RemoteId:    track.RemoteId,
-			Title:       track.Title,
-			ThumbnailId: track.CoverId,
+			Id:        track.Id,
+			SourceId:  track.SourceId,
+			RemoteId:  track.RemoteId,
+			Title:     track.Title,
+			ArtworkId: track.ArtworkId,
 		}
 
 		if track.ArtistId != nil {
@@ -99,13 +99,13 @@ func toTapeFullRs(tape tapes.SavedTape, tracks []model.LibraryTrack) TapeFullRs 
 	}
 
 	tapeRs := TapeFullRs{
-		Id:          tape.Id,
-		Name:        tape.Name,
-		Type:        tape.Type,
-		ThumbnailId: tape.ThumbnailId,
-		ReleasedAt:  tape.ReleasedAt.UnwrapNullable(),
-		CreatedAt:   tape.CreatedAt.Unwrap(),
-		Tracks:      tracksRs,
+		Id:         tape.Id,
+		Name:       tape.Name,
+		Type:       tape.Type,
+		ArtworkId:  tape.ArtworkId,
+		ReleasedAt: tape.ReleasedAt.UnwrapNullable(),
+		CreatedAt:  tape.CreatedAt.Unwrap(),
+		Tracks:     tracksRs,
 	}
 
 	if tape.ArtistId != nil {
@@ -138,7 +138,7 @@ type TapeRq struct {
 	Name string
 	Type string
 
-	ThumbnailId *uuid.UUID
+	ArtworkId *uuid.UUID
 
 	ArtistId   *uuid.UUID
 	ReleasedAt *time.Time
@@ -153,12 +153,12 @@ func tapeRqToTape(tapeRq TapeRq) tapes.Tape {
 	}
 
 	return tapes.Tape{
-		Name:        tapeRq.Name,
-		Type:        tapeRq.Type,
-		ThumbnailId: tapeRq.ThumbnailId,
-		ArtistId:    tapeRq.ArtistId,
-		ReleasedAt:  util.NewTimestampWrapperOrNull(tapeRq.ReleasedAt),
-		Tracks:      tapeTracks,
+		Name:       tapeRq.Name,
+		Type:       tapeRq.Type,
+		ArtworkId:  tapeRq.ArtworkId,
+		ArtistId:   tapeRq.ArtistId,
+		ReleasedAt: util.NewTimestampWrapperOrNull(tapeRq.ReleasedAt),
+		Tracks:     tapeTracks,
 	}
 }
 
@@ -255,11 +255,11 @@ type GuessTapeMetadataRq struct {
 }
 
 type GuessTapeMetadataRs struct {
-	Name        string
-	Type        model.TapeType
-	Artist      *TapeRsArtist
-	ReleasedAt  *time.Time
-	ThumbnailId *uuid.UUID
+	Name       string
+	Type       model.TapeType
+	Artist     *TapeRsArtist
+	ReleasedAt *time.Time
+	ArtworkId  *uuid.UUID
 }
 
 func PostTapesGuessMetadata(auth *authenticator, tapes *tapes.TapeService) WebappHandler {
@@ -280,10 +280,10 @@ func PostTapesGuessMetadata(auth *authenticator, tapes *tapes.TapeService) Webap
 		}
 
 		rs := GuessTapeMetadataRs{
-			Name:        guessedMetadata.Name,
-			Type:        guessedMetadata.Type,
-			ReleasedAt:  guessedMetadata.ReleasedAt,
-			ThumbnailId: guessedMetadata.ThumbnailId,
+			Name:       guessedMetadata.Name,
+			Type:       guessedMetadata.Type,
+			ReleasedAt: guessedMetadata.ReleasedAt,
+			ArtworkId:  guessedMetadata.ArtworkId,
 		}
 
 		if guessedMetadata.ArtistId != nil {

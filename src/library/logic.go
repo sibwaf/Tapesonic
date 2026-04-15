@@ -12,7 +12,7 @@ type LibraryService struct {
 	artists   *ArtistStorage
 	albums    *AlbumStorage
 	tracks    *TrackStorage
-	covers    *CoverStorage
+	artworks  *ArtworkStorage
 	playlists *PlaylistStorage
 }
 
@@ -20,28 +20,28 @@ func newLibraryService(
 	artists *ArtistStorage,
 	albums *AlbumStorage,
 	tracks *TrackStorage,
-	covers *CoverStorage,
+	artworks *ArtworkStorage,
 	playlists *PlaylistStorage,
 ) *LibraryService {
 	return &LibraryService{
 		artists:   artists,
 		albums:    albums,
 		tracks:    tracks,
-		covers:    covers,
+		artworks:  artworks,
 		playlists: playlists,
 	}
 }
 
-func (svc *LibraryService) GetCover(id string) (model.LibraryCover, error) {
-	cover, err := svc.covers.FindCoverById(id)
+func (svc *LibraryService) GetArtwork(id string) (model.LibraryArtwork, error) {
+	artwork, err := svc.artworks.FindById(id)
 	if err != nil {
-		return model.LibraryCover{}, err
+		return model.LibraryArtwork{}, err
 	}
-	if cover == nil {
-		return model.LibraryCover{}, model.ErrNotFound
+	if artwork == nil {
+		return model.LibraryArtwork{}, model.ErrNotFound
 	}
 
-	return *cover, nil
+	return *artwork, nil
 }
 
 func (svc *LibraryService) GetArtist(user users.User, id string) (model.LibraryArtist, error) {

@@ -15,9 +15,9 @@ import (
 type SavedTape struct {
 	Id uuid.UUID
 
-	Type        model.TapeType
-	Name        string
-	ThumbnailId *uuid.UUID
+	Type      model.TapeType
+	Name      string
+	ArtworkId *uuid.UUID
 
 	ArtistId   *uuid.UUID
 	ArtistName string
@@ -35,7 +35,8 @@ type Tape struct {
 	Name string
 	Type model.TapeType
 
-	ThumbnailId *uuid.UUID
+	ArtworkId *uuid.UUID
+	Artwork   *library.AllArtworkId
 
 	Tracks []TapeToTrack `gorm:"constraint:OnDelete:CASCADE;"`
 

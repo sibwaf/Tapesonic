@@ -12,7 +12,7 @@ type LibraryArtist struct {
 
 	Name string
 
-	CoverId *uuid.UUID
+	ArtworkId *uuid.UUID
 
 	AlbumCount int
 
@@ -27,7 +27,7 @@ type LibraryAlbum struct {
 	ArtistId   string
 	ArtistName string
 
-	CoverId *uuid.UUID
+	ArtworkId *uuid.UUID
 
 	TrackCount int
 	Duration   time.Duration
@@ -47,7 +47,7 @@ type LibraryPlaylist struct {
 
 	Name string
 
-	CoverId *uuid.UUID
+	ArtworkId *uuid.UUID
 
 	TrackCount int
 	Duration   time.Duration
@@ -78,16 +78,16 @@ type LibraryTrack struct {
 
 	AlbumTrackIndex int
 
-	CoverId *uuid.UUID
+	ArtworkId *uuid.UUID
 
 	Duration time.Duration
 
 	PlayedAt *util.TimestampWrapper
 }
 
-type LibraryCover struct {
+type LibraryArtwork struct {
 	Id uuid.UUID
 
-	RemoteId      uuid.UUID
-	RemoteCoverId string
+	RemoteId        uuid.UUID
+	RemoteArtworkId string
 }

@@ -23,14 +23,14 @@ type TrackRs struct {
 	Artist *TrackRsArtist
 	Title  string
 
-	ThumbnailId *uuid.UUID
+	ArtworkId *uuid.UUID
 }
 
 func libraryToTrackRs(track model.LibraryTrack) TrackRs {
 	trackRs := TrackRs{
-		Id:          track.Id,
-		Title:       track.Title,
-		ThumbnailId: track.CoverId,
+		Id:        track.Id,
+		Title:     track.Title,
+		ArtworkId: track.ArtworkId,
 	}
 
 	if track.SourceId != nil {

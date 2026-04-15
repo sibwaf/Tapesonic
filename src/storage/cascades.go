@@ -79,15 +79,21 @@ func CreateCascades(db *gorm.DB) error {
 			OnConstraint:     action_delete,
 		},
 		{
-			ReferencingTable: "tapes",
-			ReferencedTable:  "thumbnails",
-			Keys:             []cascadeField{{ReferencingField: "thumbnail_id", ReferencedField: "id"}},
-			OnConstraint:     action_set_null,
+			ReferencingTable: "all_artwork_ids",
+			ReferencedTable:  "artworks",
+			Keys:             []cascadeField{{ReferencingField: "artwork_id", ReferencedField: "id"}},
+			OnConstraint:     action_delete,
+		},
+		{
+			ReferencingTable: "all_artwork_ids",
+			ReferencedTable:  "remote_artworks",
+			Keys:             []cascadeField{{ReferencingField: "remote_artwork_id", ReferencedField: "id"}},
+			OnConstraint:     action_delete,
 		},
 		{
 			ReferencingTable: "tapes",
-			ReferencedTable:  "remote_covers",
-			Keys:             []cascadeField{{ReferencingField: "thumbnail_id", ReferencedField: "id"}},
+			ReferencedTable:  "all_artwork_ids",
+			Keys:             []cascadeField{{ReferencingField: "artwork_id", ReferencedField: "id"}},
 			OnConstraint:     action_set_null,
 		},
 	}

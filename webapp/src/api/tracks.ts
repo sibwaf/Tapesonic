@@ -14,7 +14,7 @@ export interface TrackRs {
     Artist: TrackRsArtist | null;
     Title: string;
 
-    ThumbnailId: string | null;
+    ArtworkId: string | null;
 }
 
 export default {

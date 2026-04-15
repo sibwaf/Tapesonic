@@ -71,7 +71,7 @@ func GetHandlers(appCtx *appcontext.Context) map[string]http.HandlerFunc {
 	auth := newAuthenticator(appCtx.Users.UserService)
 	router := mux.NewRouter()
 
-	router.Handle("/media/thumbnails/{thumbnailId}", asHandlerFunc(GetThumbnail(auth, appCtx.Library.LibraryService, appCtx.Media.Covers))).Methods("GET")
+	router.Handle("/media/artworks/{artworkId}", asHandlerFunc(GetArtwork(auth, appCtx.Library.LibraryService, appCtx.Media.Artworks))).Methods("GET")
 
 	return map[string]http.HandlerFunc{"/media/": router.ServeHTTP}
 }

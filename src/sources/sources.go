@@ -24,8 +24,8 @@ func (store *SourceStorage) PrepareDatabase() error {
 
 func (store *SourceStorage) Upsert(source Source) (Source, error) {
 	query := `
-		INSERT INTO sources (id, extractor_key, extracted_id, url, title, uploader, uploader_id, album_artist, album_title, album_index, track_artist, track_title, duration_ms, uploaded_at, release_date, thumbnail_id, management_policy, created_at, updated_at)
-		VALUES (@id, @extractorKey, @extractedId, @url, @title, @uploader, @uploaderId, @albumArtist, @albumTitle, @albumIndex, @trackArtist, @trackTitle, @durationMs, @uploadedAt, @releaseDate, @thumbnailId, @managementPolicy, @createdAt, @updatedAt)
+		INSERT INTO sources (id, extractor_key, extracted_id, url, title, uploader, uploader_id, album_artist, album_title, album_index, track_artist, track_title, duration_ms, uploaded_at, release_date, artwork_id, management_policy, created_at, updated_at)
+		VALUES (@id, @extractorKey, @extractedId, @url, @title, @uploader, @uploaderId, @albumArtist, @albumTitle, @albumIndex, @trackArtist, @trackTitle, @durationMs, @uploadedAt, @releaseDate, @artworkId, @managementPolicy, @createdAt, @updatedAt)
 		ON CONFLICT (url) DO UPDATE
 		SET
 			extractor_key = excluded.extractor_key,
@@ -42,7 +42,7 @@ func (store *SourceStorage) Upsert(source Source) (Source, error) {
 			duration_ms = excluded.duration_ms,
 			uploaded_at = excluded.uploaded_at,
 			release_date = excluded.release_date,
-			thumbnail_id = excluded.thumbnail_id,
+			artwork_id = excluded.artwork_id,
 			management_policy = excluded.management_policy,
 			updated_at = excluded.updated_at
 		RETURNING *
@@ -63,7 +63,7 @@ func (store *SourceStorage) Upsert(source Source) (Source, error) {
 		"durationMs":       source.DurationMs,
 		"uploadedAt":       source.UploadedAt,
 		"releaseDate":      source.ReleaseDate,
-		"thumbnailId":      source.ThumbnailId,
+		"artworkId":        source.ArtworkId,
 		"managementPolicy": source.ManagementPolicy,
 		"createdAt":        source.CreatedAt,
 		"updatedAt":        source.UpdatedAt,
@@ -113,7 +113,7 @@ func (store *SourceStorage) GetHierarchy(id uuid.UUID) ([]SourceForHierarchy, er
 			sources.url AS url,
 			sources.title AS title,
 			sources.uploader AS uploader,
-			sources.thumbnail_id AS thumbnail_id
+			sources.artwork_id AS artwork_id
 		FROM sources
 		JOIN all_sources ON sources.id = all_sources.id
 		LEFT JOIN source_hierarchies ON sources.id = source_hierarchies.child_id

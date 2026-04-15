@@ -23,7 +23,7 @@ func (store *PlaylistStorage) PrepareDatabase() error {
 			CREATE VIEW all_playlists (
 				id,
 				name,
-				cover_id,
+				artwork_id,
 				track_count,
 				duration_ms,
 				created_at,
@@ -56,7 +56,7 @@ func (store *PlaylistStorage) PrepareDatabase() error {
 			SELECT
 				tapes.id AS id,
 				tapes.name AS name,
-				tapes.thumbnail_id AS cover_id,
+				tapes.artwork_id AS artwork_id,
 				tapes_aggregate.track_count AS track_count,
 				tapes_aggregate.total_duration_ms AS duration_ms,
 				tapes.created_at AS created_at,
@@ -72,7 +72,7 @@ func (store *PlaylistStorage) PrepareDatabase() error {
 			SELECT
 				recommended_playlists.id AS id,
 				recommended_playlists.name AS name,
-				NULL AS cover_id,
+				recommended_playlists.artwork_id AS artwork_id,
 				recommended_playlists_aggregate.track_count AS track_count,
 				recommended_playlists_aggregate.total_duration_ms AS duration_ms,
 				recommended_playlists.created_at AS created_at,
@@ -126,7 +126,7 @@ func (store *PlaylistStorage) GetAllPlaylists(userId uuid.UUID) ([]model.Library
 		SELECT
 			all_playlists.id AS id,
 			all_playlists.name AS name,
-			all_playlists.cover_id AS cover_id,
+			all_playlists.artwork_id AS artwork_id,
 			all_playlists.track_count AS track_count,
 			all_playlists.duration_ms * 1000 * 1000 AS duration,
 			all_playlists.created_at AS created_at,
@@ -146,7 +146,7 @@ func (store *PlaylistStorage) GetPlaylistById(userId uuid.UUID, playlistId strin
 		SELECT
 			all_playlists.id AS id,
 			all_playlists.name AS name,
-			all_playlists.cover_id AS cover_id,
+			all_playlists.artwork_id AS artwork_id,
 			all_playlists.track_count AS track_count,
 			all_playlists.duration_ms * 1000 * 1000 AS duration,
 			all_playlists.created_at AS created_at,

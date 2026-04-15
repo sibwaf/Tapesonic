@@ -38,10 +38,10 @@ func (store *RecommendationStorage) GetById(id uuid.UUID) (RecommendedPlaylist, 
 
 func (store *RecommendationStorage) UpsertPlaylist(playlist RecommendedPlaylist) (RecommendedPlaylist, error) {
 	sql := `
-		INSERT INTO recommended_playlists (id, provider, provider_playlist_id, user_id, name, cover_id, created_at, updated_at, sync_tag)
-		VALUES (@id, @provider, @providerPlaylistId, @userId, @name, @coverId, @createdAt, @updatedAt, @syncTag)
+		INSERT INTO recommended_playlists (id, provider, provider_playlist_id, user_id, name, artwork_id, created_at, updated_at, sync_tag)
+		VALUES (@id, @provider, @providerPlaylistId, @userId, @name, @artworkId, @createdAt, @updatedAt, @syncTag)
 		ON CONFLICT (provider, provider_playlist_id) DO UPDATE
-		SET name = excluded.name, cover_id = excluded.cover_id, sync_tag = excluded.sync_tag
+		SET name = excluded.name, artwork_id = excluded.artwork_id, sync_tag = excluded.sync_tag
 		RETURNING *
 	`
 	params := map[string]any{
@@ -50,7 +50,7 @@ func (store *RecommendationStorage) UpsertPlaylist(playlist RecommendedPlaylist)
 		"providerPlaylistId": playlist.ProviderPlaylistId,
 		"userId":             playlist.UserId,
 		"name":               playlist.Name,
-		"coverId":            playlist.CoverId,
+		"artworkId":          playlist.ArtworkId,
 		"createdAt":          playlist.CreatedAt,
 		"updatedAt":          playlist.UpdatedAt,
 		"syncTag":            playlist.SyncTag,
