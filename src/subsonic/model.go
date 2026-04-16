@@ -158,6 +158,8 @@ type Child struct {
 	Duration  int `json:"duration" xml:"duration,attr"`
 	PlayCount int `json:"playCount" xml:"playCount,attr"`
 
+	ContentType string `json:"contentType" xml:"contentType,attr"`
+
 	Played *time.Time `json:"played" xml:"played,attr,omitempty"`
 }
 
