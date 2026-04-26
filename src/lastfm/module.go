@@ -11,11 +11,8 @@ func NewLastFmModule(
 	db *gorm.DB,
 	apiKey string,
 	apiSecret string,
-) (*LastFmModule, error) {
-	sessions, err := newLastFmSessionStorage(db)
-	if err != nil {
-		return nil, err
-	}
+) *LastFmModule {
+	sessions := newLastFmSessionStorage(db)
 
 	var client *LastFmClient = nil
 	if apiKey != "" && apiSecret != "" {
@@ -28,5 +25,5 @@ func NewLastFmModule(
 	return &LastFmModule{
 		LastFmService:               service,
 		LastFmRecommendationService: recommendationService,
-	}, nil
+	}
 }

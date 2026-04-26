@@ -52,20 +52,6 @@ func NewSourcesModule(
 	}
 }
 
-func (module *SourcesModule) PrepareDatabase() error {
-	if err := module.sources.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := module.tracks.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := module.files.PrepareDatabase(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (module *SourcesModule) RegisterSchedules(scheduler *scheduling.TaskScheduler) {
 	if module.sourceDownloadCron != nil {
 		if _, err := scheduler.RegisterTask(TASK_SOURCES_FIND_SOURCE_FOR_DOWNLOAD, nil, time.Now()); err != nil {

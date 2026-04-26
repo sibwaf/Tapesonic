@@ -1,7 +1,6 @@
 package remotes
 
 import (
-	"tapesonic/users"
 	"tapesonic/util"
 
 	"github.com/google/uuid"
@@ -11,37 +10,23 @@ import (
 type RemoteTrack struct {
 	Id uuid.UUID
 
-	RemoteId uuid.UUID `gorm:"uniqueIndex:remote_track_uniq"`
-	Remote   Remote
+	RemoteId uuid.UUID
+	TrackId  string
 
-	TrackId string `gorm:"uniqueIndex:remote_track_uniq"`
-
-	Artist   string
-	ArtistId string
-
-	Album   string
-	AlbumId string
-
+	Title      string
+	ArtworkId  string
+	Artist     string
+	ArtistId   string
+	Album      string
+	AlbumId    string
 	AlbumIndex int
-
-	ArtworkId string
-
-	Title string
-
 	DurationMs int
 
 	SearchTitle string
-
-	Users []RemoteTrackToUser `gorm:"constraint:OnDelete:CASCADE;"`
 }
 
 type RemoteTrackToUser struct {
-	RemoteTrackId uuid.UUID `gorm:"uniqueIndex:remote_track_to_user_uniq"`
-	RemoteTrack   RemoteTrack
-
-	UserId uuid.UUID `gorm:"uniqueIndex:remote_track_to_user_uniq"`
-	User   users.User
-
+	UserId  uuid.UUID
 	SyncTag string
 }
 
@@ -49,12 +34,8 @@ type RemoteTrackStorage struct {
 	db *gorm.DB
 }
 
-func newRemoteTrackStorage(db *gorm.DB) (*RemoteTrackStorage, error) {
-	if err := db.AutoMigrate(&RemoteTrack{}, &RemoteTrackToUser{}); err != nil {
-		return nil, err
-	}
-
-	return &RemoteTrackStorage{db: db}, nil
+func newRemoteTrackStorage(db *gorm.DB) *RemoteTrackStorage {
+	return &RemoteTrackStorage{db: db}
 }
 
 func (store *RemoteTrackStorage) Upsert(track RemoteTrack, trackToUser RemoteTrackToUser) error {
@@ -90,7 +71,7 @@ func (store *RemoteTrackStorage) Upsert(track RemoteTrack, trackToUser RemoteTra
 		}
 
 		sql2 := `
-			INSERT INTO remote_track_to_users (remote_track_id, user_id, sync_tag)
+			INSERT INTO remote_tracks_to_users (remote_track_id, user_id, sync_tag)
 			VALUES (@remoteTrackId, @userId, @syncTag)
 			ON CONFLICT (remote_track_id, user_id) DO UPDATE
 			SET sync_tag = excluded.sync_tag
@@ -122,7 +103,7 @@ func (store *RemoteTrackStorage) Upsert(track RemoteTrack, trackToUser RemoteTra
 
 func (store *RemoteTrackStorage) DeleteUserBindingsBySyncTag(userId uuid.UUID, syncTag string) error {
 	sql := `
-		DELETE FROM remote_track_to_users
+		DELETE FROM remote_tracks_to_users
 		WHERE user_id = @userId AND sync_tag != @syncTag
 	`
 	params := map[string]any{

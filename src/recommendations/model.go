@@ -1,9 +1,6 @@
 package recommendations
 
 import (
-	"tapesonic/artworks"
-	"tapesonic/library"
-	"tapesonic/users"
 	"tapesonic/util"
 
 	"github.com/google/uuid"
@@ -21,35 +18,23 @@ const (
 type RecommendedPlaylist struct {
 	Id uuid.UUID
 
-	Provider           RecommendationProvider `gorm:"uniqueIndex:recommended_playlist_uniq"`
-	ProviderPlaylistId string                 `gorm:"uniqueIndex:recommended_playlist_uniq"`
+	Provider           RecommendationProvider
+	ProviderPlaylistId string
 
-	UserId uuid.UUID
-	User   users.User
-
-	Name string
-
+	UserId    uuid.UUID
+	Name      string
 	ArtworkId *uuid.UUID
-	Artwork   *artworks.Artwork
 
 	CreatedAt util.TimestampWrapper
 	UpdatedAt util.TimestampWrapper
 
 	SyncTag string
-
-	Tracks []RecommendedPlaylistTrack `gorm:"constraint:OnDelete:CASCADE;"`
 }
 
 type RecommendedPlaylistTrack struct {
-	RecommendedPlaylistId uuid.UUID
-	RecommendedPlaylist   RecommendedPlaylist
-
-	Artist string
-	Title  string
-
-	TrackId string
-	Track   library.AllTrackId
-
+	Artist     string
+	Title      string
+	TrackId    string
 	TrackIndex int
 }
 

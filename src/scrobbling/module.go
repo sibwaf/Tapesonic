@@ -28,7 +28,3 @@ func NewScrobblingModule(
 		ScrobbleService:   NewScrobbleService(listenbrainz, lastfm, library, remotes, statStorage),
 	}
 }
-
-func (module *ScrobblingModule) PrepareDatabase() error {
-	return module.listenStatStorage.PrepareDatabase()
-}

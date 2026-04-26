@@ -1,8 +1,6 @@
 package sources
 
 import (
-	"tapesonic/artists"
-	"tapesonic/artworks"
 	"tapesonic/util"
 	"tapesonic/ytdlp"
 
@@ -124,7 +122,7 @@ type Source struct {
 
 	ExtractorKey string
 	ExtractedId  string
-	Url          string `gorm:"uniqueIndex"`
+	Url          string
 
 	Title      string
 	Uploader   string
@@ -141,7 +139,6 @@ type Source struct {
 	ReleaseDate *util.TimestampWrapper
 
 	ArtworkId *uuid.UUID
-	Artwork   *artworks.Artwork
 
 	ManagementPolicy SourceManagementPolicy
 
@@ -149,29 +146,14 @@ type Source struct {
 	UpdatedAt util.TimestampWrapper
 }
 
-type SourceHierarchy struct {
-	ParentId uuid.UUID `gorm:"primaryKey"`
-	Parent   Source
-
-	ChildId uuid.UUID `gorm:"primaryKey"`
-	Child   Source
-
-	ListIndex int
-}
-
 type SourceTrack struct {
 	Id uuid.UUID
 
-	SourceId uuid.UUID
-	Source   Source
-
+	SourceId      uuid.UUID
+	Title         string
 	StartOffsetMs int64
 	EndOffsetMs   int64
-
-	ArtistId *uuid.UUID
-	Artist   *artists.Artist
-
-	Title string
+	ArtistId      *uuid.UUID
 
 	SearchTitle string
 }
@@ -179,12 +161,9 @@ type SourceTrack struct {
 type SourceFile struct {
 	Id uuid.UUID
 
-	SourceId uuid.UUID `gorm:"uniqueIndex"`
-	Source   Source
-
-	Format string
-	Codec  string
-
+	SourceId  uuid.UUID
+	Format    string
+	Codec     string
 	MediaPath string
 
 	CreatedAt util.TimestampWrapper

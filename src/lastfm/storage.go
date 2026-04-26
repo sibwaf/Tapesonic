@@ -13,9 +13,8 @@ type LastFmSessionStorage struct {
 	db *storage.DbHelper
 }
 
-func newLastFmSessionStorage(db *gorm.DB) (*LastFmSessionStorage, error) {
-	err := db.AutoMigrate(&LastFmSession{})
-	return &LastFmSessionStorage{db: storage.NewDbHelper(db)}, err
+func newLastFmSessionStorage(db *gorm.DB) *LastFmSessionStorage {
+	return &LastFmSessionStorage{db: storage.NewDbHelper(db)}
 }
 
 func (storage *LastFmSessionStorage) Save(session LastFmSession) (LastFmSession, error) {

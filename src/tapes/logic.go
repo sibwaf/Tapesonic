@@ -37,7 +37,7 @@ func newTapeService(
 
 func (s *TapeService) Create(userId uuid.UUID, tape Tape) (SavedTape, []model.LibraryTrack, error) {
 	tape.Id = uuid.New()
-	tape.CreatedById = userId
+	tape.CreatedBy = userId
 	tape.CreatedAt = util.NewTimestampWrapper(time.Now())
 	tape.UpdatedAt = util.NewTimestampWrapper(time.Now())
 

@@ -42,10 +42,6 @@ func NewRecommendationModule(
 	}
 }
 
-func (module *RecommendationsModule) PrepareDatabase() error {
-	return module.storage.PrepareDatabase()
-}
-
 func (module *RecommendationsModule) RegisterSchedules(scheduler *scheduling.TaskScheduler) {
 	if module.playlistRefreshCron != nil {
 		// todo: session discovery is stupid and should be event-based or something,

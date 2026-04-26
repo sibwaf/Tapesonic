@@ -13,8 +13,8 @@ type UserStorage struct {
 	db *gorm.DB
 }
 
-func newUserStorage(db *gorm.DB) (*UserStorage, error) {
-	return &UserStorage{db: db}, db.AutoMigrate(&User{})
+func newUserStorage(db *gorm.DB) *UserStorage {
+	return &UserStorage{db: db}
 }
 
 func (storage *UserStorage) Create(user User) (User, error) {

@@ -6,15 +6,11 @@ type UsersModule struct {
 	UserService *UserService
 }
 
-func NewUsersModule(db *gorm.DB) (*UsersModule, error) {
-	storage, err := newUserStorage(db)
-	if err != nil {
-		return nil, err
-	}
-
+func NewUsersModule(db *gorm.DB) *UsersModule {
+	storage := newUserStorage(db)
 	service := newUserService(storage)
 
 	return &UsersModule{
 		UserService: service,
-	}, nil
+	}
 }

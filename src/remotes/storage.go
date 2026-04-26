@@ -14,8 +14,8 @@ type RemoteStorage struct {
 	db *storage.DbHelper
 }
 
-func newRemoteStorage(db *gorm.DB) (*RemoteStorage, error) {
-	return &RemoteStorage{db: storage.NewDbHelper(db)}, db.AutoMigrate(&Remote{}, &RemoteToUser{})
+func newRemoteStorage(db *gorm.DB) *RemoteStorage {
+	return &RemoteStorage{db: storage.NewDbHelper(db)}
 }
 
 func (storage *RemoteStorage) GetAll() ([]Remote, error) {
@@ -90,37 +90,13 @@ func (storage *RemoteStorage) UpdateSettings(remoteId uuid.UUID, settings Remote
 }
 
 func (storage *RemoteStorage) Delete(remoteId uuid.UUID) error {
-	return storage.db.Transaction(func(tx *gorm.DB) error {
-		// todo: proper cascading
-
-		if err := tx.Exec("DELETE FROM remote_tracks WHERE remote_id = ?", remoteId).Error; err != nil {
-			return err
-		}
-		if err := tx.Exec("DELETE FROM remote_albums WHERE remote_id = ?", remoteId).Error; err != nil {
-			return err
-		}
-		if err := tx.Exec("DELETE FROM remote_artists WHERE remote_id = ?", remoteId).Error; err != nil {
-			return err
-		}
-		if err := tx.Exec("DELETE FROM remote_artworks WHERE remote_id = ?", remoteId).Error; err != nil {
-			return err
-		}
-
-		if err := tx.Exec("DELETE FROM remote_to_users WHERE remote_id = ?", remoteId).Error; err != nil {
-			return err
-		}
-		if err := tx.Exec("DELETE FROM remotes WHERE id = ?", remoteId).Error; err != nil {
-			return err
-		}
-
-		return nil
-	})
+	return storage.db.Exec("DELETE FROM remotes WHERE id = ?", remoteId).Error
 }
 
 func (storage *RemoteStorage) FindCredentials(userId uuid.UUID, remoteId uuid.UUID) (*RemoteCredentials, error) {
 	sql := `
 		SELECT *
-		FROM remote_to_users
+		FROM remotes_to_users
 		WHERE user_id = @userId AND remote_id = @remoteId
 	`
 	params := map[string]any{
@@ -138,13 +114,13 @@ func (storage *RemoteStorage) FindCredentials(userId uuid.UUID, remoteId uuid.UU
 }
 
 func (storage *RemoteStorage) SetCredentials(userId uuid.UUID, remoteId uuid.UUID, credentials RemoteCredentials) error {
-	credentialsText, err := json.Marshal(credentials)
+	credentialsJson, err := json.Marshal(credentials)
 	if err != nil {
 		return err
 	}
 
 	sql := `
-		INSERT INTO remote_to_users (remote_id, user_id, credentials)
+		INSERT INTO remotes_to_users (remote_id, user_id, credentials)
 		VALUES (@remoteId, @userId, @credentials)
 		ON CONFLICT DO UPDATE
 		SET credentials = excluded.credentials
@@ -152,7 +128,7 @@ func (storage *RemoteStorage) SetCredentials(userId uuid.UUID, remoteId uuid.UUI
 	params := map[string]any{
 		"userId":      userId,
 		"remoteId":    remoteId,
-		"credentials": credentialsText,
+		"credentials": string(credentialsJson),
 	}
 
 	return storage.db.Exec(sql, params).Error
@@ -160,7 +136,7 @@ func (storage *RemoteStorage) SetCredentials(userId uuid.UUID, remoteId uuid.UUI
 
 func (storage *RemoteStorage) RemoveCredentials(userId uuid.UUID, remoteId uuid.UUID) error {
 	sql := `
-		DELETE FROM remote_to_users
+		DELETE FROM remotes_to_users
 		WHERE user_id = @userId AND remote_id = @remoteId
 	`
 	params := map[string]any{

@@ -186,7 +186,7 @@ func (svc *StreamService) ServeStream(user users.User, r *http.Request, w http.R
 
 			return err
 		default:
-			return fmt.Errorf("unknown remote type %s" + remote.Type)
+			return fmt.Errorf("unknown remote type %s", remote.Type)
 		}
 	}
 }

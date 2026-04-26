@@ -8,22 +8,18 @@ import (
 type RemoteArtwork struct {
 	Id uuid.UUID
 
-	RemoteId uuid.UUID `gorm:"uniqueIndex:remote_artwork_uniq"`
+	RemoteId uuid.UUID
 	Remote   Remote
 
-	ArtworkId string `gorm:"uniqueIndex:remote_artwork_uniq"`
+	ArtworkId string
 }
 
 type RemoteArtworkStorage struct {
 	db *gorm.DB
 }
 
-func newRemoteArtworkStorage(db *gorm.DB) (*RemoteArtworkStorage, error) {
-	if err := db.AutoMigrate(&RemoteArtwork{}); err != nil {
-		return nil, err
-	}
-
-	return &RemoteArtworkStorage{db: db}, nil
+func newRemoteArtworkStorage(db *gorm.DB) *RemoteArtworkStorage {
+	return &RemoteArtworkStorage{db: db}
 }
 
 func (store *RemoteArtworkStorage) Upsert(artwork RemoteArtwork) error {

@@ -10,7 +10,7 @@ import (
 type User struct {
 	Id uuid.UUID
 
-	Name         string `gorm:"uniqueIndex"`
+	Name         string
 	PasswordHash string
 	Role         model.Role
 

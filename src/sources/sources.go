@@ -18,10 +18,6 @@ func newSourceStorage(db *gorm.DB) *SourceStorage {
 	return &SourceStorage{db: db}
 }
 
-func (store *SourceStorage) PrepareDatabase() error {
-	return store.db.AutoMigrate(&Source{}, &SourceHierarchy{})
-}
-
 func (store *SourceStorage) Upsert(source Source) (Source, error) {
 	query := `
 		INSERT INTO sources (id, extractor_key, extracted_id, url, title, uploader, uploader_id, album_artist, album_title, album_index, track_artist, track_title, duration_ms, uploaded_at, release_date, artwork_id, management_policy, created_at, updated_at)
@@ -74,7 +70,7 @@ func (store *SourceStorage) Upsert(source Source) (Source, error) {
 
 func (store *SourceStorage) UpdateHierarchy(parentId uuid.UUID, childIds []uuid.UUID) error {
 	sql := `
-		INSERT INTO source_hierarchies (parent_id, child_id, list_index)
+		INSERT INTO source_hierarchy (parent_id, child_id, list_index)
 		VALUES (@parentId, @childId, @listIndex)
 		ON CONFLICT DO UPDATE
 		SET list_index = excluded.list_index
@@ -103,20 +99,20 @@ func (store *SourceStorage) GetHierarchy(id uuid.UUID) ([]SourceForHierarchy, er
 			VALUES (@id)
 			UNION
 			SELECT ids.value
-			FROM source_hierarchies, json_each(json_array(source_hierarchies.parent_id, source_hierarchies.child_id)) ids
-			JOIN all_sources ON all_sources.id IN (source_hierarchies.parent_id, source_hierarchies.child_id)
+			FROM source_hierarchy, json_each(json_array(source_hierarchy.parent_id, source_hierarchy.child_id)) ids
+			JOIN all_sources ON all_sources.id IN (source_hierarchy.parent_id, source_hierarchy.child_id)
 		)
 		SELECT
 			sources.id AS id,
-			source_hierarchies.parent_id AS parent_id,
-			coalesce(source_hierarchies.list_index, -1) AS list_index,
+			source_hierarchy.parent_id AS parent_id,
+			coalesce(source_hierarchy.list_index, -1) AS list_index,
 			sources.url AS url,
 			sources.title AS title,
 			sources.uploader AS uploader,
 			sources.artwork_id AS artwork_id
 		FROM sources
 		JOIN all_sources ON sources.id = all_sources.id
-		LEFT JOIN source_hierarchies ON sources.id = source_hierarchies.child_id
+		LEFT JOIN source_hierarchy ON sources.id = source_hierarchy.child_id
 	`
 	params := map[string]any{
 		"id": id,
@@ -205,7 +201,7 @@ func (store *SourceStorage) FindNextForDownload() (*Source, error) {
 			AND EXISTS (
 				SELECT 1
 				FROM source_tracks
-				JOIN tape_to_tracks ON tape_to_tracks.track_id = source_tracks.id
+				JOIN tape_tracks ON tape_tracks.track_id = source_tracks.id
 				WHERE source_tracks.source_id = sources.id
 				LIMIT 1
 			)

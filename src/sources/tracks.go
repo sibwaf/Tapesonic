@@ -18,10 +18,6 @@ func newTrackStorage(db *gorm.DB) *TrackStorage {
 	return &TrackStorage{db: db}
 }
 
-func (storage *TrackStorage) PrepareDatabase() error {
-	return storage.db.AutoMigrate(&SourceTrack{})
-}
-
 func (storage *TrackStorage) ReplaceTracksForSource(sourceId uuid.UUID, tracks []SourceTrack) ([]SavedSourceTrack, error) {
 	result := []SavedSourceTrack{}
 	return result, storage.db.Transaction(func(tx *gorm.DB) error {
@@ -119,12 +115,12 @@ func (storage *TrackStorage) GetAllTracksBySource(sourceId uuid.UUID) ([]SavedSo
 				VALUES ('%s', '%s', 0, 0)
 				UNION
 				SELECT
-					source_hierarchies.parent_id,
-					source_hierarchies.child_id,
+					source_hierarchy.parent_id,
+					source_hierarchy.child_id,
 					all_sources.nest_level + 1,
-					source_hierarchies.list_index
-				FROM source_hierarchies
-				JOIN all_sources ON all_sources.child_id = source_hierarchies.parent_id
+					source_hierarchy.list_index
+				FROM source_hierarchy
+				JOIN all_sources ON all_sources.child_id = source_hierarchy.parent_id
 			)
 			SELECT
 				source_tracks.id AS id,
@@ -187,8 +183,8 @@ func (storage *TrackStorage) FindTracksForMetadataGuessingByIds(trackIds []strin
 			(
 				SELECT json_group_array(parents.title)
 				FROM sources parents
-				JOIN source_hierarchies ON parents.id = source_hierarchies.parent_id
-				WHERE source_hierarchies.child_id = sources.id
+				JOIN source_hierarchy ON parents.id = source_hierarchy.parent_id
+				WHERE source_hierarchy.child_id = sources.id
 			) AS "source_parent_titles",
 			source_tracks.artist_id AS "artist_id",
 			sources.release_date AS "release_date",

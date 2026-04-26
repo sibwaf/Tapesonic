@@ -2,7 +2,6 @@ package lastfm
 
 import (
 	"errors"
-	"tapesonic/users"
 	"tapesonic/util"
 
 	"github.com/google/uuid"
@@ -23,8 +22,7 @@ type LastFmAuthLink struct {
 }
 
 type LastFmSession struct {
-	UserId uuid.UUID `gorm:"primaryKey"`
-	User   *users.User
+	UserId uuid.UUID
 
 	SessionKey string
 	Username   string

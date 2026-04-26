@@ -17,16 +17,12 @@ func newTapeStorage(db *gorm.DB) *TapeStorage {
 	return &TapeStorage{db: db}
 }
 
-func (store *TapeStorage) PrepareDatabase() error {
-	return store.db.AutoMigrate(&Tape{}, &TapeToTrack{})
-}
-
 func (store *TapeStorage) Create(tape Tape) (SavedTape, error) {
 	result := SavedTape{}
 	return result, store.db.Transaction(func(tx *gorm.DB) error {
 		tapeSql := `
-			INSERT INTO tapes (id, name, type, artwork_id, artist_id, released_at, created_at, updated_at, search_name)
-			VALUES (@id, @name, @type, @artworkId, @artistId, @releasedAt, @createdAt, @updatedAt, @searchName)
+			INSERT INTO tapes (id, name, type, artwork_id, artist_id, released_at, created_by, created_at, updated_at, search_name)
+			VALUES (@id, @name, @type, @artworkId, @artistId, @releasedAt, @createdBy, @createdAt, @updatedAt, @searchName)
 			RETURNING *
 		`
 		tapeParams := map[string]any{
@@ -36,6 +32,7 @@ func (store *TapeStorage) Create(tape Tape) (SavedTape, error) {
 			"artworkId":  tape.ArtworkId,
 			"artistId":   tape.ArtistId,
 			"releasedAt": tape.ReleasedAt,
+			"createdBy":  tape.CreatedBy,
 			"createdAt":  tape.CreatedAt,
 			"updatedAt":  tape.UpdatedAt,
 			"searchName": util.MakeTextSearchString(tape.Name),
@@ -93,12 +90,12 @@ func (store *TapeStorage) Update(tape Tape) (SavedTape, error) {
 
 func (store *TapeStorage) ReplaceTracksById(tapeId uuid.UUID, trackIds []string) error {
 	return store.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Exec("DELETE FROM tape_to_tracks WHERE tape_id = ?", tapeId).Error; err != nil {
+		if err := tx.Exec("DELETE FROM tape_tracks WHERE tape_id = ?", tapeId).Error; err != nil {
 			return err
 		}
 
 		sql := `
-			INSERT INTO tape_to_tracks (tape_id, track_id, list_index)
+			INSERT INTO tape_tracks (tape_id, track_id, list_index)
 			VALUES (@tapeId, @trackId, @listIndex)
 		`
 
@@ -179,10 +176,10 @@ func (store *TapeStorage) getByIdWithTx(tx *gorm.DB, id uuid.UUID) (SavedTape, e
 
 func (store *TapeStorage) GetTrackIdsById(tapeId uuid.UUID) ([]string, error) {
 	query := `
-		SELECT tape_to_tracks.track_id
-		FROM tape_to_tracks
-		WHERE tape_to_tracks.tape_id = @tapeId
-		ORDER BY tape_to_tracks.list_index
+		SELECT tape_tracks.track_id
+		FROM tape_tracks
+		WHERE tape_tracks.tape_id = @tapeId
+		ORDER BY tape_tracks.list_index
 	`
 	params := map[string]any{"tapeId": tapeId}
 

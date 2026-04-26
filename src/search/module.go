@@ -4,8 +4,6 @@ import (
 	"tapesonic/artists"
 	"tapesonic/library"
 	"tapesonic/sources"
-
-	"gorm.io/gorm"
 )
 
 type SearchModule struct {
@@ -13,7 +11,6 @@ type SearchModule struct {
 }
 
 func NewSearchModule(
-	db *gorm.DB,
 	artists *artists.ArtistService,
 	library *library.LibraryService,
 	sources *sources.SourceService,

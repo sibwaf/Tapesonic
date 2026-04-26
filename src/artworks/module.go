@@ -16,7 +16,3 @@ func NewArtworksModule(db *gorm.DB, artworkDir string) *ArtworksModule {
 		ArtworkService: service,
 	}
 }
-
-func (module *ArtworksModule) PrepareDatabase() error {
-	return module.storage.PrepareDatabase()
-}

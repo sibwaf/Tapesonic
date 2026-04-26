@@ -2,7 +2,6 @@ package listenbrainz
 
 import (
 	"errors"
-	"tapesonic/users"
 	"tapesonic/util"
 	"time"
 
@@ -18,8 +17,7 @@ var (
 // internal
 
 type ListenBrainzSession struct {
-	UserId uuid.UUID `gorm:"primaryKey"`
-	User   users.User
+	UserId uuid.UUID
 
 	Token    string
 	Username string

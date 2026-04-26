@@ -1,10 +1,7 @@
 package tapes
 
 import (
-	"tapesonic/artists"
-	"tapesonic/library"
 	"tapesonic/model"
-	"tapesonic/users"
 	"tapesonic/util"
 
 	"github.com/google/uuid"
@@ -32,34 +29,24 @@ type SavedTape struct {
 type Tape struct {
 	Id uuid.UUID
 
-	Name string
-	Type model.TapeType
-
+	Name      string
+	Type      model.TapeType
+	ArtistId  *uuid.UUID
 	ArtworkId *uuid.UUID
-	Artwork   *library.AllArtworkId
-
-	Tracks []TapeToTrack `gorm:"constraint:OnDelete:CASCADE;"`
-
-	ArtistId *uuid.UUID
-	Artist   *artists.Artist
 
 	ReleasedAt *util.TimestampWrapper
 
-	CreatedById uuid.UUID
-	CreatedBy   users.User
-
+	CreatedBy uuid.UUID
 	CreatedAt util.TimestampWrapper
 	UpdatedAt util.TimestampWrapper
 
 	SearchName string
+
+	Tracks []TapeTrack
 }
 
-type TapeToTrack struct {
-	TapeId uuid.UUID `gorm:"primaryKey"`
-	Tape   *Tape
-
-	TrackId string `gorm:"primaryKey"`
-	Track   *library.AllTrackId
-
+type TapeTrack struct {
+	TapeId    uuid.UUID
+	TrackId   string
 	ListIndex int
 }

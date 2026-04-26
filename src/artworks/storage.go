@@ -16,10 +16,6 @@ func newArtworkStorage(db *gorm.DB) *ArtworkStorage {
 	return &ArtworkStorage{db: db}
 }
 
-func (store *ArtworkStorage) PrepareDatabase() error {
-	return store.db.AutoMigrate(&Artwork{})
-}
-
 func (store *ArtworkStorage) Upsert(artwork Artwork) (Artwork, error) {
 	return artwork, store.db.Transaction(func(tx *gorm.DB) error {
 		query := `

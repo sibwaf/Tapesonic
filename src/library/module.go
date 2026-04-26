@@ -30,22 +30,3 @@ func NewLibraryModule(db *gorm.DB) *LibraryModule {
 		LibraryService:  service,
 	}
 }
-
-func (module *LibraryModule) PrepareDatabase() error {
-	if err := module.artworkStorage.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := module.artistStorage.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := module.albumStorage.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := module.trackStorage.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := module.playlistStorage.PrepareDatabase(); err != nil {
-		return err
-	}
-	return nil
-}

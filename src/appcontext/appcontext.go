@@ -12,6 +12,7 @@ import (
 	"tapesonic/library"
 	"tapesonic/listenbrainz"
 	"tapesonic/media"
+	"tapesonic/migration"
 	"tapesonic/recommendations"
 	"tapesonic/remotes"
 	"tapesonic/scheduling"
@@ -75,34 +76,11 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		return nil, err
 	}
 
-	if err := storage.DropCascades(db); err != nil {
-		return nil, err
-	}
-
-	if err := db.Exec(`DROP VIEW IF EXISTS all_playlist_tracks`).Error; err != nil {
-		return nil, err
-	}
-	if err := db.Exec(`DROP VIEW IF EXISTS all_playlists`).Error; err != nil {
-		return nil, err
-	}
-	if err := db.Exec(`DROP VIEW IF EXISTS all_albums`).Error; err != nil {
-		return nil, err
-	}
-	if err := db.Exec(`DROP VIEW IF EXISTS all_tracks`).Error; err != nil {
-		return nil, err
-	}
-	if err := db.Exec(`DROP VIEW IF EXISTS all_artists`).Error; err != nil {
-		return nil, err
-	}
-	if err := db.Exec(`DROP VIEW IF EXISTS all_artworks`).Error; err != nil {
+	if err = migration.Migrate(db); err != nil {
 		return nil, err
 	}
 
 	context.Scheduling = scheduling.NewSchedulingModule(db, config.SchedulerDelay)
-
-	if err = storage.Migrate(db); err != nil {
-		return nil, err
-	}
 
 	context.Ytdlp = ytdlp.NewYtdlpModule(
 		db,
@@ -111,9 +89,7 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		config.YtdlpMetadataMaxParallelism,
 	)
 
-	if context.Users, err = users.NewUsersModule(db); err != nil {
-		return nil, err
-	}
+	context.Users = users.NewUsersModule(db)
 	context.Artworks = artworks.NewArtworksModule(
 		db,
 		path.Join(config.MediaStorageDir, "artworks"),
@@ -126,31 +102,24 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		config.DownloadNextSourceSchedule,
 		config.MediaStorageDir,
 	)
-	if context.Remotes, err = remotes.NewRemotesModule(
+	context.Remotes = remotes.NewRemotesModule(
 		db,
 		context.Scheduling.TaskScheduler,
 		context.Artists.ArtistService,
 		config.RemoteLibrarySyncSchedule,
-	); err != nil {
-		return nil, err
-	}
+	)
 	context.Library = library.NewLibraryModule(db)
 	context.Tapes = tapes.NewTapesModule(db, context.Artists.ArtistService, context.Sources.SourceService, context.Library.LibraryService)
 
-	if context.StreamCacheStorage, err = storage.NewStreamCacheStorage(
+	context.StreamCacheStorage = storage.NewStreamCacheStorage(
 		path.Join(config.CacheDir, "stream"),
 		config.StreamCacheSize,
 		config.StreamCacheMinLifetime,
 		db,
-	); err != nil {
-		return nil, err
-	}
+	)
 
 	context.ListenBrainz = listenbrainz.NewListenBrainzModule(db)
-
-	if context.LastFm, err = lastfm.NewLastFmModule(db, config.LastFmApiKey, config.LastFmApiSecret); err != nil {
-		return nil, err
-	}
+	context.LastFm = lastfm.NewLastFmModule(db, config.LastFmApiKey, config.LastFmApiSecret)
 
 	context.Scrobbling = scrobbling.NewScrobblingModule(
 		db,
@@ -170,7 +139,6 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 	)
 
 	context.Search = search.NewSearchModule(
-		db,
 		context.Artists.ArtistService,
 		context.Library.LibraryService,
 		context.Sources.SourceService,
@@ -186,53 +154,10 @@ func NewContext(config *configPkg.TapesonicConfig) (*Context, error) {
 		config.RecommendationPlaylistSyncSchedule,
 	)
 
-	if err = prepareDatabase(&context, db); err != nil {
-		return nil, err
-	}
-
 	registerSchedulers(&context)
 	// todo: stop schedulers
 
 	return &context, nil
-}
-
-func prepareDatabase(context *Context, db *gorm.DB) error {
-	if err := context.Scheduling.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := context.Ytdlp.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := context.Artworks.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := context.Artists.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := context.Sources.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := context.Tapes.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := context.Scrobbling.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := context.Recommendations.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := context.Library.PrepareDatabase(); err != nil {
-		return err
-	}
-	if err := context.ListenBrainz.PrepareDatabase(); err != nil {
-		return err
-	}
-
-	if err := storage.CreateCascades(db); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func registerSchedulers(context *Context) {

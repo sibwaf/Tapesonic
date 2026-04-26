@@ -23,7 +23,3 @@ func NewSchedulingModule(db *gorm.DB, taskCheckInterval time.Duration) *Scheduli
 		TaskScheduler: taskScheduler,
 	}
 }
-
-func (module *SchedulingModule) PrepareDatabase() error {
-	return module.storage.PrepareDatabase()
-}

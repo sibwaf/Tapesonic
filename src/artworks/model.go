@@ -9,7 +9,7 @@ import (
 type Artwork struct {
 	Id uuid.UUID
 
-	DeduplicationId string `gorm:"uniqueIndex"`
+	DeduplicationId string
 
 	FilePath string
 	Format   string

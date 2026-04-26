@@ -9,8 +9,8 @@ import (
 type ScheduledTask struct {
 	Id uuid.UUID
 
-	Type       string `gorm:"uniqueIndex:scheduled_task_uniq"`
-	Parameters string `gorm:"uniqueIndex:scheduled_task_uniq"`
+	Type       string
+	Parameters string
 
 	RunAt          util.TimestampWrapper
 	RunAttemptedAt *util.TimestampWrapper

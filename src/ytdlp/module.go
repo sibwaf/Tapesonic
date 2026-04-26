@@ -26,7 +26,3 @@ func NewYtdlpModule(
 		YtdlpService: service,
 	}
 }
-
-func (module *YtdlpModule) PrepareDatabase() error {
-	return module.cache.PrepareDatabase()
-}

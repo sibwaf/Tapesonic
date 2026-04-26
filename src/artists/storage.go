@@ -19,10 +19,6 @@ func newArtistStorage(db *gorm.DB) *artistStorage {
 	return &artistStorage{db: db}
 }
 
-func (store *artistStorage) PrepareDatabase() error {
-	return store.db.AutoMigrate(&Artist{})
-}
-
 func (store *artistStorage) CreateOrGet(id uuid.UUID, name string, aliases []string, musicBrainzId string) (Artist, error) {
 	aliasesJson, err := json.Marshal(aliases)
 	if err != nil {

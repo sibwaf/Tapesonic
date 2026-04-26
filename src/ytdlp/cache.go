@@ -16,13 +16,9 @@ func newYtdlpMetadataStorage(db *gorm.DB) *YtdlpMetadataStorage {
 	return &YtdlpMetadataStorage{db: db}
 }
 
-func (s *YtdlpMetadataStorage) PrepareDatabase() error {
-	return s.db.AutoMigrate(&YtdlpMetadataCacheItem{})
-}
-
 func (s *YtdlpMetadataStorage) Upsert(url string, metadata string) error {
 	query := `
-		INSERT INTO ytdlp_metadata_cache_items (url, metadata, created_at, updated_at)
+		INSERT INTO ytdlp_metadata_cache (url, metadata, created_at, updated_at)
 		VALUES (@url, @metadata, @createdAt, @updatedAt)
 		ON CONFLICT (url) DO UPDATE
 		SET metadata = excluded.metadata, updated_at = excluded.updated_at
@@ -40,7 +36,7 @@ func (s *YtdlpMetadataStorage) Upsert(url string, metadata string) error {
 func (s *YtdlpMetadataStorage) Find(url string, minUpdatedAt time.Time) (*YtdlpMetadataCacheItem, error) {
 	sql := `
 		SELECT *
-		FROM ytdlp_metadata_cache_items
+		FROM ytdlp_metadata_cache
 		WHERE url = @url AND updated_at >= @minUpdatedAt
 	`
 	params := map[string]any{

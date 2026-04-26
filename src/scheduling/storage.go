@@ -17,10 +17,6 @@ func newTaskStorage(db *gorm.DB) *TaskStorage {
 	return &TaskStorage{db: db}
 }
 
-func (store *TaskStorage) PrepareDatabase() error {
-	return store.db.AutoMigrate(&ScheduledTask{})
-}
-
 func (store *TaskStorage) FindTaskByParameters(taskType string, parameters string) (*ScheduledTask, error) {
 	sql := `
 		SELECT id, type, parameters, run_at, run_attempted_at, run_succeeded_at

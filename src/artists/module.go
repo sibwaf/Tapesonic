@@ -15,7 +15,3 @@ func NewArtistsModule(db *gorm.DB) *ArtistsModule {
 		ArtistService: newArtistService(storage),
 	}
 }
-
-func (module *ArtistsModule) PrepareDatabase() error {
-	return module.storage.PrepareDatabase()
-}

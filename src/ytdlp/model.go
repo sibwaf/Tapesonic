@@ -12,7 +12,7 @@ var (
 // database
 
 type YtdlpMetadataCacheItem struct {
-	Url string `gorm:"uniqueIndex"`
+	Url string
 
 	Metadata string
 

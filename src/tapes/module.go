@@ -27,7 +27,3 @@ func NewTapesModule(
 		TapeService: service,
 	}
 }
-
-func (module *TapesModule) PrepareDatabase() error {
-	return module.storage.PrepareDatabase()
-}

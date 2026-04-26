@@ -20,31 +20,12 @@ func NewRemotesModule(
 	taskScheduler *scheduling.TaskScheduler,
 	artists *artists.ArtistService,
 	librarySyncCron cron.Schedule,
-) (*RemotesModule, error) {
-	remoteStorage, err := newRemoteStorage(db)
-	if err != nil {
-		return nil, err
-	}
-
-	artworkStorage, err := newRemoteArtworkStorage(db)
-	if err != nil {
-		return nil, err
-	}
-
-	artistStorage, err := newRemoteArtistStorage(db)
-	if err != nil {
-		return nil, err
-	}
-
-	albumStorage, err := newRemoteAlbumStorage(db)
-	if err != nil {
-		return nil, err
-	}
-
-	trackStorage, err := newRemoteTrackStorage(db)
-	if err != nil {
-		return nil, err
-	}
+) *RemotesModule {
+	remoteStorage := newRemoteStorage(db)
+	artworkStorage := newRemoteArtworkStorage(db)
+	artistStorage := newRemoteArtistStorage(db)
+	albumStorage := newRemoteAlbumStorage(db)
+	trackStorage := newRemoteTrackStorage(db)
 
 	planner := newTaskPlanner(taskScheduler)
 
@@ -63,7 +44,7 @@ func NewRemotesModule(
 		RemoteService:   service,
 		subsonicSync:    subsonicSync,
 		librarySyncCron: librarySyncCron,
-	}, nil
+	}
 }
 
 func (module *RemotesModule) RegisterSchedules(scheduler *scheduling.TaskScheduler) {

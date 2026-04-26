@@ -20,7 +20,3 @@ func NewListenBrainzModule(db *gorm.DB) *ListenBrainzModule {
 		ListenBrainzRecommendationService: recommendationService,
 	}
 }
-
-func (module *ListenBrainzModule) PrepareDatabase() error {
-	return module.sessions.PrepareDatabase()
-}

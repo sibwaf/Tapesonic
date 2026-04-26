@@ -50,11 +50,7 @@ func NewStreamCacheStorage(
 	maxSize int64,
 	minLifetime time.Duration,
 	db *gorm.DB,
-) (*StreamCacheStorage, error) {
-	if err := db.AutoMigrate(&StreamCacheItem{}); err != nil {
-		return nil, err
-	}
-
+) *StreamCacheStorage {
 	return &StreamCacheStorage{
 		dir:         dir,
 		maxSize:     maxSize,
@@ -64,7 +60,7 @@ func NewStreamCacheStorage(
 
 		lock:     util.NewStripedRwMutex(),
 		trimLock: &sync.Mutex{},
-	}, nil
+	}
 }
 
 func (storage *StreamCacheStorage) GetOrSave(
@@ -150,7 +146,7 @@ func (storage *StreamCacheStorage) readFile(id string) (StreamCacheItem, io.Read
 	fullPath := path.Join(storage.dir, filename)
 
 	query := `
-		UPDATE stream_cache_items
+		UPDATE stream_cache
 		SET accessed_at = @accessedAt
 		WHERE id = @id
 		RETURNING *
@@ -194,7 +190,7 @@ func (storage *StreamCacheStorage) writeFile(id string, contentType string, read
 	}
 
 	sql := `
-		INSERT INTO stream_cache_items (id, filename, size, content_type, created_at, accessed_at)
+		INSERT INTO stream_cache (id, filename, size, content_type, created_at, accessed_at)
 		VALUES (@id, @filename, @size, @contentType, @createdAt, @accessedAt)
 		RETURNING *
 	`
@@ -256,7 +252,7 @@ func (storage *StreamCacheStorage) trimToSize() error {
 
 	for {
 		currentSize := int64(0)
-		if err := storage.db.Raw("SELECT sum(size) FROM stream_cache_items").Scan(&currentSize).Error; err != nil {
+		if err := storage.db.Raw("SELECT sum(size) FROM stream_cache").Scan(&currentSize).Error; err != nil {
 			return err
 		}
 

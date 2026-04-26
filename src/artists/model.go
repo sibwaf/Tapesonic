@@ -12,5 +12,5 @@ type Artist struct {
 
 	SearchName string
 
-	MusicBrainzId *string `gorm:"uniqueIndex:artists_unique_mbid"`
+	MusicBrainzId *string
 }

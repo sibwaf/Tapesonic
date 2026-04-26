@@ -16,10 +16,6 @@ func newListenBrainzSessionStorage(db *gorm.DB) *ListenBrainzSessionStorage {
 	return &ListenBrainzSessionStorage{db: db}
 }
 
-func (store *ListenBrainzSessionStorage) PrepareDatabase() error {
-	return store.db.AutoMigrate(&ListenBrainzSession{})
-}
-
 func (store *ListenBrainzSessionStorage) Save(session ListenBrainzSession) (ListenBrainzSession, error) {
 	sql := `
 		INSERT INTO listen_brainz_sessions (user_id, token, username, is_scrobbling_enabled, created_at, updated_at)

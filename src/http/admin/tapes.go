@@ -147,9 +147,9 @@ type TapeRq struct {
 }
 
 func tapeRqToTape(tapeRq TapeRq) tapes.Tape {
-	tapeTracks := []tapes.TapeToTrack{}
+	tapeTracks := []tapes.TapeTrack{}
 	for _, trackId := range tapeRq.TrackIds {
-		tapeTracks = append(tapeTracks, tapes.TapeToTrack{TrackId: trackId})
+		tapeTracks = append(tapeTracks, tapes.TapeTrack{TrackId: trackId})
 	}
 
 	return tapes.Tape{

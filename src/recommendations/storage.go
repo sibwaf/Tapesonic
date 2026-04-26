@@ -18,10 +18,6 @@ func newRecommendationStorage(db *gorm.DB) *RecommendationStorage {
 	return &RecommendationStorage{db: db}
 }
 
-func (store *RecommendationStorage) PrepareDatabase() error {
-	return store.db.AutoMigrate(&RecommendedPlaylist{}, &RecommendedPlaylistTrack{})
-}
-
 func (store *RecommendationStorage) GetById(id uuid.UUID) (RecommendedPlaylist, error) {
 	sql := `SELECT * FROM recommended_playlists WHERE id = @id`
 	params := map[string]any{"id": id}

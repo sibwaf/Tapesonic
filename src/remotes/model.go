@@ -1,7 +1,6 @@
 package remotes
 
 import (
-	"tapesonic/users"
 	"tapesonic/util"
 
 	"github.com/google/uuid"
@@ -36,12 +35,7 @@ type Remote struct {
 }
 
 type RemoteToUser struct {
-	RemoteId uuid.UUID `gorm:"primaryKey"`
-	Remote   Remote
-
-	UserId uuid.UUID `gorm:"primaryKey"`
-	User   users.User
-
+	UserId      uuid.UUID
 	Credentials RemoteCredentials `gorm:"serializer:json"`
 }
 

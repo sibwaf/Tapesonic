@@ -15,10 +15,6 @@ func newFileStorage(db *gorm.DB) *FileStorage {
 	return &FileStorage{db: db}
 }
 
-func (store *FileStorage) PrepareDatabase() error {
-	return store.db.AutoMigrate(&SourceFile{})
-}
-
 func (store *FileStorage) Create(file SourceFile) (SourceFile, error) {
 	sql := `
 		INSERT INTO source_files (id, source_id, format, codec, media_path, created_at, updated_at)
